@@ -25,6 +25,7 @@ static constexpr int LIST_X = 166, LIST_W = 320 - 166;
 static const Rect R_DEL = {298, 24, 16, 16};
 static const Rect R_RMINUS = {246, 24, 18, 16};   // repeat count -
 static const Rect R_RPLUS  = {268, 24, 18, 16};   // repeat count +
+static const Rect R_COND   = {244, 24, 46, 16};   // sense condition cycle
 static constexpr int ROW_Y0 = BAND_Y + 22, ROW_H = 24;
 static const Rect R_TOGGLE = {6, (int16_t)(BOTBAR_Y + 2), 150, 26};
 static const Rect R_RUNBAR = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
@@ -35,7 +36,10 @@ static const Rect R_RESET = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
 void GameScreen::begin(Profile* profile, uint32_t level) {
   _profile = profile;
   _level = level;
-  MazeGen::generate(_maze, profile ? profile->seedBase : 0, level);
+  _boardCount = MazeGen::generateBoards(_boards, gb::MAX_BOARDS,
+                                        profile ? profile->seedBase : 0, level);
+  _boardIdx = 0;
+  _maze = _boards[0];
   _prog.clear();
   // Resume the in-progress script for this level if present (SPEC §11.1).
   if (profile && profile->workLevel == level && !profile->work.empty()) {
@@ -75,7 +79,11 @@ void GameScreen::drawChrome() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   char buf[40];
   const char* nm = _profile ? _profile->name.c_str() : "Player";
-  snprintf(buf, sizeof(buf), "%s   Lv %u", nm, (unsigned)_level);
+  if (_boardCount > 1)
+    snprintf(buf, sizeof(buf), "%s  Lv %u  maze %d/%d", nm, (unsigned)_level,
+             _boardIdx + 1, _boardCount);
+  else
+    snprintf(buf, sizeof(buf), "%s   Lv %u", nm, (unsigned)_level);
   label(g, 6, 4, buf, C_INK);
   uint32_t stars = _profile ? _profile->stats.starsTotal : 0;
   snprintf(buf, sizeof(buf), "*%u", (unsigned)stars);
@@ -196,8 +204,9 @@ int GameScreen::listTop() const {
 }
 
 ui::Rect GameScreen::funcTabRect(int i) const {
-  int w = (LIST_W - 8) / 3;
-  return {(int16_t)(LIST_X + 4 + i * w), (int16_t)(BAND_Y + 20),
+  // 5 cells: MAIN | F1 | F2 | Save>Lib | Load<Lib (SPEC §10, §11.1)
+  int w = (LIST_W - 6) / 5;
+  return {(int16_t)(LIST_X + 3 + i * w), (int16_t)(BAND_Y + 20),
           (int16_t)(w - 2), 16};
 }
 
@@ -222,6 +231,17 @@ void GameScreen::appendNodeToTarget(const Node& n) {
   drawProgramList();
 }
 
+static const char* condName(Cond c) {
+  switch (c) {
+    case WALL_AHEAD: return "wall";
+    case PIT_AHEAD: return "pit";
+    case AT_GOAL: return "goal";
+    case ENEMY_AHEAD: return "enemy";
+    case ENEMY_NEAR: return "near";
+  }
+  return "?";
+}
+
 static void nodeLabel(const Node& n, char* buf, size_t bn, Glyph& gl, uint16_t& col) {
   switch (n.type) {
     case N_CMD:
@@ -235,8 +255,8 @@ static void nodeLabel(const Node& n, char* buf, size_t bn, Glyph& gl, uint16_t& 
       }
       break;
     case N_REPEAT:       gl = Glyph::REPEAT; col = C_LOOP;  snprintf(buf, bn, "repeat %d", n.count); break;
-    case N_REPEAT_UNTIL: gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "until..."); break;
-    case N_IF:           gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "if..."); break;
+    case N_REPEAT_UNTIL: gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "until %s", condName(n.cond)); break;
+    case N_IF:           gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "if %s", condName(n.cond)); break;
     case N_CALL:         gl = Glyph::CALL;   col = C_FUNC;  snprintf(buf, bn, "call F%d", n.func); break;
   }
 }
@@ -261,11 +281,13 @@ void GameScreen::drawProgramList() {
     if (sn->type == N_REPEAT) {
       button(g, R_RMINUS, "-", C_LOOP, C_PANEL_HI);
       button(g, R_RPLUS, "+", C_LOOP, C_PANEL_HI);
+    } else if (sn->type == N_IF || sn->type == N_REPEAT_UNTIL) {
+      button(g, R_COND, condName(sn->cond), C_SENSE, C_PANEL_HI);  // tap to cycle
     }
     button(g, R_DEL, "x", C_BAD, C_PANEL_HI);
   }
 
-  // MAIN | F1 | F2 tabs once functions unlock (SPEC §10)
+  // MAIN | F1 | F2 | Save | Load once functions/library unlock (SPEC §10, §11.1)
   if (_profile && _profile->unlocks.func) {
     const char* tabs[3] = {"MAIN", "F1", "F2"};
     NodeList* lists[3] = {&_prog.main, &_prog.f1, &_prog.f2};
@@ -274,6 +296,8 @@ void GameScreen::drawProgramList() {
       bool on = (_editList == lists[i]);
       button(g, r, tabs[i], on ? C_ACCENT : C_DIM, on ? C_PANEL_HI : C_PANEL);
     }
+    button(g, funcTabRect(3), "S>L", C_GO, C_PANEL);
+    button(g, funcTabRect(4), "L<L", C_FUNC, C_PANEL);
   }
 
   int top = listTop();
@@ -373,11 +397,18 @@ void GameScreen::handleListTap(int x, int y) {
       if (sn->type == N_REPEAT) {
         if (R_RMINUS.contains(x, y)) { if (sn->count > 2) sn->count--; hal::audio.blip(); drawProgramList(); return; }
         if (R_RPLUS.contains(x, y))  { if (sn->count < 5) sn->count++; hal::audio.blip(); drawProgramList(); return; }
+      } else if (sn->type == N_IF || sn->type == N_REPEAT_UNTIL) {
+        if (R_COND.contains(x, y)) {
+          // cycle WALL_AHEAD -> PIT_AHEAD -> AT_GOAL
+          sn->cond = (sn->cond == WALL_AHEAD) ? PIT_AHEAD
+                   : (sn->cond == PIT_AHEAD) ? AT_GOAL : WALL_AHEAD;
+          hal::audio.blip(); drawProgramList(); return;
+        }
       }
     }
     if (R_DEL.contains(x, y)) { deleteSelected(); return; }
   }
-  // function-body tabs
+  // function-body tabs + library Save/Load
   if (_profile && _profile->unlocks.func) {
     NodeList* lists[3] = {&_prog.main, &_prog.f1, &_prog.f2};
     for (int i = 0; i < 3; i++) {
@@ -386,6 +417,8 @@ void GameScreen::handleListTap(int x, int y) {
         drawProgramList(); return;
       }
     }
+    if (funcTabRect(3).contains(x, y)) { hal::audio.blip(); saveToLibrary(); return; }
+    if (funcTabRect(4).contains(x, y)) { hal::audio.blip(); loadFromLibrary(); return; }
   }
   if (x < LIST_X) return;
   int top = listTop();
@@ -438,9 +471,47 @@ void GameScreen::startRun() {
 }
 
 void GameScreen::resetRun() {
+  _boardIdx = 0;
+  _maze = _boards[0];
   _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
   _auto = false;
+  _drawnPose = _maze.startPose();
   drawMazeView(false);
+}
+
+void GameScreen::advanceBoard() {
+  _boardIdx++;
+  _maze = _boards[_boardIdx];
+  _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
+  _drawnPose = _maze.startPose();
+  drawMazeView(false);
+  char buf[24];
+  snprintf(buf, sizeof(buf), "Maze %d / %d", _boardIdx + 1, _boardCount);
+  toast(buf, C_ACCENT);
+  _lastStep = 0;  // brief pause then continue auto-stepping
+}
+
+void GameScreen::saveToLibrary() {
+  if (!_profile) return;
+  if (_prog.main.empty()) { toast("nothing to save", C_ACCENT); return; }
+  if ((int)_profile->library.size() >= gb::LIBRARY_MAX) { toast("library full", C_BAD); return; }
+  gb::LibEntry e;
+  char nm[16];
+  snprintf(nm, sizeof(nm), "Lib %d", (int)_profile->library.size() + 1);
+  e.name = nm;
+  e.program = _prog;
+  _profile->library.push_back(e);
+  drawProgramList();
+  toast("saved to library", C_GO);
+}
+
+void GameScreen::loadFromLibrary() {
+  if (!_profile || _profile->library.empty()) { toast("library empty", C_ACCENT); return; }
+  _prog = _profile->library.back().program;  // load most recent (SPEC §11.1)
+  _editList = &_prog.main;
+  _selected = -1;
+  drawProgramList();
+  toast("loaded from library", C_GO);
 }
 
 void GameScreen::stepOnce(uint32_t now) {
@@ -455,6 +526,8 @@ void GameScreen::stepOnce(uint32_t now) {
 
   if (o == OUT_OK) { hal::audio.tick(); return; }
   if (o == OUT_WIN) {
+    // Multi-maze generalization level: the same program must clear every board.
+    if (_boardIdx + 1 < _boardCount) { hal::audio.tick(); advanceBoard(); return; }
     _mode = M_WIN;
     _writtenCount = programWrittenCount(_prog);
     _stars = starsFor(_writtenCount, _par);

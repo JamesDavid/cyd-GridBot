@@ -6,6 +6,7 @@
 #include "hal/Display.h"
 #include "ui/Theme.h"
 #include "game/Maze.h"
+#include "game/MazeGen.h"
 #include "game/Program.h"
 #include "game/Interpreter.h"
 #include "game/Profile.h"
@@ -59,9 +60,16 @@ class GameScreen : public app::IScreen {
   // 0=JUMP,1=REPEAT,2=CALL,3=SENSE. Returns whether unlocked for this profile.
   bool cornerUnlocked(int slot) const;
 
+  void advanceBoard();        // multi-maze: load the next board, keep the program
+  void saveToLibrary();
+  void loadFromLibrary();
+
   gb::Profile* _profile = nullptr;
   uint32_t _level = 1;
-  gb::Maze _maze;
+  gb::Maze _boards[gb::MAX_BOARDS];
+  int _boardCount = 1;
+  int _boardIdx = 0;
+  gb::Maze _maze;             // active board (copy of _boards[_boardIdx])
   gb::Program _prog;
   gb::Interpreter _it;
   gb::NodeList* _editList = nullptr;  // which body the list edits (MAIN for now)

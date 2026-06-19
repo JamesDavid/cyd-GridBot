@@ -153,5 +153,41 @@ void generate(Maze& out, uint32_t seedBase, int level) {
   out.setGoal(0, d.cols - 1);
 }
 
+void generateSpiral(Maze& out, int rows, int cols) {
+  if (rows < 3) rows = 3;
+  if (cols < 3) cols = 3;
+  out.reset(rows, cols);
+  out.fill(WALL);
+  const int b = rows - 1, t = 0, l = 0, r = cols - 1;
+  for (int c = l; c <= r; c++) out.set(b, c, FLOOR);   // bottom row
+  for (int row = b; row >= t; row--) out.set(row, r, FLOOR);  // right column
+  for (int c = r; c >= l; c--) out.set(t, c, FLOOR);   // top row
+  Pose s; s.row = (int8_t)b; s.col = (int8_t)l; s.facing = EAST;
+  out.setStart(s);
+  out.set(b, l, START);
+  out.setGoal(t, l);  // top-left, end of the 3-sided corridor
+}
+
+int generateBoards(Maze* out, int maxOut, uint32_t seedBase, int level) {
+  if (!isMultiLevel(level)) {
+    generate(out[0], seedBase, level);
+    return 1;
+  }
+  // 2-3 wall-follower-solvable spirals of varying size; same START facing so one
+  // general program clears them all (SPEC §7.1).
+  Rng rng(seedFor(seedBase, (uint32_t)level));
+  int count = 2 + (int)rng.below(2);  // 2 or 3
+  if (count > maxOut) count = maxOut;
+  if (count > MAX_BOARDS) count = MAX_BOARDS;
+  for (int i = 0; i < count; i++) {
+    int rows = 5 + (int)rng.below(3) + i;          // 5..9
+    int cols = 6 + (int)rng.below(4);              // 6..9
+    if (rows > MAZE_MAX_ROWS) rows = MAZE_MAX_ROWS;
+    if (cols > MAZE_MAX_COLS) cols = MAZE_MAX_COLS;
+    generateSpiral(out[i], rows, cols);
+  }
+  return count;
+}
+
 }  // namespace MazeGen
 }  // namespace gb

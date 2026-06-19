@@ -21,9 +21,26 @@ struct Difficulty {
 
 Difficulty difficultyFor(int level);
 
+// Sensing tier begins at this level (SPEC §7). At/after it, a level is a
+// "generalization" set: one program must clear 2-3 boards (SPEC §7.1).
+constexpr int SENSE_LEVEL = 55;
+constexpr int MAX_BOARDS = 3;
+inline bool isMultiLevel(int level) { return level >= SENSE_LEVEL; }
+
 namespace MazeGen {
 // Fill `out` with the maze for (seedBase, level). Always solvable (SPEC §6).
 void generate(Maze& out, uint32_t seedBase, int level);
+
+// A left-turn "C-spiral": all walls except a 3-sided corridor (bottom -> right ->
+// top), START bottom-left facing EAST, GOAL top-left. Solvable by the canonical
+// wall-follower `REPEAT_UNTIL AT_GOAL { IF WALL_AHEAD TURN_L; FORWARD }` — the §7.1
+// payoff. Used for multi-maze sensing levels.
+void generateSpiral(Maze& out, int rows, int cols);
+
+// Fill out[0..count) with the boards for (seedBase, level). count==1 for normal
+// levels; 2-3 wall-follower-solvable spirals for sensing levels (SPEC §7.1).
+// Returns the board count (<= MAX_BOARDS).
+int generateBoards(Maze* out, int maxOut, uint32_t seedBase, int level);
 }  // namespace MazeGen
 
 }  // namespace gb

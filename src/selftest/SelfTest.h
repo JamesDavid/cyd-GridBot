@@ -12,6 +12,7 @@
 #include "game/Interpreter.h"
 #include "game/MazeGen.h"
 #include "game/Score.h"
+#include "game/Bots.h"
 #include "store/ProfileStore.h"
 
 namespace selftest {
@@ -98,6 +99,21 @@ inline void runAll() {
     check(saved, "profile_save");
     check(eq, "profile_roundtrip");
     store::profiles.remove("uTEST");
+  }
+
+  // Sensing showcase: one wall-follower clears a generated multi-maze set (§7.1).
+  {
+    gb::Program wf = gb::wallFollowerProgram();
+    bool allWin = true;
+    for (uint32_t sb = 1; sb <= 5; sb++) {
+      gb::Maze boards[gb::MAX_BOARDS];
+      int nb = gb::MazeGen::generateBoards(boards, gb::MAX_BOARDS, sb, gb::SENSE_LEVEL + 2);
+      for (int i = 0; i < nb; i++) {
+        gb::Interpreter it; it.load(&wf, &boards[i], boards[i].startPose(), 2000);
+        if (it.runToEnd() != gb::OUT_WIN) allWin = false;
+      }
+    }
+    check(allWin, "wall_follower_clears_sets");
   }
 
   Serial.printf("=== SELFTEST DONE: %d passed, %d failed ===\n", _pass, _fail);

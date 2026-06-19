@@ -20,7 +20,12 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [ ] Debounced periodic autosave of the resume slot mid-edit (currently saved on
       level transitions; power-off mid-edit can lose the in-progress script).
 - [ ] Star celebration animation (fly-in stars) + per-level best-stars display.
-- [ ] Condition picker UX polish for sense blocks (WALL/PIT/GOAL cycling).
+- [x] Condition picker for sense blocks (WALL/PIT/GOAL cycling) — basic cycling done;
+      UX polish (a popup picker) still open.
+- [ ] Library picker UI: name entry on save + choose-which-entry on load (currently
+      auto-named "Lib N", load pulls the most recent only).
+- [ ] Richer multi-ring spiral / varied sensing mazes (current sensing levels use a
+      clean single-ring "C-spiral" that the wall-follower provably clears).
 
 ## Engine / generation
 - [ ] Richer maze topology (branches/dead-ends) beyond the biased-walk corridor.
