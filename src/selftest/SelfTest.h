@@ -58,8 +58,19 @@ inline void runAll() {
     check(it.runToEnd() == gb::OUT_BONK, "interp_bonk");
   }
   {
-    gb::Maze m; gb::MazeGen::generate(m, 73219, 1);
-    check(gb::shortestSolutionLen(m, false) > 0, "gen_solvable_lvl1");
+    // Solvability sweep under real ESP32 RNG/types (mirrors the native sweep).
+    bool allSolvable = true;
+    int n = 0;
+    for (uint32_t sb = 1; sb <= 8; sb++) {
+      for (int lvl = 1; lvl <= 60; lvl += 3) {
+        gb::Maze m; gb::MazeGen::generate(m, sb, lvl);
+        gb::Difficulty d = gb::difficultyFor(lvl);
+        if (gb::shortestSolutionLen(m, d.allowPitGaps) <= 0) allSolvable = false;
+        n++;
+      }
+    }
+    Serial.printf("  (swept %d generated mazes)\n", n);
+    check(allSolvable, "gen_solvable_sweep");
   }
 
   Serial.printf("=== SELFTEST DONE: %d passed, %d failed ===\n", _pass, _fail);
