@@ -60,7 +60,7 @@ void ArenaScreen::drawMenu() {
   label(g, SCREEN_W / 2, 36, "Pick an opponent", C_INK, textdatum_t::top_center);
   button(g, R_AI, "vs House AI", C_GO, C_PANEL);
   button(g, R_HOT, "Hotseat 2P", C_FUNC, C_PANEL);
-  button(g, R_RADIO, "Radio battle (needs 2 boards)", C_DIM, C_PANEL);
+  button(g, R_RADIO, "Radio: battle / trade a friend", C_MOVE, C_PANEL);
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
   button(g, R_TYPE, _type == MatchType::RACE ? "Race" : "Sumo", C_ACCENT, C_PANEL);
@@ -183,6 +183,7 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   switch (_phase) {
     case Phase::MENU:
       if (R_BACK.contains(tx, ty)) return app::Signal::BACK;
+      if (R_RADIO.contains(tx, ty)) return app::Signal::GOTO_RADIO;
       if (R_TYPE.contains(tx, ty)) {
         _type = (_type == MatchType::RACE) ? MatchType::SUMO : MatchType::RACE;
         drawMenu();

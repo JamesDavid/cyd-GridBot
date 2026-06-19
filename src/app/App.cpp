@@ -130,6 +130,14 @@ void App::tick(uint32_t now) {
     case State::ARENA: {
       Signal s = _arena.tick(now, tp);
       if (s == Signal::BACK) gotoIntro(_profile.level);
+      else if (s == Signal::GOTO_RADIO) {
+        _radio.begin(&_profile); _radio.enter(); _state = State::RADIO;
+      }
+      break;
+    }
+    case State::RADIO: {
+      Signal s = _radio.tick(now, tp);
+      if (s == Signal::BACK) { saveProfile(); _arena.begin(&_profile); _arena.enter(); _state = State::ARENA; }
       break;
     }
   }

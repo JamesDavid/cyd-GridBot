@@ -9,6 +9,7 @@
 #include "screens/ProfileCreateScreen.h"
 #include "screens/StatsScreen.h"
 #include "screens/ArenaScreen.h"
+#include "screens/RadioScreen.h"
 
 namespace app {
 
@@ -18,7 +19,7 @@ class App {
   void tick(uint32_t now);
 
  private:
-  enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA };
+  enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO };
 
   void gotoSelect();
   void gotoIntro(uint32_t level);
@@ -36,6 +37,7 @@ class App {
   screens::GameScreen _game;
   screens::StatsScreen _stats;
   screens::ArenaScreen _arena;
+  screens::RadioScreen _radio;
   TapDetector _introTap;
   ui::Rect _arenaBtn{90, 196, 140, 28};  // shown on the level intro post-sensing
 };

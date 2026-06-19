@@ -13,6 +13,7 @@ enum class Signal : uint8_t {
   NEW_PROFILE,   // "+ New Player" tapped -> profile create
   CREATED,       // profile-create finished -> create + play
   GOTO_STATS,    // open the stats screen
+  GOTO_RADIO,    // open the radio (ESP-NOW) link screen
 };
 
 class IScreen {

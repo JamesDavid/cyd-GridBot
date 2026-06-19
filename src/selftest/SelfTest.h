@@ -52,10 +52,10 @@ inline void runAll() {
     check(it.primCount() == 3, "interp_repeat_count");
   }
   {
-    gb::Maze m; m.reset(1, 2); m.fill(gb::FLOOR);
+    gb::Maze m; m.reset(1, 3); m.fill(gb::FLOOR);
     gb::Pose s; s.row = 0; s.col = 0; s.facing = gb::EAST;
     m.setStart(s); m.set(0, 1, gb::WALL);
-    m.setGoal(0, 1);  // goal under a wall is unreachable, but FWD bonks first
+    m.setGoal(0, 2);  // forward hits the wall at col1 before reaching the goal
     gb::Program p; p.main.push_back(gb::Node::command(gb::CMD_FWD));
     gb::Interpreter it; it.load(&p, &m, m.startPose());
     check(it.runToEnd() == gb::OUT_BONK, "interp_bonk");
