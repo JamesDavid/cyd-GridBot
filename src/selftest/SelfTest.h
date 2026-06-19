@@ -12,6 +12,7 @@
 #include "game/Interpreter.h"
 #include "game/MazeGen.h"
 #include "game/Score.h"
+#include "store/ProfileStore.h"
 
 namespace selftest {
 
@@ -71,6 +72,32 @@ inline void runAll() {
     }
     Serial.printf("  (swept %d generated mazes)\n", n);
     check(allSolvable, "gen_solvable_sweep");
+  }
+
+  // LittleFS profile round-trip (the filesystem is board-side, SPEC §14).
+  {
+    store::profiles.begin();
+    gb::Profile p;
+    p.id = "uTEST"; p.name = "Theo"; p.avatar = 3; p.level = 14;
+    p.seedBase = 73219; p.unlocks = gb::computeUnlocks(14);
+    p.stats.totalWins = 7; p.stats.starsTotal = 15;
+    p.stats.commandsUsed[gb::CS_FWD] = 42;
+    p.workLevel = 14;
+    p.work.main.push_back(gb::Node::command(gb::CMD_FWD));
+    gb::Node rep = gb::Node::repeat(3);
+    rep.body.push_back(gb::Node::command(gb::CMD_TURN_R));
+    p.work.main.push_back(rep);
+    bool saved = store::profiles.save(p);
+    gb::Profile q;
+    bool loaded = store::profiles.load("uTEST", q);
+    bool eq = loaded && q.name == "Theo" && q.avatar == 3 && q.level == 14 &&
+              q.seedBase == 73219 && q.unlocks.jump == true &&
+              q.stats.totalWins == 7 && q.stats.commandsUsed[gb::CS_FWD] == 42 &&
+              q.workLevel == 14 &&
+              gb::programWrittenCount(q.work) == gb::programWrittenCount(p.work);
+    check(saved, "profile_save");
+    check(eq, "profile_roundtrip");
+    store::profiles.remove("uTEST");
   }
 
   Serial.printf("=== SELFTEST DONE: %d passed, %d failed ===\n", _pass, _fail);

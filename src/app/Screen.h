@@ -7,10 +7,12 @@ namespace app {
 
 enum class Signal : uint8_t {
   NONE,
-  WON,         // game level cleared -> advance
-  BACK,        // return to profile select
-  PLAY,        // a profile/level was chosen -> start game
-  GOTO_STATS,
+  WON,           // game level cleared -> advance
+  BACK,          // return to the previous screen
+  PLAY,          // a profile was chosen -> start game
+  NEW_PROFILE,   // "+ New Player" tapped -> profile create
+  CREATED,       // profile-create finished -> create + play
+  GOTO_STATS,    // open the stats screen
 };
 
 class IScreen {
