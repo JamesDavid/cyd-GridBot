@@ -1,0 +1,444 @@
+#include "screens/GameScreen.h"
+
+#include "hal/Display.h"
+#include "ui/UI.h"
+#include "ui/Theme.h"
+#include "assets/Assets.h"
+#include "game/MazeGen.h"
+#include "game/Score.h"
+
+using namespace ui;
+using namespace gb;
+
+namespace screens {
+
+// ---- layout rects (320x240, SPEC §10) -------------------------------------
+static constexpr int PAD_X0 = 6, PAD_Y0 = BAND_Y + 2, PAD_CELL = 50, PAD_PITCH = 52;
+static Rect padCell(int i, int j) { return {(int16_t)(PAD_X0 + j * PAD_PITCH),
+                                            (int16_t)(PAD_Y0 + i * PAD_PITCH),
+                                            PAD_CELL, PAD_CELL}; }
+static const Rect R_CLEAR = {6, 181, 74, 28};
+static const Rect R_RUNPAD = {84, 181, 78, 28};
+static constexpr int LIST_X = 166, LIST_W = 320 - 166;
+static const Rect R_DEL = {298, 24, 16, 16};
+static constexpr int ROW_Y0 = BAND_Y + 22, ROW_H = 24;
+static constexpr int LIST_VISIBLE = (BOTBAR_Y - ROW_Y0) / ROW_H;
+static const Rect R_TOGGLE = {6, (int16_t)(BOTBAR_Y + 2), 150, 26};
+static const Rect R_RUNBAR = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
+static const Rect R_STEP = {6, (int16_t)(BOTBAR_Y + 2), 150, 26};
+static const Rect R_RESET = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
+
+// ---------------------------------------------------------------------------
+void GameScreen::begin(Profile* profile, uint32_t level) {
+  _profile = profile;
+  _level = level;
+  MazeGen::generate(_maze, profile ? profile->seedBase : 0, level);
+  _prog.clear();
+  // Resume the in-progress script for this level if present (SPEC §11.1).
+  if (profile && profile->workLevel == level && !profile->work.empty()) {
+    _prog = profile->work;
+  }
+  _editList = &_prog.main;
+  _par = shortestSolutionLen(_maze, profile && profile->unlocks.jump);
+  if (_par <= 0) _par = 1;
+  _stepMs = profile ? animStepMs(profile->settings) : 400;
+  _view = V_CODE;
+  _mode = M_EDIT;
+  _auto = false;
+  _selected = -1;
+  _scroll = 0;
+  _failNode = nullptr;
+  _drawnPose = _maze.startPose();
+  _it.load(&_prog, &_maze, _maze.startPose());
+}
+
+void GameScreen::enter() { drawCodeView(); }
+
+bool GameScreen::cornerUnlocked(int slot) const {
+  if (!_profile) return false;
+  switch (slot) {
+    case 0: return _profile->unlocks.jump;
+    case 1: return _profile->unlocks.repeat;
+    case 2: return _profile->unlocks.func;
+    case 3: return _profile->unlocks.sense;
+  }
+  return false;
+}
+
+// ---- chrome ---------------------------------------------------------------
+void GameScreen::drawChrome() {
+  auto& g = hal::display.gfx();
+  g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
+  char buf[40];
+  const char* nm = _profile ? _profile->name.c_str() : "Player";
+  snprintf(buf, sizeof(buf), "%s   Lv %u", nm, (unsigned)_level);
+  label(g, 6, 4, buf, C_INK);
+  uint32_t stars = _profile ? _profile->stats.starsTotal : 0;
+  snprintf(buf, sizeof(buf), "*%u", (unsigned)stars);
+  label(g, 280, 4, buf, C_ACCENT, textdatum_t::top_right);
+}
+
+// ---- maze view ------------------------------------------------------------
+void GameScreen::mazeGeometry(int& tile, int& ox, int& oy) {
+  int cols = _maze.cols(), rows = _maze.rows();
+  tile = SCREEN_W / cols;
+  int th = BAND_H / rows;
+  if (th < tile) tile = th;
+  int gw = tile * cols, gh = tile * rows;
+  ox = (SCREEN_W - gw) / 2;
+  oy = BAND_Y + (BAND_H - gh) / 2;
+}
+
+void GameScreen::drawCell(int r, int c) {
+  auto& g = hal::display.gfx();
+  int tile, ox, oy;
+  mazeGeometry(tile, ox, oy);
+  int x = ox + c * tile, y = oy + r * tile;
+  Tile t = _maze.at(r, c);
+  uint16_t bg = ((r + c) & 1) ? C_FLOOR : C_FLOOR2;
+  if (t == WALL) bg = C_WALL;
+  else if (t == PIT) bg = C_PIT;
+  g.fillRect(x, y, tile - 1, tile - 1, bg);
+  if (t == PIT) g.fillCircle(x + tile / 2, y + tile / 2, tile / 3, C_BG);
+  if (_maze.isGoal(r, c))
+    assets::drawGoalToken(g, x + tile / 2, y + tile / 2, tile,
+                          _profile ? _profile->avatar : 0);
+}
+
+void GameScreen::drawCharacterAt(const Pose& p) {
+  auto& g = hal::display.gfx();
+  int tile, ox, oy;
+  mazeGeometry(tile, ox, oy);
+  int cx = ox + p.col * tile + tile / 2;
+  int cy = oy + p.row * tile + tile / 2;
+  assets::drawCharacter(g, cx, cy, tile, _profile ? _profile->avatar : 0, p.facing);
+}
+
+void GameScreen::drawMazeView(bool peek) {
+  auto& g = hal::display.gfx();
+  g.fillRect(0, BAND_Y, SCREEN_W, BAND_H, C_BG);
+  drawChrome();
+  for (int r = 0; r < _maze.rows(); r++)
+    for (int c = 0; c < _maze.cols(); c++) drawCell(r, c);
+  Pose p = (_mode == M_RUN) ? _it.pose() : _maze.startPose();
+  drawCharacterAt(p);
+  _drawnPose = p;
+  drawBottomBar();
+  if (peek) label(g, SCREEN_W / 2, BAND_Y + 8, "(peek)", C_DIM,
+                  textdatum_t::top_center);
+}
+
+// ---- code view ------------------------------------------------------------
+void GameScreen::drawCodeView() {
+  auto& g = hal::display.gfx();
+  g.fillRect(0, BAND_Y, SCREEN_W, BAND_H, C_BG);
+  drawChrome();
+  drawControlPad();
+  drawProgramList();
+  drawBottomBar();
+}
+
+void GameScreen::drawControlPad() {
+  auto& g = hal::display.gfx();
+  auto cell = [&](int i, int j, Glyph gl, uint16_t col, bool locked) {
+    Rect r = padCell(i, j);
+    panel(g, r, locked ? C_LOCK : C_PANEL_HI);
+    drawGlyph(g, locked ? Glyph::LOCK : gl, r.cx(), r.cy(), 22,
+              locked ? C_DIM : col);
+  };
+  bool bw = _profile && _profile->unlocks.backward;
+  cell(0, 1, Glyph::ARROW_UP, C_MOVE, false);          // FORWARD
+  cell(1, 0, Glyph::TURN_L, C_TURN, false);            // TURN LEFT
+  cell(1, 2, Glyph::TURN_R, C_TURN, false);            // TURN RIGHT
+  cell(2, 1, Glyph::ARROW_DOWN, C_MOVE, !bw);          // BACKWARD (locked < Tier1.5)
+  // centre avatar
+  Rect ctr = padCell(1, 1);
+  panel(g, ctr, C_PANEL);
+  assets::drawCharacter(g, ctr.cx(), ctr.cy(), 44, _profile ? _profile->avatar : 0,
+                        EAST);
+  // four corner growth slots
+  const Glyph cg[4] = {Glyph::JUMP, Glyph::REPEAT, Glyph::CALL, Glyph::SENSE};
+  const uint16_t cc[4] = {C_GO, C_LOOP, C_FUNC, C_SENSE};
+  const int ci[4] = {0, 0, 2, 2}, cj[4] = {0, 2, 0, 2};
+  for (int s = 0; s < 4; s++)
+    cell(ci[s], cj[s], cg[s], cc[s], !cornerUnlocked(s));
+  // CLEAR / RUN under the pad
+  button(g, R_CLEAR, "CLEAR", C_BAD, C_PANEL);
+  button(g, R_RUNPAD, "RUN", C_GO, C_PANEL);
+  drawGlyph(g, Glyph::PLAY, R_RUNPAD.x + 14, R_RUNPAD.cy(), 12, C_GO);
+}
+
+void GameScreen::flatten(NodeList& list, int depth, std::vector<Row>& out) {
+  for (size_t i = 0; i < list.size(); i++) {
+    out.push_back({&list[i], &list, (int)i, depth});
+    if (!list[i].body.empty()) flatten(list[i].body, depth + 1, out);
+  }
+}
+
+static void nodeLabel(const Node& n, char* buf, size_t bn, Glyph& gl, uint16_t& col) {
+  switch (n.type) {
+    case N_CMD:
+      switch (n.cmd) {
+        case CMD_FWD:    gl = Glyph::ARROW_UP;  col = C_MOVE; snprintf(buf, bn, "forward"); break;
+        case CMD_BACK:   gl = Glyph::ARROW_DOWN;col = C_MOVE; snprintf(buf, bn, "back"); break;
+        case CMD_TURN_L: gl = Glyph::TURN_L;    col = C_TURN; snprintf(buf, bn, "turn L"); break;
+        case CMD_TURN_R: gl = Glyph::TURN_R;    col = C_TURN; snprintf(buf, bn, "turn R"); break;
+        case CMD_JUMP:   gl = Glyph::JUMP;      col = C_GO;   snprintf(buf, bn, "jump"); break;
+        default:         gl = Glyph::PLAY;      col = C_INK;  snprintf(buf, bn, "?"); break;
+      }
+      break;
+    case N_REPEAT:       gl = Glyph::REPEAT; col = C_LOOP;  snprintf(buf, bn, "repeat %d", n.count); break;
+    case N_REPEAT_UNTIL: gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "until..."); break;
+    case N_IF:           gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "if..."); break;
+    case N_CALL:         gl = Glyph::CALL;   col = C_FUNC;  snprintf(buf, bn, "call F%d", n.func); break;
+  }
+}
+
+void GameScreen::drawProgramList() {
+  auto& g = hal::display.gfx();
+  g.fillRect(LIST_X, BAND_Y, LIST_W, BAND_H, C_PANEL);
+  char hdr[24];
+  _writtenCount = programWrittenCount(_prog);
+  snprintf(hdr, sizeof(hdr), "PROGRAM  %d/%d", _writtenCount, _par);
+  label(g, LIST_X + 6, BAND_Y + 5, hdr, C_INK);
+  if (_selected >= 0) { button(g, R_DEL, "x", C_BAD, C_PANEL_HI); }
+
+  std::vector<Row> rows;
+  flatten(_prog.main, 0, rows);
+  int n = (int)rows.size();
+  if (_selected >= n) _selected = -1;
+  // keep selection visible
+  if (_selected >= 0 && _selected < _scroll) _scroll = _selected;
+  if (_selected >= _scroll + LIST_VISIBLE) _scroll = _selected - LIST_VISIBLE + 1;
+  if (_scroll > n - LIST_VISIBLE) _scroll = (n > LIST_VISIBLE) ? n - LIST_VISIBLE : 0;
+  if (_scroll < 0) _scroll = 0;
+
+  for (int vi = 0; vi < LIST_VISIBLE; vi++) {
+    int ri = _scroll + vi;
+    if (ri >= n) break;
+    Row& row = rows[ri];
+    int y = ROW_Y0 + vi * ROW_H;
+    bool sel = (ri == _selected);
+    if (sel) g.fillRoundRect(LIST_X + 2, y, LIST_W - 4, ROW_H - 2, 4, C_PANEL_HI);
+    char num[6]; snprintf(num, sizeof(num), "%d", ri + 1);
+    label(g, LIST_X + 6, y + 6, num, C_DIM);
+    int gx = LIST_X + 26 + row.depth * 12;
+    char lab[20]; Glyph gl = Glyph::PLAY; uint16_t col = C_INK;
+    nodeLabel(*row.node, lab, sizeof(lab), gl, col);
+    drawGlyph(g, gl, gx + 8, y + ROW_H / 2 - 1, 14, col);
+    label(g, gx + 22, y + 6, lab, C_INK);
+  }
+  if (n == 0)
+    label(g, LIST_X + 8, ROW_Y0 + 8, "tap pad to add", C_DIM);
+}
+
+void GameScreen::drawBottomBar() {
+  auto& g = hal::display.gfx();
+  g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
+  if (_mode == M_RUN) {
+    button(g, R_STEP, "STEP", C_INK, C_PANEL);
+    button(g, R_RESET, "RESET", C_INK, C_PANEL);
+  } else {
+    const char* t = (_view == V_CODE) ? "VIEW: Maze" : "VIEW: Code";
+    button(g, R_TOGGLE, t, C_ACCENT, C_PANEL);
+    button(g, R_RUNBAR, "RUN >", C_GO, C_PANEL);
+  }
+}
+
+void GameScreen::toast(const char* msg, uint16_t color) {
+  auto& g = hal::display.gfx();
+  int w = 180, h = 30, x = (SCREEN_W - w) / 2, y = BAND_Y + 8;
+  g.fillRoundRect(x, y, w, h, 6, C_PANEL);
+  g.drawRoundRect(x, y, w, h, 6, color);
+  label(g, x + w / 2, y + h / 2, msg, color, textdatum_t::middle_center);
+}
+
+// ---- input ----------------------------------------------------------------
+void GameScreen::appendCommand(Cmd c) {
+  if (!_editList) return;
+  _editList->push_back(Node::command(c));
+  if (_profile) {  // command histogram (SPEC §9)
+    if (c == CMD_FWD) _profile->stats.commandsUsed[CS_FWD]++;
+    else if (c == CMD_BACK) _profile->stats.commandsUsed[CS_BACK]++;
+    else if (c == CMD_JUMP) _profile->stats.commandsUsed[CS_JUMP]++;
+    else _profile->stats.commandsUsed[CS_TURN]++;
+  }
+  _selected = -1;
+  drawProgramList();
+}
+
+void GameScreen::handlePadTap(int x, int y) {
+  // direction cells
+  if (padCell(0, 1).contains(x, y)) { appendCommand(CMD_FWD); return; }
+  if (padCell(1, 0).contains(x, y)) { appendCommand(CMD_TURN_L); return; }
+  if (padCell(1, 2).contains(x, y)) { appendCommand(CMD_TURN_R); return; }
+  if (padCell(2, 1).contains(x, y)) {
+    if (_profile && _profile->unlocks.backward) appendCommand(CMD_BACK);
+    return;
+  }
+  // corner growth slots
+  const int ci[4] = {0, 0, 2, 2}, cj[4] = {0, 2, 0, 2};
+  for (int s = 0; s < 4; s++) {
+    if (padCell(ci[s], cj[s]).contains(x, y) && cornerUnlocked(s)) {
+      if (s == 0) appendCommand(CMD_JUMP);
+      else if (s == 1) { _editList->push_back(Node::repeat(2)); _selected = -1; drawProgramList(); }
+      else if (s == 2) { _editList->push_back(Node::call(1)); _selected = -1; drawProgramList(); }
+      else if (s == 3) { _editList->push_back(Node::repeatUntil(WALL_AHEAD)); _selected = -1; drawProgramList(); }
+      return;
+    }
+  }
+}
+
+void GameScreen::handleListTap(int x, int y) {
+  if (_selected >= 0 && R_DEL.contains(x, y)) { deleteSelected(); return; }
+  if (x < LIST_X) return;
+  for (int vi = 0; vi < LIST_VISIBLE; vi++) {
+    int yy = ROW_Y0 + vi * ROW_H;
+    if (y >= yy && y < yy + ROW_H) {
+      int ri = _scroll + vi;
+      std::vector<Row> rows;
+      flatten(_prog.main, 0, rows);
+      if (ri < (int)rows.size()) _selected = (ri == _selected) ? -1 : ri;
+      drawProgramList();
+      return;
+    }
+  }
+}
+
+void GameScreen::deleteSelected() {
+  std::vector<Row> rows;
+  flatten(_prog.main, 0, rows);
+  if (_selected < 0 || _selected >= (int)rows.size()) return;
+  Row& r = rows[_selected];
+  r.list->erase(r.list->begin() + r.index);
+  _selected = -1;
+  drawProgramList();
+}
+
+void GameScreen::handleCodeTap(int x, int y) {
+  if (R_CLEAR.contains(x, y)) { _prog.main.clear(); _selected = -1; drawProgramList(); return; }
+  if (R_RUNPAD.contains(x, y)) { startRun(); return; }
+  if (x < LIST_X) handlePadTap(x, y);
+  else handleListTap(x, y);
+}
+
+void GameScreen::startRun() {
+  if (_prog.main.empty()) { toast("add some commands!", C_ACCENT); return; }
+  if (_profile) {
+    _profile->stats.totalRuns++;
+    _profile->workLevel = _level;       // autosave resume slot in memory (SPEC §11.1)
+    _profile->work = _prog;
+  }
+  _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
+  _mode = M_RUN;
+  _auto = true;
+  _view = V_MAZE;
+  _failNode = nullptr;
+  drawMazeView(false);
+  _lastStep = 0;
+}
+
+void GameScreen::resetRun() {
+  _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
+  _auto = false;
+  drawMazeView(false);
+}
+
+void GameScreen::stepOnce(uint32_t now) {
+  (void)now;
+  if (_it.finished()) return;
+  Pose old = _it.pose();
+  Outcome o = _it.step();
+  // dirty-rect: clear the cell we left, redraw the goal/character.
+  drawCell(old.row, old.col);
+  drawCharacterAt(_it.pose());
+  _drawnPose = _it.pose();
+
+  if (o == OUT_OK) return;
+  if (o == OUT_WIN) {
+    _mode = M_WIN;
+    _writtenCount = programWrittenCount(_prog);
+    _stars = starsFor(_writtenCount, _par);
+    if (_profile) {
+      _profile->stats.totalWins++;
+      _profile->stats.starsTotal += _stars;
+    }
+    // win overlay
+    auto& g = hal::display.gfx();
+    int w = 200, h = 80, x = (SCREEN_W - w) / 2, yy = (SCREEN_H - h) / 2;
+    g.fillRoundRect(x, yy, w, h, 10, C_PANEL);
+    g.drawRoundRect(x, yy, w, h, 10, C_GO);
+    label(g, SCREEN_W / 2, yy + 22, "YOU WIN!", C_GO, textdatum_t::middle_center, 2);
+    char st[16]; snprintf(st, sizeof(st), "%d star%s", _stars, _stars == 1 ? "" : "s");
+    label(g, SCREEN_W / 2, yy + 50, st, C_ACCENT, textdatum_t::middle_center);
+    label(g, SCREEN_W / 2, yy + 68, "tap to continue", C_DIM, textdatum_t::middle_center);
+    return;
+  }
+  // failure (BONK / FELL / DONE_NO_WIN)
+  if (_profile) {
+    if (o == OUT_BONK) _profile->stats.bonks++;
+    else if (o == OUT_FELL) _profile->stats.falls++;
+  }
+  _failNode = _it.currentNode();
+  _mode = M_FAIL;
+  _auto = false;
+  const char* msg = (o == OUT_BONK) ? "Bonk! a wall." :
+                    (o == OUT_FELL) ? "Splash! a pit." : "Didn't reach the goal.";
+  toast(msg, C_BAD);
+}
+
+// ---- main tick ------------------------------------------------------------
+app::Signal GameScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
+  int tx = 0, ty = 0;
+  bool tap = _tap.tapped(tp, now, tx, ty);
+
+  if (_mode == M_WIN) {
+    if (tap) return app::Signal::WON;
+    return app::Signal::NONE;
+  }
+
+  if (_mode == M_RUN) {
+    if (_auto && (_lastStep == 0 || now - _lastStep >= _stepMs)) {
+      stepOnce(now);
+      _lastStep = now;
+    }
+    if (tap && _mode == M_RUN) {
+      if (R_STEP.contains(tx, ty)) { _auto = false; stepOnce(now); _lastStep = now; }
+      else if (R_RESET.contains(tx, ty)) { resetRun(); }
+    }
+    if (_mode == M_FAIL) {  // a fail dropped us out of run -> back to code view
+      _view = V_CODE;
+      drawCodeView();
+    }
+    return app::Signal::NONE;
+  }
+
+  // M_EDIT / M_FAIL editing
+  if (_mode == M_FAIL) _mode = M_EDIT;
+
+  // deferred view toggle + hold-to-peek
+  if (tap && _view == V_CODE && R_TOGGLE.contains(tx, ty)) {
+    _toggleActive = true; _peeking = false; tap = false;
+  } else if (tap && _view == V_MAZE && R_TOGGLE.contains(tx, ty)) {
+    _view = V_CODE; drawCodeView(); tap = false;
+  }
+  if (_toggleActive) {
+    if (_view == V_CODE && !_peeking && _tap.heldMs(now) > 300) {
+      _peeking = true; drawMazeView(true);
+    }
+    if (!_tap.held()) {
+      if (_peeking) { _peeking = false; drawCodeView(); }
+      else { _view = V_MAZE; drawMazeView(false); }
+      _toggleActive = false;
+    }
+    return app::Signal::NONE;
+  }
+
+  if (tap) {
+    if (_view == V_CODE) handleCodeTap(tx, ty);
+    else if (R_RUNBAR.contains(tx, ty)) startRun();
+  }
+  return app::Signal::NONE;
+}
+
+}  // namespace screens

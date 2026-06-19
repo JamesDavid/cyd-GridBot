@@ -7,6 +7,11 @@
 #pragma once
 #include <Arduino.h>
 #include "core/Util.h"
+#include "game/Maze.h"
+#include "game/Program.h"
+#include "game/Interpreter.h"
+#include "game/MazeGen.h"
+#include "game/Score.h"
 
 namespace selftest {
 
@@ -28,6 +33,33 @@ inline void runAll() {
     bool same = true;
     for (int i = 0; i < 100; i++) if (a.next() != b.next()) same = false;
     check(same, "rng_deterministic");
+  }
+
+  // Interpreter fixtures under real ESP32 types (mirror the native tests).
+  {
+    gb::Maze m; m.reset(1, 4); m.fill(gb::FLOOR);
+    gb::Pose s; s.row = 0; s.col = 0; s.facing = gb::EAST;
+    m.setStart(s); m.set(0, 0, gb::START); m.setGoal(0, 3);
+    gb::Program p;
+    gb::Node rep = gb::Node::repeat(3);
+    rep.body.push_back(gb::Node::command(gb::CMD_FWD));
+    p.main.push_back(rep);
+    gb::Interpreter it; it.load(&p, &m, m.startPose());
+    check(it.runToEnd() == gb::OUT_WIN, "interp_repeat_win");
+    check(it.primCount() == 3, "interp_repeat_count");
+  }
+  {
+    gb::Maze m; m.reset(1, 2); m.fill(gb::FLOOR);
+    gb::Pose s; s.row = 0; s.col = 0; s.facing = gb::EAST;
+    m.setStart(s); m.set(0, 1, gb::WALL);
+    m.setGoal(0, 1);  // goal under a wall is unreachable, but FWD bonks first
+    gb::Program p; p.main.push_back(gb::Node::command(gb::CMD_FWD));
+    gb::Interpreter it; it.load(&p, &m, m.startPose());
+    check(it.runToEnd() == gb::OUT_BONK, "interp_bonk");
+  }
+  {
+    gb::Maze m; gb::MazeGen::generate(m, 73219, 1);
+    check(gb::shortestSolutionLen(m, false) > 0, "gen_solvable_lvl1");
   }
 
   Serial.printf("=== SELFTEST DONE: %d passed, %d failed ===\n", _pass, _fail);
