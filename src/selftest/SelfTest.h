@@ -128,6 +128,17 @@ inline void runAll() {
     check(a1.logHash() == a2.logHash(), "arena_deterministic");
   }
 
+  // Sumo determinism (PUSH verb) under ESP32 types.
+  {
+    gb::Program a = gb::hunterProgram(), b = gb::hunterProgram();
+    gb::Maze m; gb::Pose s0, s1;
+    gb::MazeGen::generateArena(m, 5, s0, s1);
+    gb::Arena a1, a2;
+    a1.setup(&m, &a, &b, s0, s1, gb::MatchType::SUMO); a1.run();
+    a2.setup(&m, &a, &b, s0, s1, gb::MatchType::SUMO); a2.run();
+    check(a1.logHash() == a2.logHash(), "sumo_deterministic");
+  }
+
   Serial.printf("=== SELFTEST DONE: %d passed, %d failed ===\n", _pass, _fail);
   Serial.println(_fail == 0 ? "SELFTEST RESULT: PASS" : "SELFTEST RESULT: FAIL");
 }

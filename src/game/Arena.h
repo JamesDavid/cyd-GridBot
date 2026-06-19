@@ -9,7 +9,7 @@
 
 namespace gb {
 
-enum class MatchType : uint8_t { RACE };  // SUMO, ZAP -> backlog
+enum class MatchType : uint8_t { RACE, SUMO };  // ZAP (FIRE verb) -> backlog
 enum class ArenaOutcome : uint8_t { RUNNING, BOT0, BOT1, DRAW };
 
 constexpr int ARENA_STEP_CAP = 300;

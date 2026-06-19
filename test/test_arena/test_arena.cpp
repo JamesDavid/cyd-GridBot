@@ -71,11 +71,44 @@ void test_arena_replay_independent_of_instances() {
   TEST_ASSERT_EQUAL((int)a1.outcome(), (int)a2.outcome());
 }
 
+// Sumo: a pusher shoves an idler standing in front of a pit -> idler out, pusher wins.
+void test_sumo_push_into_pit() {
+  Maze m;
+  m.reset(1, 4);
+  m.fill(FLOOR);
+  m.set(0, 3, PIT);                 // pit at the right end
+  Pose s0; s0.row = 0; s0.col = 1; s0.facing = EAST;  // pusher
+  Pose s1; s1.row = 0; s1.col = 2; s1.facing = WEST;  // victim, just left of the pit
+  // pusher program: PUSH repeatedly
+  Program pusher;
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(Node::command(CMD_PUSH));
+  pusher.main.push_back(loop);
+  Program idle;  // empty -> stands still then done
+  Arena ar;
+  ar.setup(&m, &pusher, &idle, s0, s1, MatchType::SUMO, 50);
+  ArenaOutcome o = ar.run();
+  TEST_ASSERT_EQUAL((int)ArenaOutcome::BOT0, (int)o);
+  TEST_ASSERT_FALSE(ar.alive(1));
+}
+
+void test_sumo_deterministic() {
+  Program a = hunterProgram(), b = hunterProgram();
+  Maze m; Pose s0, s1;
+  MazeGen::generateArena(m, 5, s0, s1);
+  Arena a1, a2;
+  a1.setup(&m, &a, &b, s0, s1, MatchType::SUMO); a1.run();
+  a2.setup(&m, &a, &b, s0, s1, MatchType::SUMO); a2.run();
+  TEST_ASSERT_EQUAL_UINT32(a1.logHash(), a2.logHash());
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_arena_deterministic_log);
   RUN_TEST(test_arena_symmetric_dash_is_draw);
   RUN_TEST(test_arena_faster_bot_wins);
   RUN_TEST(test_arena_replay_independent_of_instances);
+  RUN_TEST(test_sumo_push_into_pit);
+  RUN_TEST(test_sumo_deterministic);
   return UNITY_END();
 }
