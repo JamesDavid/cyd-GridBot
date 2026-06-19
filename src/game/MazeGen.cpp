@@ -168,6 +168,32 @@ void generateSpiral(Maze& out, int rows, int cols) {
   out.setGoal(t, l);  // top-left, end of the 3-sided corridor
 }
 
+void generateArena(Maze& out, uint32_t seed, Pose& s0, Pose& s1) {
+  Rng rng(seed);
+  int rows = 5 + (int)rng.below(2);       // 5..6 (odd-ish), keep a clear mid row
+  int cols = 9;                            // odd so there's a true centre column
+  out.reset(rows, cols);
+  out.fill(FLOOR);
+  int rmid = rows / 2, cmid = cols / 2;
+
+  // Mirror a few symmetric walls/pits so neither side is favoured (no RNG asymmetry).
+  int decos = 1 + (int)rng.below(2);
+  for (int k = 0; k < decos; k++) {
+    int rr = (int)rng.below(rows);
+    int cc = (int)rng.below(cmid - 1);     // left half, away from the centre column
+    if (rr == rmid || cc == 0) continue;   // keep the mid row + start columns clear
+    Tile t = rng.chance(50) ? WALL : PIT;
+    out.set(rr, cc, t);
+    out.set(rr, cols - 1 - cc, t);         // mirror to the right half
+  }
+
+  out.setGoal(rmid, cmid);
+  s0.row = (int8_t)rmid; s0.col = 0;        s0.facing = EAST;
+  s1.row = (int8_t)rmid; s1.col = (int8_t)(cols - 1); s1.facing = WEST;
+  out.set(s0.row, s0.col, START);
+  out.set(s1.row, s1.col, START);
+}
+
 int generateBoards(Maze* out, int maxOut, uint32_t seedBase, int level) {
   if (!isMultiLevel(level)) {
     generate(out[0], seedBase, level);

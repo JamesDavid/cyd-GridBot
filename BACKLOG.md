@@ -34,10 +34,14 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [ ] Par tuning per tier (loops/functions rewarded more explicitly).
 
 ## Arena mode (SPEC §18 — post-campaign capstone)
+- [x] Deterministic N=2 tick engine + Race match type + resolution pass (collision
+      bounce, fall-out, win check). Determinism proven by byte-identical log test.
+- [x] Symmetric arena generation (mirrored hazards, equidistant starts).
+- [x] Race demo screen: player's library bot (or wall-follower) vs a house AI bot.
 - [ ] Sumo match type (`PUSH` verb) and Zap (`FIRE` verb) on the shared tick engine.
-- [ ] Built-in AI bot roster (always-forward, wall-follower, ENEMY_NEAR hunter).
-- [ ] Library bots as fighters; hotseat lock-in/handoff screen.
-- [ ] Symmetric arena generation (mirrored hazards, equidistant starts).
+- [ ] Fuller AI bot roster (always-forward, ENEMY_NEAR hunter) + opponent picker UI.
+- [ ] Author the arena bot in the Code view (currently uses the latest library entry).
+- [ ] Hotseat (2 kids, 1 device) lock-in / handoff screen.
 
 ## Hardware / platform
 - [ ] Resolve the §1.1 2-USB panel question on the real unit (ILI9341 vs ST7789,

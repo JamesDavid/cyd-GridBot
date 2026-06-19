@@ -13,6 +13,7 @@
 #include "game/MazeGen.h"
 #include "game/Score.h"
 #include "game/Bots.h"
+#include "game/Arena.h"
 #include "store/ProfileStore.h"
 
 namespace selftest {
@@ -114,6 +115,17 @@ inline void runAll() {
       }
     }
     check(allWin, "wall_follower_clears_sets");
+  }
+
+  // Arena determinism: same inputs -> identical match log (SPEC §18.1).
+  {
+    gb::Program a = gb::wallFollowerProgram(), b = gb::wallFollowerProgram();
+    gb::Maze m; gb::Pose s0, s1;
+    gb::MazeGen::generateArena(m, 42, s0, s1);
+    gb::Arena a1, a2;
+    a1.setup(&m, &a, &b, s0, s1); a1.run();
+    a2.setup(&m, &a, &b, s0, s1); a2.run();
+    check(a1.logHash() == a2.logHash(), "arena_deterministic");
   }
 
   Serial.printf("=== SELFTEST DONE: %d passed, %d failed ===\n", _pass, _fail);

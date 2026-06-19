@@ -65,6 +65,11 @@ void App::drawIntro() {
   if (newText) label(g, SCREEN_W / 2, y + 52, newText, C_GO, textdatum_t::middle_center);
 
   label(g, SCREEN_W / 2, y + h - 22, "tap to start", C_DIM, textdatum_t::middle_center);
+
+  // Arena unlocks after the sensing tier (SPEC §18).
+  if (_profile.unlocks.sense) {
+    button(g, _arenaBtn, "ARENA >", C_FUNC, C_PANEL);
+  }
 }
 
 void App::gotoGame() {
@@ -95,7 +100,13 @@ void App::tick(uint32_t now) {
     }
     case State::INTRO: {
       int x, y;
-      if (_introTap.tapped(tp, now, x, y)) gotoGame();
+      if (_introTap.tapped(tp, now, x, y)) {
+        if (_profile.unlocks.sense && _arenaBtn.contains(x, y)) {
+          _arena.begin(&_profile); _arena.enter(); _state = State::ARENA;
+        } else {
+          gotoGame();
+        }
+      }
       break;
     }
     case State::GAME: {
@@ -114,6 +125,11 @@ void App::tick(uint32_t now) {
     case State::STATS: {
       Signal s = _stats.tick(now, tp);
       if (s == Signal::BACK) gotoSelect();
+      break;
+    }
+    case State::ARENA: {
+      Signal s = _arena.tick(now, tp);
+      if (s == Signal::BACK) gotoIntro(_profile.level);
       break;
     }
   }

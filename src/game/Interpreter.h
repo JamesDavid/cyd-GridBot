@@ -34,6 +34,7 @@ class Interpreter {
   bool finished() const { return _finished; }
   Outcome lastOutcome() const { return _last; }
   const Pose& pose() const { return _pose; }
+  void setPose(const Pose& p) { _pose = p; }  // arena collision revert (SPEC §18.1)
   int primCount() const { return _prim; }
   // The node whose command was last executed — for highlighting a failing step.
   const Node* currentNode() const { return _current; }

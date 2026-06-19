@@ -41,6 +41,11 @@ void generateSpiral(Maze& out, int rows, int cols);
 // levels; 2-3 wall-follower-solvable spirals for sensing levels (SPEC §7.1).
 // Returns the board count (<= MAX_BOARDS).
 int generateBoards(Maze* out, int maxOut, uint32_t seedBase, int level);
+
+// Symmetric Race arena (SPEC §18.1): a mirrored board with the GOAL on the centre
+// column and two starts equidistant from it (left facing E, right facing W), so
+// neither bot has a positional edge. Returns the two start poses via s0/s1.
+void generateArena(Maze& out, uint32_t seed, Pose& s0, Pose& s1);
 }  // namespace MazeGen
 
 }  // namespace gb
