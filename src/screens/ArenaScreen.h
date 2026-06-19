@@ -1,8 +1,10 @@
-// GridBot — Arena Race demo (SPEC §18). Pits the player's program (their latest
-// library bot, or the wall-follower) against a built-in AI on a symmetric board and
-// animates the deterministic match. A minimal capstone; authoring reuse, opponent
-// picker, hotseat and Sumo/Zap are in BACKLOG.
+// GridBot — Arena (SPEC §18). Pre-match menu (Race/Sumo + opponent), then an
+// animated deterministic match. Opponents: House AI, Hotseat 2P (lock-in/handoff),
+// and Radio (ESP-NOW, hardware-pending). Authoring-in-code-view -> BACKLOG; bots are
+// picked from built-ins + the player's library.
 #pragma once
+#include <vector>
+#include <string>
 #include "app/Screen.h"
 #include "ui/UI.h"
 #include "game/Maze.h"
@@ -18,6 +20,14 @@ class ArenaScreen : public app::IScreen {
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
 
  private:
+  enum class Phase : uint8_t { MENU, PICK1, HANDOFF, PICK2, BOARD, DONE };
+  struct Candidate { std::string name; gb::Program prog; uint8_t avatar; };
+
+  void buildCandidates();
+  void drawMenu();
+  void drawPick(int player);
+  void drawHandoff();
+  void startMatch();
   void drawBoard();
   void mazeGeometry(int& tile, int& ox, int& oy);
   void drawCell(int r, int c);
@@ -25,13 +35,16 @@ class ArenaScreen : public app::IScreen {
   void finishOverlay();
 
   gb::Profile* _profile = nullptr;
+  std::vector<Candidate> _cands;
+  gb::MatchType _type = gb::MatchType::RACE;
+  bool _hotseat = false;
+  int _pick0 = -1, _pick1 = -1;
+
   gb::Maze _maze;
-  gb::Program _p0, _p1;
   gb::Pose _s0, _s1;
   gb::Arena _arena;
-  gb::Pose _drawn[2];
+  Phase _phase = Phase::MENU;
   bool _running = false;
-  bool _done = false;
   uint32_t _last = 0;
   app::TapDetector _tap;
 };
