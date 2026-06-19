@@ -13,7 +13,11 @@ static const char* KEY_LABELS[28] = {
   "O","P","Q","R","S","T","U",
   "V","W","X","Y","Z","DEL","OK"};
 
-void ProfileCreateScreen::begin() { _name.clear(); _avatar = 0; }
+void ProfileCreateScreen::begin() { _name.clear(); _avatar = 0; _edit = false; }
+
+void ProfileCreateScreen::beginEdit(const std::string& name, uint8_t avatar) {
+  _name = name; _avatar = avatar; _edit = true;
+}
 
 ui::Rect ProfileCreateScreen::keyRect(int i) const {
   int r = i / KB_COLS, c = i % KB_COLS;
@@ -40,7 +44,7 @@ void ProfileCreateScreen::draw() {
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
-  label(g, SCREEN_W / 2, 4, "New Player", C_ACCENT, textdatum_t::top_center);
+  label(g, SCREEN_W / 2, 4, _edit ? "Edit Player" : "New Player", C_ACCENT, textdatum_t::top_center);
 
   drawNameField();
 

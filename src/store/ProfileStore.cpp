@@ -19,8 +19,19 @@ static std::string pathFor(const std::string& id) {
 }
 
 // ---- (de)serialization ----------------------------------------------------
+static std::string genUuid() {
+  // 128-bit random id as hex (esp_random is hardware-RNG on ESP32).
+  char buf[33];
+  for (int i = 0; i < 4; i++) {
+    uint32_t r = esp_random();
+    snprintf(buf + i * 8, 9, "%08x", (unsigned)r);
+  }
+  return std::string(buf);
+}
+
 static void profileToJson(const gb::Profile& p, JsonObject o) {
   o["id"] = p.id;
+  o["uuid"] = p.uuid;
   o["name"] = p.name;
   o["avatar"] = p.avatar;
   o["level"] = p.level;
@@ -64,6 +75,7 @@ static void profileToJson(const gb::Profile& p, JsonObject o) {
 static void profileFromJson(JsonObjectConst o, gb::Profile& p) {
   p = gb::Profile{};
   p.id = (const char*)(o["id"] | "");
+  p.uuid = (const char*)(o["uuid"] | "");
   p.name = (const char*)(o["name"] | "Player");
   p.avatar = o["avatar"] | 0;
   p.level = o["level"] | 1;
@@ -197,6 +209,7 @@ std::string ProfileStore::createProfile(const std::string& name, uint8_t avatar)
 
   gb::Profile p;
   p.id = idbuf;
+  p.uuid = genUuid();
   p.name = name.empty() ? "Player" : name;
   p.avatar = avatar;
   p.level = 1;

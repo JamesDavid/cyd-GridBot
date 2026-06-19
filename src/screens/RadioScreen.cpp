@@ -62,6 +62,7 @@ void RadioScreen::startLink(bool trade) {
   net::BotCard mine;
   mine.name = _profile ? String(_profile->name.c_str()) : String("Player");
   mine.avatar = _myAvatar;
+  mine.uuid = _profile ? String(_profile->uuid.c_str()) : String("");
   mine.progJson = programToJsonString(_mine);
   net::radio.begin();
   net::radio.startSession(mine);

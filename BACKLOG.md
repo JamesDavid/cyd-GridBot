@@ -51,8 +51,21 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [ ] 4" ST7796 and ESP32-S3 CrowPanel targets (extra envs).
 
 ## Tooling (PIO_DEBUG loop)
-- [ ] On-device remote debug API: ElegantOTA `/update`, `/api/screen.jpg` JPEG
-      screenshot, `/api/tap|swipe|status`, plus `scripts/ota.ps1` + `scripts/shot.ps1`
-      so the screen can be observed/driven headlessly. (Not yet built — verification
-      so far is native tests + green builds; flashing requires the user's serial port.)
-- [ ] Capture real on-device screenshots for the README once a board is attached.
+- [x] USB-serial PIO_DEBUG loop: `scripts/shot.py` (screenshot via panel readback ->
+      PNG), `scripts/drive.py` (tap + screenshot driver), serial commands S/T/L/X in
+      firmware. Verified on the real CYD over COM3 — no WiFi needed.
+- [ ] Optional WiFi remote debug API (ElegantOTA `/update`, `/api/screen.jpg`,
+      `/api/tap|swipe|status`) as an alternative to the serial loop.
+- [x] Real on-device screenshots captured for verification (and available for README).
+
+## Hardware-testing fixes (found by flashing to the real CYD)
+- [x] Back/pause button in the game returns to the profile menu (SPEC §10).
+- [x] Failure feedback: reddened + shaken character + message on the maze, then a tap
+      to the Code view with the failing instruction flashed red (SPEC §8.3) — no
+      longer snaps straight back.
+- [x] Per-line delete: select a row + a big under-pad DEL button (40px target);
+      fixed a dangling fail-highlight pointer after delete.
+- [x] Profile edit (name/avatar) from the stats screen, keeping all stats/progress.
+- [x] Per-profile UUID for cross-session friend recognition (in the radio friend-card).
+- [ ] Touch reliability tuning on the resistive panel (lower Z-threshold / re-cal flow);
+      `X` serial command clears calibration to force a re-cal.

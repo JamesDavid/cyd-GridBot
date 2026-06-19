@@ -16,11 +16,18 @@ class Touch {
   void begin();                 // load calibration or run it if missing/stale
   TouchPoint read();            // debounced single read (invert flags applied)
   void recalibrate();           // force the 4-corner routine + persist
+  void clearCalibration();      // delete stored calibration (forces re-cal on reboot)
+  void inject(int x, int y);    // synthetic tap (PIO_DEBUG serial /api/tap equivalent)
+  void setLog(bool on) { _log = on; }
 
  private:
   bool loadCalibration();
   void saveCalibration(const uint16_t* data);
   void runCalibration();        // draws corners, stores result
+
+  int _injX = 0, _injY = 0, _injCount = 0;  // synthetic tap state
+  bool _log = false;
+  uint32_t _lastLog = 0;
 };
 
 extern Touch touch;

@@ -44,7 +44,8 @@ struct LibEntry {
 };
 
 struct Profile {
-  std::string id;          // "u01"
+  std::string id;          // "u01" (device-local filename id)
+  std::string uuid;        // stable global id for friend sync across devices
   std::string name = "Player";
   uint8_t avatar = 0;      // roster index (SPEC §4.1)
   uint32_t level = 1;      // current/highest level

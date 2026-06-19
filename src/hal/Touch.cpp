@@ -56,8 +56,21 @@ void Touch::runCalibration() {
 
 void Touch::recalibrate() { runCalibration(); }
 
+void Touch::clearCalibration() {
+  if (LittleFS.exists(CALIB_PATH)) LittleFS.remove(CALIB_PATH);
+}
+
+void Touch::inject(int x, int y) {
+  _injX = x; _injY = y; _injCount = 3;  // pressed for a few reads, then released
+}
+
 TouchPoint Touch::read() {
   TouchPoint p;
+  if (_injCount > 0) {                 // synthetic tap takes priority
+    _injCount--;
+    p.x = (int16_t)_injX; p.y = (int16_t)_injY; p.pressed = true;
+    return p;
+  }
   int32_t x = 0, y = 0;
   if (display.gfx().getTouch(&x, &y)) {
 #if TOUCH_INVERT_X
@@ -69,6 +82,10 @@ TouchPoint Touch::read() {
     p.x = (int16_t)x;
     p.y = (int16_t)y;
     p.pressed = true;
+    if (_log && millis() - _lastLog > 120) {
+      _lastLog = millis();
+      Serial.printf("TOUCH %d %d\n", p.x, p.y);
+    }
   }
   return p;
 }

@@ -15,6 +15,7 @@ namespace net {
 struct BotCard {
   String name;       // friend's profile name (<= 8 chars)
   uint8_t avatar = 0;
+  String uuid;       // friend's stable profile id (for cross-session recognition)
   String progJson;   // program AST serialized via gb::programToJson
 };
 

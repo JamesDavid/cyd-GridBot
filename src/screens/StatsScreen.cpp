@@ -7,6 +7,7 @@ using namespace gb;
 namespace screens {
 
 static const Rect R_BACK = {6, (int16_t)(BOTBAR_Y + 2), 120, 26};
+static const Rect R_EDIT = {180, (int16_t)(BOTBAR_Y + 2), 134, 26};
 static const char* CMD_NAMES[CS_COUNT] = {"Fwd","Back","Turn","Jump","Loop","Func","Sense"};
 
 void StatsScreen::enter() { draw(); }
@@ -54,12 +55,15 @@ void StatsScreen::draw() {
   }
 
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
+  button(g, R_EDIT, "Edit name/char", C_ACCENT, C_PANEL);
 }
 
 app::Signal StatsScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int tx, ty;
-  if (_tap.tapped(tp, now, tx, ty) && R_BACK.contains(tx, ty))
-    return app::Signal::BACK;
+  if (_tap.tapped(tp, now, tx, ty)) {
+    if (R_BACK.contains(tx, ty)) return app::Signal::BACK;
+    if (R_EDIT.contains(tx, ty)) return app::Signal::EDIT_PROFILE;
+  }
   return app::Signal::NONE;
 }
 

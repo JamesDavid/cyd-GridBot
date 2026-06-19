@@ -92,9 +92,17 @@ void App::tick(uint32_t now) {
     case State::CREATE: {
       Signal s = _create.tick(now, tp);
       if (s == Signal::CREATED) {
-        std::string id = store::profiles.createProfile(_create.name(), _create.avatar());
-        loadProfileInto(id);
-        gotoIntro(_profile.level);
+        if (_create.isEdit()) {
+          // tweak name/avatar in place — keep all stats/progress
+          _profile.name = _create.name();
+          _profile.avatar = _create.avatar();
+          saveProfile();
+          gotoSelect();
+        } else {
+          std::string id = store::profiles.createProfile(_create.name(), _create.avatar());
+          loadProfileInto(id);
+          gotoIntro(_profile.level);
+        }
       }
       break;
     }
@@ -111,6 +119,7 @@ void App::tick(uint32_t now) {
     }
     case State::GAME: {
       Signal s = _game.tick(now, tp);
+      if (s == Signal::BACK) { saveProfile(); gotoSelect(); break; }
       if (s == Signal::WON) {
         _profile.stats.levelsCompleted++;
         _profile.workLevel = 0;
@@ -125,6 +134,11 @@ void App::tick(uint32_t now) {
     case State::STATS: {
       Signal s = _stats.tick(now, tp);
       if (s == Signal::BACK) gotoSelect();
+      else if (s == Signal::EDIT_PROFILE) {
+        _create.beginEdit(_profile.name, _profile.avatar);
+        _create.enter();
+        _state = State::CREATE;
+      }
       break;
     }
     case State::ARENA: {

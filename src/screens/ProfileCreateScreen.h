@@ -9,12 +9,14 @@ namespace screens {
 
 class ProfileCreateScreen : public app::IScreen {
  public:
-  void begin();
+  void begin();                                   // new profile
+  void beginEdit(const std::string& name, uint8_t avatar);  // edit existing
   void enter() override;
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
 
   const std::string& name() const { return _name; }
   uint8_t avatar() const { return _avatar; }
+  bool isEdit() const { return _edit; }
 
  private:
   void draw();
@@ -24,6 +26,7 @@ class ProfileCreateScreen : public app::IScreen {
 
   std::string _name;
   uint8_t _avatar = 0;
+  bool _edit = false;
   app::TapDetector _tap;
 };
 

@@ -19,14 +19,16 @@ static constexpr int PAD_X0 = 6, PAD_Y0 = BAND_Y + 2, PAD_CELL = 50, PAD_PITCH =
 static Rect padCell(int i, int j) { return {(int16_t)(PAD_X0 + j * PAD_PITCH),
                                             (int16_t)(PAD_Y0 + i * PAD_PITCH),
                                             PAD_CELL, PAD_CELL}; }
-static const Rect R_CLEAR = {6, 181, 74, 28};
-static const Rect R_RUNPAD = {84, 181, 78, 28};
+static const Rect R_CLEAR  = {6, 179, 48, 30};
+static const Rect R_DELPAD = {58, 179, 46, 30};   // delete selected line (big target)
+static const Rect R_RUNPAD = {108, 179, 54, 30};
 static constexpr int LIST_X = 166, LIST_W = 320 - 166;
 static const Rect R_DEL = {298, 24, 16, 16};
 static const Rect R_RMINUS = {246, 24, 18, 16};   // repeat count -
 static const Rect R_RPLUS  = {268, 24, 18, 16};   // repeat count +
 static const Rect R_COND   = {244, 24, 46, 16};   // sense condition cycle
 static constexpr int ROW_Y0 = BAND_Y + 22, ROW_H = 24;
+static const Rect R_PAUSE = {296, 2, 22, 18};   // back/pause in the status bar
 static const Rect R_TOGGLE = {6, (int16_t)(BOTBAR_Y + 2), 150, 26};
 static const Rect R_RUNBAR = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
 static const Rect R_STEP = {6, (int16_t)(BOTBAR_Y + 2), 150, 26};
@@ -87,7 +89,9 @@ void GameScreen::drawChrome() {
   label(g, 6, 4, buf, C_INK);
   uint32_t stars = _profile ? _profile->stats.starsTotal : 0;
   snprintf(buf, sizeof(buf), "*%u", (unsigned)stars);
-  label(g, 280, 4, buf, C_ACCENT, textdatum_t::top_right);
+  label(g, 268, 4, buf, C_ACCENT, textdatum_t::top_right);
+  // back/pause button (SPEC §10): returns to the profile menu
+  button(g, R_PAUSE, "<", C_INK, C_PANEL_HI);
 }
 
 // ---- maze view ------------------------------------------------------------
@@ -174,10 +178,11 @@ void GameScreen::drawControlPad() {
   const int ci[4] = {0, 0, 2, 2}, cj[4] = {0, 2, 0, 2};
   for (int s = 0; s < 4; s++)
     cell(ci[s], cj[s], cg[s], cc[s], !cornerUnlocked(s));
-  // CLEAR / RUN under the pad
-  button(g, R_CLEAR, "CLEAR", C_BAD, C_PANEL);
+  // CLEAR / DEL / RUN under the pad
+  button(g, R_CLEAR, "CLR", C_BAD, C_PANEL);
+  bool canDel = (_selected >= 0);
+  button(g, R_DELPAD, "DEL", canDel ? C_BAD : C_DIM, C_PANEL);
   button(g, R_RUNPAD, "RUN", C_GO, C_PANEL);
-  drawGlyph(g, Glyph::PLAY, R_RUNPAD.x + 14, R_RUNPAD.cy(), 12, C_GO);
 }
 
 static uint16_t bracketColorFor(const Node& n) {
@@ -227,6 +232,7 @@ NodeList* GameScreen::appendTarget() {
 void GameScreen::appendNodeToTarget(const Node& n) {
   appendTarget()->push_back(n);
   _selected = -1;
+  _failNode = nullptr;  // editing clears the failure highlight
   hal::audio.blip();
   drawProgramList();
 }
@@ -313,7 +319,12 @@ void GameScreen::drawProgramList() {
     Row& row = rows[ri];
     int y = top + vi * ROW_H;
     bool sel = (ri == _selected);
-    if (sel) g.fillRoundRect(LIST_X + 2, y, LIST_W - 4, ROW_H - 2, 4, C_PANEL_HI);
+    bool failed = (_failNode && row.node == _failNode);
+    if (failed) {
+      g.fillRoundRect(LIST_X + 2, y, LIST_W - 4, ROW_H - 2, 4, C_BAD);
+    } else if (sel) {
+      g.fillRoundRect(LIST_X + 2, y, LIST_W - 4, ROW_H - 2, 4, C_PANEL_HI);
+    }
     char num[6]; snprintf(num, sizeof(num), "%d", ri + 1);
     label(g, LIST_X + 4, y + 6, num, C_DIM);
     // E-bracket for nested rows (SPEC §10)
@@ -431,6 +442,7 @@ void GameScreen::handleListTap(int x, int y) {
       flatten(*_editList, 0, rows);
       if (ri < (int)rows.size()) { _selected = (ri == _selected) ? -1 : ri; hal::audio.blip(); }
       drawProgramList();
+      drawControlPad();  // refresh DEL enabled state
       return;
     }
   }
@@ -443,12 +455,14 @@ void GameScreen::deleteSelected() {
   Row& r = rows[_selected];
   r.list->erase(r.list->begin() + r.index);
   _selected = -1;
+  _failNode = nullptr;  // the node pointer is now invalid; clear the fail highlight
   hal::audio.blip();
   drawProgramList();
 }
 
 void GameScreen::handleCodeTap(int x, int y) {
-  if (R_CLEAR.contains(x, y)) { _editList->clear(); _selected = -1; hal::audio.blip(); drawProgramList(); return; }
+  if (R_CLEAR.contains(x, y)) { _editList->clear(); _selected = -1; _failNode = nullptr; hal::audio.blip(); drawProgramList(); drawControlPad(); return; }
+  if (R_DELPAD.contains(x, y)) { if (_selected >= 0) { deleteSelected(); drawControlPad(); } return; }
   if (R_RUNPAD.contains(x, y)) { startRun(); return; }
   if (x < LIST_X) handlePadTap(x, y);
   else handleListTap(x, y);
@@ -558,8 +572,26 @@ void GameScreen::stepOnce(uint32_t now) {
   _auto = false;
   hal::audio.fail();
   hal::led.red();
-  const char* msg = (o == OUT_BONK) ? "Bonk! a wall." :
-                    (o == OUT_FELL) ? "Splash! a pit." : "Didn't reach the goal.";
+  // Redden + "shake" the character in place so the failure is visible on the maze
+  // (SPEC §8.3) — don't snap straight back to code.
+  {
+    auto& g = hal::display.gfx();
+    int tile, ox, oy; mazeGeometry(tile, ox, oy);
+    int cx = ox + _it.pose().col * tile + tile / 2;
+    int cy = oy + _it.pose().row * tile + tile / 2;
+    for (int s = 0; s < 3; s++) {  // quick shake
+      g.fillCircle(cx + (s & 1 ? 2 : -2), cy, tile * 0.36f, C_BAD);
+      delay(40);
+      drawCell(_it.pose().row, _it.pose().col);
+      drawCharacterAt(_it.pose());
+      delay(30);
+    }
+    g.fillCircle(cx, cy, tile * 0.36f, C_BAD);
+    g.drawCircle(cx, cy, tile * 0.36f + 1, ui::C_INK);
+  }
+  const char* msg = (o == OUT_BONK) ? "Bonk! a wall - tap to fix" :
+                    (o == OUT_FELL) ? "Splash! a pit - tap to fix" :
+                                      "Missed the goal - tap to fix";
   toast(msg, C_BAD);
 }
 
@@ -573,6 +605,13 @@ app::Signal GameScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     return app::Signal::NONE;
   }
 
+  // Failure: stay on the maze showing the reddened character + message; a tap takes
+  // the kid to the Code view with the failing instruction flashed (SPEC §8.3).
+  if (_mode == M_FAIL) {
+    if (tap) { _mode = M_EDIT; _view = V_CODE; drawCodeView(); }
+    return app::Signal::NONE;
+  }
+
   if (_mode == M_RUN) {
     if (_auto && (_lastStep == 0 || now - _lastStep >= _stepMs)) {
       stepOnce(now);
@@ -582,15 +621,14 @@ app::Signal GameScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       if (R_STEP.contains(tx, ty)) { _auto = false; stepOnce(now); _lastStep = now; }
       else if (R_RESET.contains(tx, ty)) { resetRun(); }
     }
-    if (_mode == M_FAIL) {  // a fail dropped us out of run -> back to code view
-      _view = V_CODE;
-      drawCodeView();
-    }
     return app::Signal::NONE;
   }
 
-  // M_EDIT / M_FAIL editing
-  if (_mode == M_FAIL) _mode = M_EDIT;
+  // back/pause -> profile menu (autosave the resume slot first, SPEC §11.1)
+  if (tap && R_PAUSE.contains(tx, ty)) {
+    if (_profile) { _profile->workLevel = _level; _profile->work = _prog; }
+    return app::Signal::BACK;
+  }
 
   // deferred view toggle + hold-to-peek
   if (tap && _view == V_CODE && R_TOGGLE.contains(tx, ty)) {
