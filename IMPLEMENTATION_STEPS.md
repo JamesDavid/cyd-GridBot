@@ -50,6 +50,8 @@ Determinism (`spec.md` §6.2 seeds, §18.1 no-RNG matches) is what makes channel
 
 \- Keep all board config in \*\*one\*\* LGFX config unit sourced from `cyd-esp32-2432s028r.md`, so a board revision is a single-file change.
 
+\- \*\*Defer, don't drop:\*\* whenever you skip or only partially implement a spec detail (a polish item, a nice-to-have, a deferred §16 decision), append it to `backlog.md` instead of leaving it implicit. Keep `backlog.md` as the living source of truth for everything not yet built, grouped by area; the README later shows only the highlights and links to it.
+
 
 
 \## The per-phase loop (apply to every phase below)

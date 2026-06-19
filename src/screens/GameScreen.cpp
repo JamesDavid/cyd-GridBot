@@ -1,6 +1,8 @@
 #include "screens/GameScreen.h"
 
 #include "hal/Display.h"
+#include "hal/Audio.h"
+#include "hal/Led.h"
 #include "ui/UI.h"
 #include "ui/Theme.h"
 #include "assets/Assets.h"
@@ -21,8 +23,9 @@ static const Rect R_CLEAR = {6, 181, 74, 28};
 static const Rect R_RUNPAD = {84, 181, 78, 28};
 static constexpr int LIST_X = 166, LIST_W = 320 - 166;
 static const Rect R_DEL = {298, 24, 16, 16};
+static const Rect R_RMINUS = {246, 24, 18, 16};   // repeat count -
+static const Rect R_RPLUS  = {268, 24, 18, 16};   // repeat count +
 static constexpr int ROW_Y0 = BAND_Y + 22, ROW_H = 24;
-static constexpr int LIST_VISIBLE = (BOTBAR_Y - ROW_Y0) / ROW_H;
 static const Rect R_TOGGLE = {6, (int16_t)(BOTBAR_Y + 2), 150, 26};
 static const Rect R_RUNBAR = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
 static const Rect R_STEP = {6, (int16_t)(BOTBAR_Y + 2), 150, 26};
@@ -42,6 +45,7 @@ void GameScreen::begin(Profile* profile, uint32_t level) {
   _par = shortestSolutionLen(_maze, profile && profile->unlocks.jump);
   if (_par <= 0) _par = 1;
   _stepMs = profile ? animStepMs(profile->settings) : 400;
+  hal::audio.setEnabled(profile ? profile->settings.sound : true);
   _view = V_CODE;
   _mode = M_EDIT;
   _auto = false;
@@ -168,11 +172,54 @@ void GameScreen::drawControlPad() {
   drawGlyph(g, Glyph::PLAY, R_RUNPAD.x + 14, R_RUNPAD.cy(), 12, C_GO);
 }
 
-void GameScreen::flatten(NodeList& list, int depth, std::vector<Row>& out) {
-  for (size_t i = 0; i < list.size(); i++) {
-    out.push_back({&list[i], &list, (int)i, depth});
-    if (!list[i].body.empty()) flatten(list[i].body, depth + 1, out);
+static uint16_t bracketColorFor(const Node& n) {
+  switch (n.type) {
+    case N_REPEAT: return C_LOOP;
+    case N_REPEAT_UNTIL:
+    case N_IF: return C_SENSE;
+    case N_CALL: return C_FUNC;
+    default: return C_DIM;
   }
+}
+
+void GameScreen::flatten(NodeList& list, int depth, std::vector<Row>& out, uint16_t bracket) {
+  for (size_t i = 0; i < list.size(); i++) {
+    out.push_back({&list[i], &list, (int)i, depth, bracket});
+    if (!list[i].body.empty())
+      flatten(list[i].body, depth + 1, out, bracketColorFor(list[i]));
+  }
+}
+
+int GameScreen::listTop() const {
+  bool tabs = _profile && _profile->unlocks.func;
+  return ROW_Y0 + (tabs ? 18 : 0);
+}
+
+ui::Rect GameScreen::funcTabRect(int i) const {
+  int w = (LIST_W - 8) / 3;
+  return {(int16_t)(LIST_X + 4 + i * w), (int16_t)(BAND_Y + 20),
+          (int16_t)(w - 2), 16};
+}
+
+NodeList* GameScreen::appendTarget() {
+  // If a block row is selected, new items go into its body; else the edit list.
+  if (_selected >= 0) {
+    std::vector<Row> rows;
+    flatten(*_editList, 0, rows);
+    if (_selected < (int)rows.size()) {
+      Node* n = rows[_selected].node;
+      if (n->type == N_REPEAT || n->type == N_IF || n->type == N_REPEAT_UNTIL)
+        return &n->body;
+    }
+  }
+  return _editList;
+}
+
+void GameScreen::appendNodeToTarget(const Node& n) {
+  appendTarget()->push_back(n);
+  _selected = -1;
+  hal::audio.blip();
+  drawProgramList();
 }
 
 static void nodeLabel(const Node& n, char* buf, size_t bn, Glyph& gl, uint16_t& col) {
@@ -197,39 +244,68 @@ static void nodeLabel(const Node& n, char* buf, size_t bn, Glyph& gl, uint16_t& 
 void GameScreen::drawProgramList() {
   auto& g = hal::display.gfx();
   g.fillRect(LIST_X, BAND_Y, LIST_W, BAND_H, C_PANEL);
-  char hdr[24];
+  const char* body = (_editList == &_prog.f1) ? "F1" : (_editList == &_prog.f2) ? "F2" : "MAIN";
+  char hdr[28];
   _writtenCount = programWrittenCount(_prog);
-  snprintf(hdr, sizeof(hdr), "PROGRAM  %d/%d", _writtenCount, _par);
+  snprintf(hdr, sizeof(hdr), "%s  %d/%d", body, _writtenCount, _par);
   label(g, LIST_X + 6, BAND_Y + 5, hdr, C_INK);
-  if (_selected >= 0) { button(g, R_DEL, "x", C_BAD, C_PANEL_HI); }
 
   std::vector<Row> rows;
-  flatten(_prog.main, 0, rows);
+  flatten(*_editList, 0, rows);
   int n = (int)rows.size();
   if (_selected >= n) _selected = -1;
-  // keep selection visible
+
+  // header controls for the selected row
+  if (_selected >= 0) {
+    Node* sn = rows[_selected].node;
+    if (sn->type == N_REPEAT) {
+      button(g, R_RMINUS, "-", C_LOOP, C_PANEL_HI);
+      button(g, R_RPLUS, "+", C_LOOP, C_PANEL_HI);
+    }
+    button(g, R_DEL, "x", C_BAD, C_PANEL_HI);
+  }
+
+  // MAIN | F1 | F2 tabs once functions unlock (SPEC §10)
+  if (_profile && _profile->unlocks.func) {
+    const char* tabs[3] = {"MAIN", "F1", "F2"};
+    NodeList* lists[3] = {&_prog.main, &_prog.f1, &_prog.f2};
+    for (int i = 0; i < 3; i++) {
+      Rect r = funcTabRect(i);
+      bool on = (_editList == lists[i]);
+      button(g, r, tabs[i], on ? C_ACCENT : C_DIM, on ? C_PANEL_HI : C_PANEL);
+    }
+  }
+
+  int top = listTop();
+  int visible = (BOTBAR_Y - top) / ROW_H;
   if (_selected >= 0 && _selected < _scroll) _scroll = _selected;
-  if (_selected >= _scroll + LIST_VISIBLE) _scroll = _selected - LIST_VISIBLE + 1;
-  if (_scroll > n - LIST_VISIBLE) _scroll = (n > LIST_VISIBLE) ? n - LIST_VISIBLE : 0;
+  if (_selected >= _scroll + visible) _scroll = _selected - visible + 1;
+  if (_scroll > n - visible) _scroll = (n > visible) ? n - visible : 0;
   if (_scroll < 0) _scroll = 0;
 
-  for (int vi = 0; vi < LIST_VISIBLE; vi++) {
+  for (int vi = 0; vi < visible; vi++) {
     int ri = _scroll + vi;
     if (ri >= n) break;
     Row& row = rows[ri];
-    int y = ROW_Y0 + vi * ROW_H;
+    int y = top + vi * ROW_H;
     bool sel = (ri == _selected);
     if (sel) g.fillRoundRect(LIST_X + 2, y, LIST_W - 4, ROW_H - 2, 4, C_PANEL_HI);
     char num[6]; snprintf(num, sizeof(num), "%d", ri + 1);
-    label(g, LIST_X + 6, y + 6, num, C_DIM);
-    int gx = LIST_X + 26 + row.depth * 12;
+    label(g, LIST_X + 4, y + 6, num, C_DIM);
+    // E-bracket for nested rows (SPEC §10)
+    if (row.depth > 0) {
+      int bx = LIST_X + 22 + (row.depth - 1) * 12;
+      g.drawFastVLine(bx, y + 2, ROW_H - 4, row.bracket);
+      g.drawFastHLine(bx, y + ROW_H / 2, 4, row.bracket);
+    }
+    int gx = LIST_X + 24 + row.depth * 12;
     char lab[20]; Glyph gl = Glyph::PLAY; uint16_t col = C_INK;
     nodeLabel(*row.node, lab, sizeof(lab), gl, col);
-    drawGlyph(g, gl, gx + 8, y + ROW_H / 2 - 1, 14, col);
-    label(g, gx + 22, y + 6, lab, C_INK);
+    drawGlyph(g, gl, gx + 7, y + ROW_H / 2 - 1, 12, col);
+    label(g, gx + 18, y + 6, lab, C_INK);
   }
   if (n == 0)
-    label(g, LIST_X + 8, ROW_Y0 + 8, "tap pad to add", C_DIM);
+    label(g, LIST_X + 8, top + 8, "tap pad to add", C_DIM);
 }
 
 void GameScreen::drawBottomBar() {
@@ -256,15 +332,13 @@ void GameScreen::toast(const char* msg, uint16_t color) {
 // ---- input ----------------------------------------------------------------
 void GameScreen::appendCommand(Cmd c) {
   if (!_editList) return;
-  _editList->push_back(Node::command(c));
   if (_profile) {  // command histogram (SPEC §9)
     if (c == CMD_FWD) _profile->stats.commandsUsed[CS_FWD]++;
     else if (c == CMD_BACK) _profile->stats.commandsUsed[CS_BACK]++;
     else if (c == CMD_JUMP) _profile->stats.commandsUsed[CS_JUMP]++;
     else _profile->stats.commandsUsed[CS_TURN]++;
   }
-  _selected = -1;
-  drawProgramList();
+  appendNodeToTarget(Node::command(c));
 }
 
 void GameScreen::handlePadTap(int x, int y) {
@@ -281,24 +355,48 @@ void GameScreen::handlePadTap(int x, int y) {
   for (int s = 0; s < 4; s++) {
     if (padCell(ci[s], cj[s]).contains(x, y) && cornerUnlocked(s)) {
       if (s == 0) appendCommand(CMD_JUMP);
-      else if (s == 1) { _editList->push_back(Node::repeat(2)); _selected = -1; drawProgramList(); }
-      else if (s == 2) { _editList->push_back(Node::call(1)); _selected = -1; drawProgramList(); }
-      else if (s == 3) { _editList->push_back(Node::repeatUntil(WALL_AHEAD)); _selected = -1; drawProgramList(); }
+      else if (s == 1) appendNodeToTarget(Node::repeat(2));
+      else if (s == 2) appendNodeToTarget(Node::call(1));
+      else if (s == 3) appendNodeToTarget(Node::repeatUntil(WALL_AHEAD));
       return;
     }
   }
 }
 
 void GameScreen::handleListTap(int x, int y) {
-  if (_selected >= 0 && R_DEL.contains(x, y)) { deleteSelected(); return; }
+  // selected-row header controls
+  if (_selected >= 0) {
+    std::vector<Row> rows;
+    flatten(*_editList, 0, rows);
+    if (_selected < (int)rows.size()) {
+      Node* sn = rows[_selected].node;
+      if (sn->type == N_REPEAT) {
+        if (R_RMINUS.contains(x, y)) { if (sn->count > 2) sn->count--; hal::audio.blip(); drawProgramList(); return; }
+        if (R_RPLUS.contains(x, y))  { if (sn->count < 5) sn->count++; hal::audio.blip(); drawProgramList(); return; }
+      }
+    }
+    if (R_DEL.contains(x, y)) { deleteSelected(); return; }
+  }
+  // function-body tabs
+  if (_profile && _profile->unlocks.func) {
+    NodeList* lists[3] = {&_prog.main, &_prog.f1, &_prog.f2};
+    for (int i = 0; i < 3; i++) {
+      if (funcTabRect(i).contains(x, y)) {
+        _editList = lists[i]; _selected = -1; _scroll = 0; hal::audio.blip();
+        drawProgramList(); return;
+      }
+    }
+  }
   if (x < LIST_X) return;
-  for (int vi = 0; vi < LIST_VISIBLE; vi++) {
-    int yy = ROW_Y0 + vi * ROW_H;
+  int top = listTop();
+  int visible = (BOTBAR_Y - top) / ROW_H;
+  for (int vi = 0; vi < visible; vi++) {
+    int yy = top + vi * ROW_H;
     if (y >= yy && y < yy + ROW_H) {
       int ri = _scroll + vi;
       std::vector<Row> rows;
-      flatten(_prog.main, 0, rows);
-      if (ri < (int)rows.size()) _selected = (ri == _selected) ? -1 : ri;
+      flatten(*_editList, 0, rows);
+      if (ri < (int)rows.size()) { _selected = (ri == _selected) ? -1 : ri; hal::audio.blip(); }
       drawProgramList();
       return;
     }
@@ -307,16 +405,17 @@ void GameScreen::handleListTap(int x, int y) {
 
 void GameScreen::deleteSelected() {
   std::vector<Row> rows;
-  flatten(_prog.main, 0, rows);
+  flatten(*_editList, 0, rows);
   if (_selected < 0 || _selected >= (int)rows.size()) return;
   Row& r = rows[_selected];
   r.list->erase(r.list->begin() + r.index);
   _selected = -1;
+  hal::audio.blip();
   drawProgramList();
 }
 
 void GameScreen::handleCodeTap(int x, int y) {
-  if (R_CLEAR.contains(x, y)) { _prog.main.clear(); _selected = -1; drawProgramList(); return; }
+  if (R_CLEAR.contains(x, y)) { _editList->clear(); _selected = -1; hal::audio.blip(); drawProgramList(); return; }
   if (R_RUNPAD.contains(x, y)) { startRun(); return; }
   if (x < LIST_X) handlePadTap(x, y);
   else handleListTap(x, y);
@@ -354,11 +453,13 @@ void GameScreen::stepOnce(uint32_t now) {
   drawCharacterAt(_it.pose());
   _drawnPose = _it.pose();
 
-  if (o == OUT_OK) return;
+  if (o == OUT_OK) { hal::audio.tick(); return; }
   if (o == OUT_WIN) {
     _mode = M_WIN;
     _writtenCount = programWrittenCount(_prog);
     _stars = starsFor(_writtenCount, _par);
+    hal::audio.win();
+    hal::led.green();
     if (_profile) {
       _profile->stats.totalWins++;
       _profile->stats.starsTotal += _stars;
@@ -382,6 +483,8 @@ void GameScreen::stepOnce(uint32_t now) {
   _failNode = _it.currentNode();
   _mode = M_FAIL;
   _auto = false;
+  hal::audio.fail();
+  hal::led.red();
   const char* msg = (o == OUT_BONK) ? "Bonk! a wall." :
                     (o == OUT_FELL) ? "Splash! a pit." : "Didn't reach the goal.";
   toast(msg, C_BAD);

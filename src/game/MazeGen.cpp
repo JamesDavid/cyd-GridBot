@@ -101,6 +101,38 @@ static bool tryGenerate(Maze& out, const Difficulty& d, uint32_t seed) {
   out.set(sr, sc, START);
   out.setGoal(gr, gc);  // also sets the GOAL tile
 
+  // After Jump unlocks, place single-tile PIT gaps ON straight stretches of the
+  // path so a jump is actually required (SPEC §6 fairness). Only on corridor cells
+  // (exactly two collinear path-neighbours), never adjacent to another gap (no
+  // 2-wide gaps, which Jump can't clear), never on START/GOAL.
+  if (d.allowPitGaps) {
+    int gaps = 0, maxGaps = (R + C) / 4;
+    const int dR[4] = {-1, 1, 0, 0}, dC[4] = {0, 0, -1, 1};
+    for (int r = 0; r < R && gaps < maxGaps; r++) {
+      for (int c = 0; c < C && gaps < maxGaps; c++) {
+        if (!path[r * C + c]) continue;
+        if ((r == sr && c == sc) || (r == gr && c == gc)) continue;
+        // keep the cells right next to START/GOAL clean (fairness: first/last move)
+        if (absv(r - sr) + absv(c - sc) <= 1) continue;
+        if (absv(r - gr) + absv(c - gc) <= 1) continue;
+        int ndir[4], ncnt = 0;
+        bool nearPit = false;
+        for (int k = 0; k < 4; k++) {
+          int nr = r + dR[k], nc = c + dC[k];
+          if (!out.inBounds(nr, nc)) continue;
+          if (out.at(nr, nc) == PIT) nearPit = true;
+          if (path[nr * C + nc]) ndir[ncnt++] = k;
+        }
+        if (nearPit || ncnt != 2) continue;
+        // collinear if the two path-neighbours are opposite directions
+        bool collinear = (dR[ndir[0]] + dR[ndir[1]] == 0) &&
+                         (dC[ndir[0]] + dC[ndir[1]] == 0);
+        if (!collinear) continue;
+        if (rng.chance(35)) { out.set(r, c, PIT); gaps++; }
+      }
+    }
+  }
+
   // Verify (cheap safety net, §6.3). The carved path is always walkable, so this
   // essentially never fails, but the assert protects against edge cases.
   return shortestSolutionLen(out, d.allowPitGaps) > 0;

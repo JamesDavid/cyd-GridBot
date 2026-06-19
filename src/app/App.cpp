@@ -1,6 +1,8 @@
 #include "app/App.h"
 #include "hal/Display.h"
 #include "hal/Touch.h"
+#include "hal/Audio.h"
+#include "hal/Led.h"
 #include "ui/UI.h"
 #include "store/ProfileStore.h"
 #include "game/MazeGen.h"
@@ -11,6 +13,8 @@ namespace app {
 
 void App::begin() {
   hal::touch.begin();
+  hal::audio.begin();
+  hal::led.begin();
   store::profiles.begin();
   gotoSelect();
 }
@@ -39,6 +43,7 @@ void App::gotoIntro(uint32_t level) {
 }
 
 void App::drawIntro() {
+  hal::led.off();
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   int w = 240, h = 120, x = (SCREEN_W - w) / 2, y = (SCREEN_H - h) / 2;

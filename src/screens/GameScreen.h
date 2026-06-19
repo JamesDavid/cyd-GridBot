@@ -4,6 +4,7 @@
 #include <vector>
 #include "app/Screen.h"
 #include "hal/Display.h"
+#include "ui/Theme.h"
 #include "game/Maze.h"
 #include "game/Program.h"
 #include "game/Interpreter.h"
@@ -25,7 +26,7 @@ class GameScreen : public app::IScreen {
   enum Mode : uint8_t { M_EDIT, M_RUN, M_WIN, M_FAIL };
 
   // flattened program-list row (rebuilt each list draw)
-  struct Row { gb::Node* node; gb::NodeList* list; int index; int depth; };
+  struct Row { gb::Node* node; gb::NodeList* list; int index; int depth; uint16_t bracket; };
 
   // ---- drawing ----
   void drawChrome();
@@ -48,7 +49,11 @@ class GameScreen : public app::IScreen {
   void startRun();
   void resetRun();
   void stepOnce(uint32_t now);
-  void flatten(gb::NodeList& list, int depth, std::vector<Row>& out);
+  void flatten(gb::NodeList& list, int depth, std::vector<Row>& out, uint16_t bracket = 0);
+  gb::NodeList* appendTarget();    // where new blocks/commands go (selected body or edit list)
+  void appendNodeToTarget(const gb::Node& n);
+  ui::Rect funcTabRect(int i) const;
+  int listTop() const;
 
   // ---- corner growth slots (SPEC §10) ----
   // 0=JUMP,1=REPEAT,2=CALL,3=SENSE. Returns whether unlocked for this profile.
