@@ -97,6 +97,7 @@ class GameScreen : public app::IScreen {
   bool _followTail = true;  // keep the newest command in view as you add
 
   gb::Pose _drawnPose;          // last drawn character pose (for dirty-rect)
+  bool _visited[gb::MAZE_MAX_CELLS] = {false};  // breadcrumb trail
   const gb::Node* _failNode = nullptr;
 
   // smooth movement tween between tiles

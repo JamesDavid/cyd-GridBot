@@ -43,16 +43,16 @@ constexpr int BOTBAR_Y = SCREEN_H - BOTBAR_H;
 // Level biomes — the floor/wall palette shifts as you climb so progress feels
 // visual. Walls keep the brick texture, just tinted; pits stay the background void.
 struct Biome {
-  uint16_t floorA, floorB, wall, wallLine;
+  uint16_t floorA, floorB, wall, wallLine, crumb;  // crumb = visited-tile breadcrumb
   const char* name;
 };
 
 inline Biome biomeFor(int level) {
-  if (level <= 5)  return {rgb(40, 72, 52), rgb(34, 62, 46), rgb(96, 150, 86),  rgb(62, 104, 56), "Meadow"};
-  if (level <= 10) return {rgb(58, 50, 44), rgb(50, 44, 40), rgb(156, 88, 60),  rgb(116, 60, 42), "Cavern"};
-  if (level <= 15) return {rgb(44, 60, 84), rgb(38, 54, 78), rgb(126, 176, 214),rgb(82, 124, 162),"Glacier"};
-  if (level <= 21) return {rgb(34, 46, 42), rgb(28, 40, 36), rgb(70, 140, 96),  rgb(46, 96, 64),  "Circuit"};
-  return                  {rgb(36, 30, 54), rgb(30, 26, 48), rgb(126, 92, 176), rgb(84, 62, 124), "Nebula"};
+  if (level <= 5)  return {rgb(40, 72, 52), rgb(34, 62, 46), rgb(96, 150, 86),  rgb(62, 104, 56), rgb(190, 230, 120), "Meadow"};
+  if (level <= 10) return {rgb(58, 50, 44), rgb(50, 44, 40), rgb(156, 88, 60),  rgb(116, 60, 42), rgb(255, 180, 90),  "Cavern"};
+  if (level <= 15) return {rgb(44, 60, 84), rgb(38, 54, 78), rgb(126, 176, 214),rgb(82, 124, 162),rgb(130, 230, 245), "Glacier"};
+  if (level <= 21) return {rgb(34, 46, 42), rgb(28, 40, 36), rgb(70, 140, 96),  rgb(46, 96, 64),  rgb(120, 245, 160), "Circuit"};
+  return                  {rgb(36, 30, 54), rgb(30, 26, 48), rgb(126, 92, 176), rgb(84, 62, 124), rgb(240, 150, 230), "Nebula"};
 }
 
 struct Rect {

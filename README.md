@@ -8,7 +8,7 @@ unlock as they go.
 
 | ![Gameplay](docs/img/gameplay.gif) |
 |:--|
-| **Write a program, watch it run.** Your robot reaches the green **battery** by following the commands you snap together. Brick walls block you, dark squares are pits you fall into, and the robot's little arrow shows which way "forward" is — everything is relative to *its* heading, which is the whole point: kids learn to think like the robot. (Levels change theme as you climb — this is the *Cavern*.) |
+| **Write a program, watch it run.** Your robot reaches the green **battery** by following the commands you snap together, dropping a glowing **breadcrumb trail** so you can see exactly where it went. Brick walls block you, dark squares are pits you fall into, and the robot's little arrow shows which way "forward" is — everything is relative to *its* heading, which is the whole point: kids learn to think like the robot. (Levels change theme as you climb — this is the *Cavern*.) |
 
 > ### ⚡ [**Flash it from your browser →**](https://jamesdavid.github.io/cyd-GridBot/)
 > Got a CYD? Plug it in and install GridBot straight from Chrome/Edge — no clone, no
@@ -208,16 +208,21 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
 
 ## What's next
 
-A few of the juiciest ideas on deck (full list in **[BACKLOG.md](BACKLOG.md)**):
+**Recently shipped:** ✅ smooth movement tween · ✅ win celebration + robot emotes ·
+✅ five **level biomes** · ✅ a 13-badge **achievements gallery** · ✅ **breadcrumb trails**
+(per-biome outlines of where the robot's been) · ✅ Sumo (PUSH) · ✅ a one-click **online
+flasher**.
 
-- **Juice & feel** — smooth tile tweening, particle bursts, robot emotes (happy bounce /
-  dizzy bonk), a chiptune loop.
+Still on deck (full list in **[BACKLOG.md](BACKLOG.md)**):
+
+- **Music** — a chiptune loop + per-event jingles (SFX are in; tunes are next).
 - **Puzzle Race** multiplayer — both players get a timer to code the *same* maze; furthest
-  progress wins.
-- **Level biomes** — grass / cave / ice / space palettes as you climb.
-- **Coin collectibles + a sprite-colour shop**, daily shared-seed challenges, and a
-  scrollable **badges gallery**.
-- **Sumo & Zap** arena verbs (PUSH is in; FIRE is next), library-bot tournaments.
+  progress (or closest to the goal) wins. One of several planned mode types.
+- **Smarter arena bots & strategic boards** so Races are more often decisive, plus the
+  **Zap** verb (FIRE), AI-roster opponents, and library-bot tournaments.
+- **Coin collectibles + a sprite-colour shop**, and **daily shared-seed challenges**.
+- **Verify the radio link** end-to-end on two boards (battle + Pokémon-style trade are
+  built but hardware-pending), and an optional **mini-map** in the Code view.
 
 ---
 

@@ -140,6 +140,9 @@ void GameScreen::drawCell(int r, int c) {
     g.drawFastVLine(x + 3 * tile / 4, y + tile / 3, tile / 3, _biome.wallLine);
   } else {
     g.fillRect(x, y, tile - 1, tile - 1, ((r + c) & 1) ? _biome.floorA : _biome.floorB);
+    // breadcrumb: outline tiles the robot has already stepped on (per-biome colour)
+    if (_visited[r * _maze.cols() + c])
+      g.drawRoundRect(x + 2, y + 2, tile - 5, tile - 5, 3, _biome.crumb);
   }
   if (_maze.isGoal(r, c)) {
     if (_profile && spriteHasPixels(_profile->customGoal))
@@ -595,6 +598,7 @@ void GameScreen::startRun() {
     _profile->workLevel = _level;       // autosave resume slot in memory (SPEC §11.1)
     _profile->work = _prog;
   }
+  for (auto& v : _visited) v = false;   // fresh breadcrumb trail
   _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
   _mode = M_RUN;
   _auto = true;
@@ -607,6 +611,7 @@ void GameScreen::startRun() {
 void GameScreen::resetRun() {
   _boardIdx = 0;
   _maze = _boards[0];
+  for (auto& v : _visited) v = false;
   _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
   _auto = false;
   _drawnPose = _maze.startPose();
@@ -618,6 +623,7 @@ void GameScreen::beginAutoRun() {
   _prog.clear();
   gb::solveMaze(_maze, _profile && _profile->unlocks.jump, _prog);
   _editList = &_prog.main;
+  for (auto& v : _visited) v = false;
   _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
   _mode = M_RUN;
   _auto = false;        // paused — advance with debugStep()
@@ -637,6 +643,7 @@ void GameScreen::debugStep() {
 void GameScreen::advanceBoard() {
   _boardIdx++;
   _maze = _boards[_boardIdx];
+  for (auto& v : _visited) v = false;
   _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
   _drawnPose = _maze.startPose();
   _tween = false;
@@ -673,6 +680,7 @@ void GameScreen::loadFromLibrary() {
 void GameScreen::stepOnce(uint32_t now) {
   if (_it.finished()) return;
   Pose old = _it.pose();
+  _visited[old.row * _maze.cols() + old.col] = true;  // drop a breadcrumb
   Outcome o = _it.step();
   bool moved = (old.row != _it.pose().row || old.col != _it.pose().col);
   if (moved && (o == OUT_OK || o == OUT_WIN)) {
