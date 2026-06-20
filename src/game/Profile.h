@@ -9,11 +9,10 @@
 
 namespace gb {
 
-// Command histogram buckets for stats (SPEC §9).
-enum CmdStat : uint8_t { CS_FWD, CS_BACK, CS_TURN, CS_JUMP, CS_REPEAT, CS_CALL, CS_SENSE, CS_COUNT };
+// Command histogram buckets for stats (SPEC §9). (Backward was removed from the game.)
+enum CmdStat : uint8_t { CS_FWD, CS_TURN, CS_JUMP, CS_REPEAT, CS_CALL, CS_SENSE, CS_COUNT };
 
 struct Unlocks {
-  bool backward = false;  // Tier 1.5
   bool jump = false;
   bool repeat = false;
   bool func = false;
@@ -93,7 +92,6 @@ inline Unlocks computeUnlocks(uint32_t level) {
   // Compressed curve so the conceptual payoff (sensing, SPEC §7.1) arrives soon —
   // the whole toolset is unlocked within ~22 levels rather than 55.
   Unlocks u;
-  u.backward = level >= 3;
   u.jump     = level >= 6;
   u.repeat   = level >= 10;
   u.func     = level >= 15;

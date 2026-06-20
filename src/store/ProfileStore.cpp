@@ -57,7 +57,6 @@ static void profileToJson(const gb::Profile& p, JsonObject o) {
   o["level"] = p.level;
   o["seedBase"] = p.seedBase;
   JsonObject u = o["unlocks"].to<JsonObject>();
-  u["backward"] = p.unlocks.backward;
   u["jump"] = p.unlocks.jump;
   u["repeat"] = p.unlocks.repeat;
   u["func"] = p.unlocks.func;
@@ -114,7 +113,6 @@ static void profileFromJson(JsonObjectConst o, gb::Profile& p) {
   p.level = o["level"] | 1;
   p.seedBase = o["seedBase"] | 0;
   JsonObjectConst u = o["unlocks"];
-  p.unlocks.backward = u["backward"] | false;
   p.unlocks.jump = u["jump"] | false;
   p.unlocks.repeat = u["repeat"] | false;
   p.unlocks.func = u["func"] | false;

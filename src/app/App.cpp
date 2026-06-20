@@ -21,7 +21,6 @@ static void tallyCommands(const gb::Program& p, gb::Stats& st) {
     if (n.type != gb::N_CMD) continue;
     switch (n.cmd) {
       case gb::CMD_FWD:    st.commandsUsed[gb::CS_FWD]++; break;
-      case gb::CMD_BACK:   st.commandsUsed[gb::CS_BACK]++; break;
       case gb::CMD_JUMP:   st.commandsUsed[gb::CS_JUMP]++; break;
       case gb::CMD_TURN_L:
       case gb::CMD_TURN_R: st.commandsUsed[gb::CS_TURN]++; break;

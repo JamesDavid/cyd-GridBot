@@ -207,7 +207,6 @@ void ProgramEditor::appendCommand(Cmd c) {
   if (!_editList) return;
   if (_profile) {
     if (c == CMD_FWD) _profile->stats.commandsUsed[CS_FWD]++;
-    else if (c == CMD_BACK) _profile->stats.commandsUsed[CS_BACK]++;
     else if (c == CMD_JUMP) _profile->stats.commandsUsed[CS_JUMP]++;
     else _profile->stats.commandsUsed[CS_TURN]++;
   }

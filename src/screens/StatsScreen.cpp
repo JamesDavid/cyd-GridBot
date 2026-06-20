@@ -14,7 +14,6 @@ static const Rect R_SHOP = {226, (int16_t)(BOTBAR_Y + 2), 88, 26};
 static const Rect R_DEL  = {262, 2, 54, 18};                 // small, top-right
 static const Rect R_CANCEL = {30, 150, 120, 34};
 static const Rect R_CONF   = {170, 150, 120, 34};
-static const char* CMD_NAMES[CS_COUNT] = {"Fwd","Back","Turn","Jump","Loop","Func","Sense"};
 
 void StatsScreen::enter() { _confirm = 0; draw(); }
 
@@ -65,19 +64,25 @@ void StatsScreen::draw() {
   snprintf(buf, sizeof(buf), "%u bonks / %u falls", (unsigned)s.bonks, (unsigned)s.falls);
   line("Oopsies", buf, C_BAD);
   snprintf(buf, sizeof(buf), "%u", (unsigned)s.currentStreak);     line("Streak", buf, C_INK);
+  // NeuroBot progress (only once the ML mode has been reached/used)
+  if (_p->unlocks.neuro || s.brainsTrained || s.fightersSaved) {
+    snprintf(buf, sizeof(buf), "%u trained / %u won / %u saved",
+             (unsigned)s.brainsTrained, (unsigned)s.neuroWins, (unsigned)s.fightersSaved);
+    line("Brains", buf, ui::rgb(120, 230, 245));
+  }
 
   // command histogram — locked commands greyed out with their unlock level
   label(g, 10, y + 1, "Commands used", C_DIM);
   y += 14;
-  const CmdStat order[7] = {CS_FWD, CS_TURN, CS_BACK, CS_JUMP, CS_REPEAT, CS_CALL, CS_SENSE};
-  const char* nm[7] = {"Fwd", "Turn", "Back", "Jump", "Loop", "Func", "Sense"};
-  const int lvl[7] = {1, 1, 3, 6, 10, 15, 22};
+  const CmdStat order[6] = {CS_FWD, CS_TURN, CS_JUMP, CS_REPEAT, CS_CALL, CS_SENSE};
+  const char* nm[6] = {"Fwd", "Turn", "Jump", "Loop", "Func", "Sense"};
+  const int lvl[6] = {1, 1, 6, 10, 15, 22};
   const gb::Unlocks& u = _p->unlocks;
-  const bool unl[7] = {true, true, u.backward, u.jump, u.repeat, u.func, u.sense};
+  const bool unl[6] = {true, true, u.jump, u.repeat, u.func, u.sense};
   uint16_t maxv = 1;
-  for (int i = 0; i < 7; i++) if (s.commandsUsed[order[i]] > maxv) maxv = s.commandsUsed[order[i]];
+  for (int i = 0; i < 6; i++) if (s.commandsUsed[order[i]] > maxv) maxv = s.commandsUsed[order[i]];
   int bx = 60, bw = 196;
-  for (int i = 0; i < 7; i++) {
+  for (int i = 0; i < 6; i++) {
     int yy = y + i * 11;
     label(g, 10, yy, nm[i], unl[i] ? C_INK : C_LOCK);
     if (unl[i]) {
@@ -117,7 +122,7 @@ app::Signal StatsScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   if (R_DRAW.contains(tx, ty)) return app::Signal::GOTO_DRAW;
   if (R_SHOP.contains(tx, ty)) return app::Signal::GOTO_SHOP;
   if (R_DEL.contains(tx, ty)) { _confirm = 1; drawConfirm(); }
-  // tapping the "Badges N/13 >" header opens the gallery
+  // tapping the "Badges N/16 >" header opens the gallery
   if (tx >= 158 && tx < 256 && ty < 22) return app::Signal::GOTO_BADGES;
   return app::Signal::NONE;
 }
