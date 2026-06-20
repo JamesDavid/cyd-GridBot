@@ -22,6 +22,7 @@ enum class Signal : uint8_t {
   GOTO_PUZZLE,     // open Puzzle Race (shared-maze timed coding contest)
   GOTO_CHALLENGE,  // open the shared-seed Challenge picker
   GOTO_NEURO_TRAIN, // train a NEURO block's brain (the neuro interface)
+  GOTO_ARENA_TRAIN, // train a brain to fight, vs an AI (Arena trainer)
 };
 
 class IScreen {

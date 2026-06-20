@@ -9,12 +9,17 @@
 
 namespace gb {
 
-constexpr int EVO_POP = 24;
-constexpr int EVO_KEEP = 6;   // top survivors that get to breed
+constexpr int EVO_POP = 16;   // population (kept modest: 3 screens each hold one in DRAM)
+constexpr int EVO_KEEP = 5;   // top survivors that get to breed
 
 // Fitness of one brain in a maze: progress toward the goal + reach bonus − falls −
 // a small efficiency cost. (Reuses the interpreter + N_NEURO; deterministic.)
 float scoreBrain(const Net& brain, const Maze& m, const EnemyView* enemy, int maxSteps);
+
+// Fitness as an ARENA FIGHTER: run a real Race match vs an AI program and score by
+// outcome (win >> progress >> loss) + survival. For training bots to battle.
+float scoreFighter(const Net& brain, const Maze& m, const Pose& s0, const Pose& s1,
+                   const Program& ai, int maxSteps);
 
 struct Evolve {
   Net pop[EVO_POP];
@@ -25,6 +30,8 @@ struct Evolve {
 
   void init(int in, int hid, int out, uint32_t seed);
   void evaluate(const Maze& m, const EnemyView* enemy = nullptr, int maxSteps = 120);
+  // score every brain as a fighter vs the AI (for the Arena trainer)
+  void evaluateArena(const Maze& m, const Pose& s0, const Pose& s1, const Program& ai, int maxSteps = 200);
   void breed();                       // selection + mutation -> next generation
   void step(const Maze& m, int maxSteps = 120) { evaluate(m, nullptr, maxSteps); breed(); }
 

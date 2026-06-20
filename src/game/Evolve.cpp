@@ -1,6 +1,7 @@
 #include "game/Evolve.h"
 #include "game/Program.h"
 #include "game/Score.h"   // distanceToGoal
+#include "game/Arena.h"
 
 namespace gb {
 
@@ -29,6 +30,34 @@ float scoreBrain(const Net& brain, const Maze& m, const EnemyView* enemy, int ma
   if (o == OUT_FELL || o == OUT_BONK) f -= 5.0f;   // crashed
   f -= it.primCount() * 0.05f;                     // be efficient
   return f;
+}
+
+float scoreFighter(const Net& brain, const Maze& m, const Pose& s0, const Pose& s1,
+                   const Program& ai, int maxSteps) {
+  Program bp;
+  bp.brains.push_back(brain);
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(Node::neuro(0));
+  bp.main.push_back(loop);
+
+  Arena ar;
+  ar.setup(&m, &bp, &ai, s0, s1, MatchType::RACE, maxSteps);
+  ar.run();
+
+  int startDist = distanceToGoal(m, s0.row, s0.col);
+  int endDist = distanceToGoal(m, ar.pose(0).row, ar.pose(0).col);
+  if (endDist < 0) endDist = startDist;
+  float f = (float)(startDist - endDist);           // progress toward the goal
+  ArenaOutcome o = ar.outcome();
+  if (o == ArenaOutcome::BOT0) f += 100.0f;          // beat the AI to the goal
+  else if (o == ArenaOutcome::BOT1) f -= 20.0f;      // lost
+  if (ar.alive(0)) f += 5.0f;                        // survived (didn't fall/get shoved)
+  return f;
+}
+
+void Evolve::evaluateArena(const Maze& m, const Pose& s0, const Pose& s1,
+                           const Program& ai, int maxSteps) {
+  for (int i = 0; i < EVO_POP; i++) fit[i] = scoreFighter(pop[i], m, s0, s1, ai, maxSteps);
 }
 
 void Evolve::init(int in, int hid, int out, uint32_t seed) {

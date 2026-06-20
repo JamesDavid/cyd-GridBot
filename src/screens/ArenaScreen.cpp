@@ -15,9 +15,10 @@ static const Rect R_BACK = {6, (int16_t)(BOTBAR_Y + 2), 100, 26};
 static const Rect R_TYPE = {110, (int16_t)(BOTBAR_Y + 2), 90, 26};
 static const Rect R_AI   = {6,  60, 150, 30};
 static const Rect R_HOT  = {164, 60, 150, 30};
-static const Rect R_RADIO= {6, 100, 308, 26};
-static const Rect R_PUZ  = {6, 132, 308, 26};
-static const Rect R_CHAL = {6, 164, 308, 26};
+static const Rect R_RADIO= {6, 96, 308, 24};
+static const Rect R_PUZ  = {6, 124, 308, 24};
+static const Rect R_CHAL = {6, 152, 308, 24};
+static const Rect R_TRAIN= {6, 180, 308, 24};   // NeuroBot: train a fighter vs AI
 static const Rect R_READY= {84, 150, 150, 34};
 
 static Program dashProgram() {
@@ -77,6 +78,8 @@ void ArenaScreen::drawMenu() {
   button(g, R_RADIO, "Radio: battle / trade a friend", C_MOVE, C_PANEL);
   button(g, R_PUZ, "Puzzle Race: same maze, beat the clock", C_LOOP, C_PANEL);
   button(g, R_CHAL, "Seed Challenge: race a friend on one board", C_SENSE, C_PANEL);
+  if (_profile && _profile->unlocks.neuro)  // NeuroBot: prep a trained brain to battle
+    button(g, R_TRAIN, "Train a fighter vs AI (NeuroBot)", ui::rgb(120, 230, 245), C_PANEL);
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
   button(g, R_TYPE, _type == MatchType::RACE ? "Race" : "Sumo", C_ACCENT, C_PANEL);
@@ -228,6 +231,7 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       if (R_RADIO.contains(tx, ty)) return app::Signal::GOTO_RADIO;
       if (R_PUZ.contains(tx, ty)) return app::Signal::GOTO_PUZZLE;
       if (R_CHAL.contains(tx, ty)) return app::Signal::GOTO_CHALLENGE;
+      if (_profile && _profile->unlocks.neuro && R_TRAIN.contains(tx, ty)) return app::Signal::GOTO_ARENA_TRAIN;
       if (R_TYPE.contains(tx, ty)) {
         _type = (_type == MatchType::RACE) ? MatchType::SUMO : MatchType::RACE;
         drawMenu();

@@ -330,6 +330,9 @@ void App::tick(uint32_t now) {
       else if (s == Signal::GOTO_PUZZLE) {
         _puzzle.begin(&_profile); _puzzle.enter(); _state = State::PUZZLE;
       }
+      else if (s == Signal::GOTO_ARENA_TRAIN) {
+        _arenaTrain.begin(&_profile); _arenaTrain.enter(); _state = State::ARENA_TRAIN;
+      }
       else if (s == Signal::GOTO_CHALLENGE) {
         _challenge.begin(&_profile); _challenge.enter(); _state = State::CHALLENGE;
       }
@@ -367,6 +370,12 @@ void App::tick(uint32_t now) {
     }
     case State::NEURO_TRAIN: {  // came from the editor's brain block; return to the game
       if (_neuroTrain.tick(now, tp) == Signal::BACK) { _game.enter(); _state = State::GAME; }
+      break;
+    }
+    case State::ARENA_TRAIN: {  // came from the Arena menu; return there (library may have grown)
+      if (_arenaTrain.tick(now, tp) == Signal::BACK) {
+        saveProfile(); _arena.begin(&_profile); _arena.enter(); _state = State::ARENA;
+      }
       break;
     }
     case State::CHALLENGE: {

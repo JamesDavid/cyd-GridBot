@@ -4,6 +4,7 @@
 // best-fitness monotonic, so we also assert it ends up clearly positive (net progress).
 #include <unity.h>
 #include "game/Maze.h"
+#include "game/MazeGen.h"
 #include "game/Evolve.h"
 #include "game/Net.h"
 
@@ -39,9 +40,27 @@ void test_scoreBrain_rewards_progress() {
   TEST_ASSERT_TRUE(spin <= 0.5f);  // spinning makes no progress
 }
 
+// The Arena-fighter fitness must be deterministic (so training is reproducible) and
+// evolving against an AI must improve the fighter.
+void test_arena_fighter_evolves() {
+  Maze m; Pose s0, s1; MazeGen::generateArena(m, 7, s0, s1);
+  Program idle;  // a do-nothing AI opponent
+  Net b; b.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 3);
+  float f1 = scoreFighter(b, m, s0, s1, idle, 200);
+  float f2 = scoreFighter(b, m, s0, s1, idle, 200);
+  TEST_ASSERT_EQUAL_FLOAT(f1, f2);                 // deterministic
+
+  Evolve evo; evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
+  evo.evaluateArena(m, s0, s1, idle, 200);
+  float best0 = evo.bestFit();
+  for (int g = 0; g < 30; g++) { evo.breed(); evo.evaluateArena(m, s0, s1, idle, 200); }
+  TEST_ASSERT_TRUE(evo.bestFit() >= best0);        // a better fighter emerged (elitism-safe)
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_evolution_improves);
   RUN_TEST(test_scoreBrain_rewards_progress);
+  RUN_TEST(test_arena_fighter_evolves);
   return UNITY_END();
 }
