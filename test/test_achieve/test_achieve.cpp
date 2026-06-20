@@ -50,9 +50,24 @@ void test_arena_artist_stars_streak() {
   TEST_ASSERT_TRUE(a & A_ARTIST);
 }
 
+void test_neurobot_badges() {
+  Profile p;
+  TEST_ASSERT_FALSE(evaluateAchievements(p) & (A_NEURO | A_NEURO_WIN | A_FIGHTER));
+  p.stats.brainsTrained = 1;
+  TEST_ASSERT_TRUE(evaluateAchievements(p) & A_NEURO);
+  p.stats.neuroWins = 1;
+  TEST_ASSERT_TRUE(evaluateAchievements(p) & A_NEURO_WIN);
+  p.stats.fightersSaved = 1;
+  TEST_ASSERT_TRUE(evaluateAchievements(p) & A_FIGHTER);
+  // names exist for the new bits (13,14,15)
+  TEST_ASSERT_EQUAL_STRING("Brainiac", achievementName(13));
+  TEST_ASSERT_EQUAL_STRING("Battle-Ready", achievementName(15));
+}
+
 void test_count() {
   TEST_ASSERT_EQUAL(0, achievementCount(0));
   TEST_ASSERT_EQUAL(3, achievementCount(A_FIRST_WIN | A_JUMP | A_LOOP));
+  TEST_ASSERT_EQUAL(16, ACH_COUNT);
 }
 
 int main(int, char**) {
@@ -60,6 +75,7 @@ int main(int, char**) {
   RUN_TEST(test_first_win_and_levels);
   RUN_TEST(test_command_badges);
   RUN_TEST(test_arena_artist_stars_streak);
+  RUN_TEST(test_neurobot_badges);
   RUN_TEST(test_count);
   return UNITY_END();
 }

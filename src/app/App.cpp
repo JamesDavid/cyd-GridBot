@@ -259,6 +259,7 @@ void App::tick(uint32_t now) {
       if (s == Signal::WON) {
         _profile.stats.levelsCompleted++;
         if (_game.lastStars() == 3) _profile.stats.threeStarWins++;
+        if (!_game.program().brains.empty()) _profile.stats.neuroWins++;  // cleared with a brain
         _profile.workLevel = 0;
         _profile.work.clear();
         _profile.level = _introLevel + 1;
@@ -369,11 +370,18 @@ void App::tick(uint32_t now) {
       break;
     }
     case State::NEURO_TRAIN: {  // came from the editor's brain block; return to the game
-      if (_neuroTrain.tick(now, tp) == Signal::BACK) { _game.enter(); _state = State::GAME; }
+      if (_neuroTrain.tick(now, tp) == Signal::BACK) {
+        if (_neuroTrain.usedBrain()) _profile.stats.brainsTrained++;
+        _profile.achievements |= gb::evaluateAchievements(_profile);
+        saveProfile();
+        _game.enter(); _state = State::GAME;
+      }
       break;
     }
     case State::ARENA_TRAIN: {  // came from the Arena menu; return there (library may have grown)
       if (_arenaTrain.tick(now, tp) == Signal::BACK) {
+        if (_arenaTrain.savedFighter()) { _profile.stats.fightersSaved++; _profile.stats.brainsTrained++; }
+        _profile.achievements |= gb::evaluateAchievements(_profile);
         saveProfile(); _arena.begin(&_profile); _arena.enter(); _state = State::ARENA;
       }
       break;

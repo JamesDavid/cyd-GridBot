@@ -16,6 +16,7 @@ class ArenaTrainScreen : public app::IScreen {
   void begin(gb::Profile* profile);
   void enter() override;
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
+  bool savedFighter() const { return _saved; }  // tapped "Save fighter"
 
  private:
   void draw();

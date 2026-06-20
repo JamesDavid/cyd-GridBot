@@ -77,6 +77,9 @@ static void profileToJson(const gb::Profile& p, JsonObject o) {
   st["currentStreak"] = p.stats.currentStreak;
   st["arenaWins"] = p.stats.arenaWins;
   st["threeStarWins"] = p.stats.threeStarWins;
+  st["brainsTrained"] = p.stats.brainsTrained;
+  st["neuroWins"] = p.stats.neuroWins;
+  st["fightersSaved"] = p.stats.fightersSaved;
   JsonArray ch = st["cmd"].to<JsonArray>();
   for (int i = 0; i < gb::CS_COUNT; i++) ch.add(p.stats.commandsUsed[i]);
   if (p.workLevel) {
@@ -131,6 +134,9 @@ static void profileFromJson(JsonObjectConst o, gb::Profile& p) {
   p.stats.currentStreak = st["currentStreak"] | 0;
   p.stats.arenaWins = st["arenaWins"] | 0;
   p.stats.threeStarWins = st["threeStarWins"] | 0;
+  p.stats.brainsTrained = st["brainsTrained"] | 0;
+  p.stats.neuroWins = st["neuroWins"] | 0;
+  p.stats.fightersSaved = st["fightersSaved"] | 0;
   JsonArrayConst ch = st["cmd"];
   int i = 0;
   for (JsonVariantConst v : ch) { if (i < gb::CS_COUNT) p.stats.commandsUsed[i++] = v | 0; }

@@ -39,6 +39,10 @@ struct Stats {
   uint32_t arenaWins = 0;
   uint32_t threeStarWins = 0;
   uint16_t commandsUsed[CS_COUNT] = {0};
+  // NeuroBot
+  uint16_t brainsTrained = 0;   // brains trained & used/saved
+  uint16_t neuroWins = 0;       // levels cleared with a NEURO brain in the program
+  uint16_t fightersSaved = 0;   // brains saved as Arena fighters
 };
 
 struct LibEntry {

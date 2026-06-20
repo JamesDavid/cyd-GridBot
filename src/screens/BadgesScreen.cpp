@@ -12,7 +12,8 @@ static const Rect R_BACK = {6, (int16_t)(BOTBAR_Y + 2), 120, 26};
 static const char* HINT[ACH_COUNT] = {
   "win a level", "earn 3 stars", "use a Jump", "use a Repeat", "use a Function",
   "clear a sense level", "win an arena", "5-win streak", "10-win streak",
-  "reach level 10", "reach level 20", "draw a sprite", "earn 50 stars"};
+  "reach level 10", "reach level 20", "draw a sprite", "earn 50 stars",
+  "train a brain", "win with a brain", "save a fighter"};
 
 void BadgesScreen::enter() { draw(); }
 
@@ -25,21 +26,22 @@ void BadgesScreen::draw() {
   snprintf(hdr, sizeof(hdr), "Badges %d/%d", achievementCount(mask), ACH_COUNT);
   label(g, 6, 3, hdr, C_ACCENT, textdatum_t::top_left, 2);
 
+  const int rowsPerCol = (ACH_COUNT + 1) / 2;  // 8 rows x 2 cols for 16 badges
   for (int i = 0; i < ACH_COUNT; i++) {
     bool got = mask & (1u << i);
-    int col = i / 7, row = i % 7;
-    int x = 6 + col * 156, y = BAND_Y + 2 + row * 26;
-    g.fillRoundRect(x, y, 152, 24, 4, got ? C_PANEL_HI : C_PANEL);
+    int col = i / rowsPerCol, row = i % rowsPerCol;
+    int x = 6 + col * 156, y = BAND_Y + 2 + row * 23;
+    g.fillRoundRect(x, y, 152, 21, 4, got ? C_PANEL_HI : C_PANEL);
     // medal: filled gold star if earned, dim outline if not
-    int mx = x + 12, my = y + 12;
+    int mx = x + 11, my = y + 10;
     if (got) {
-      g.fillCircle(mx, my, 7, C_ACCENT);
-      g.fillCircle(mx, my, 4, C_GO);
+      g.fillCircle(mx, my, 6, C_ACCENT);
+      g.fillCircle(mx, my, 3, C_GO);
     } else {
-      g.drawCircle(mx, my, 7, C_LOCK);
+      g.drawCircle(mx, my, 6, C_LOCK);
     }
-    label(g, x + 26, y + 2, achievementName(i), got ? C_INK : C_DIM);
-    label(g, x + 26, y + 13, got ? "earned!" : HINT[i], got ? C_GO : C_LOCK);
+    label(g, x + 24, y + 1, achievementName(i), got ? C_INK : C_DIM);
+    label(g, x + 24, y + 11, got ? "earned!" : HINT[i], got ? C_GO : C_LOCK);
   }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);

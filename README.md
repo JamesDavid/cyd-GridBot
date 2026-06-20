@@ -98,7 +98,7 @@ hook, and the whole difficulty curve is designed to lead there.
 
 | ![Badges gallery](docs/img/badges.png) |
 |:--|
-| **13 badges to collect.** First Steps, Bright Spark (3 stars), Hopper (your first Jump), Looper, Architect (a Function), Sixth Sense, Champion (an arena win), On Fire (5-streak), Unstoppable (10-streak), Explorer (Lv 10), Veteran (Lv 20), Artist (draw a sprite), and Star Collector. Gold medal = earned; grey = a hint for how to get it. |
+| **16 badges to collect.** First Steps, Bright Spark (3 stars), Hopper (your first Jump), Looper, Architect (a Function), Sixth Sense, Champion (an arena win), On Fire (5-streak), Unstoppable (10-streak), Explorer (Lv 10), Veteran (Lv 20), Artist (draw a sprite), Star Collector, and the **NeuroBot** trio — **Brainiac** (train a brain), **Mind Over Maze** (clear a level *with* a brain), and **Battle-Ready** (save a brain as an Arena fighter). Gold medal = earned; grey = a hint for how to get it. |
 
 ### Themed worlds
 
@@ -266,7 +266,7 @@ evolution lessons, a trainable **brain block** in the editor, brains that persis
 ✅ **coin & gem collectibles + a sprite-colour & emoji shop** · ✅ a **chiptune menu theme** +
 win fanfare + badge chime · ✅ smooth movement tween + a **win celebration** (confetti
 & star fly-in) · ✅ five **level biomes** ·
-✅ a 13-badge **achievements gallery** · ✅ **breadcrumb trails** · ✅ Sumo (PUSH) ·
+✅ a 16-badge **achievements gallery** (incl. NeuroBot badges) · ✅ **breadcrumb trails** · ✅ Sumo (PUSH) ·
 ✅ a one-click **online flasher**.
 
 Still on deck (full list in **[BACKLOG.md](BACKLOG.md)**):

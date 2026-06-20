@@ -20,14 +20,18 @@ enum Achievement : uint32_t {
   A_LVL20      = 1u << 10,  // reach level 20
   A_ARTIST     = 1u << 11,  // draw a custom sprite
   A_COLLECT50  = 1u << 12,  // earn 50 total stars
-  ACH_COUNT    = 13
+  A_NEURO      = 1u << 13,  // train a brain (NeuroBot)
+  A_NEURO_WIN  = 1u << 14,  // clear a level with a trained brain
+  A_FIGHTER    = 1u << 15,  // save a brain as an Arena fighter
+  ACH_COUNT    = 16
 };
 
 inline const char* achievementName(int bit) {
   static const char* N[ACH_COUNT] = {
     "First Steps", "Bright Spark", "Hopper", "Looper", "Architect",
     "Sixth Sense", "Champion", "On Fire", "Unstoppable", "Explorer",
-    "Veteran", "Artist", "Star Collector"};
+    "Veteran", "Artist", "Star Collector",
+    "Brainiac", "Mind Over Maze", "Battle-Ready"};
   return (bit >= 0 && bit < ACH_COUNT) ? N[bit] : "?";
 }
 
@@ -48,6 +52,9 @@ inline uint32_t evaluateAchievements(const Profile& p) {
   if (p.level >= 20)                  a |= A_LVL20;
   if (!p.customChar.empty() || !p.customGoal.empty()) a |= A_ARTIST;
   if (s.starsTotal >= 50)             a |= A_COLLECT50;
+  if (s.brainsTrained >= 1)           a |= A_NEURO;
+  if (s.neuroWins >= 1)               a |= A_NEURO_WIN;
+  if (s.fightersSaved >= 1)           a |= A_FIGHTER;
   return a;
 }
 

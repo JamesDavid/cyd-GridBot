@@ -15,6 +15,7 @@ class NeuroTrainScreen : public app::IScreen {
   void begin(gb::Program* prog, int brainIdx, gb::Maze* maze);
   void enter() override;
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
+  bool usedBrain() const { return _saved; }  // tapped "Use it" -> a brain was trained
 
  private:
   void draw();
