@@ -66,7 +66,7 @@ hook, and the whole difficulty curve is designed to lead there.
 
 | ![A built program](docs/img/code-program.png) |
 |:--|
-| **A real program.** Snap blocks together and they stack up in the list — here: *forward, forward, turn R, jump, repeat 2, forward*. Each block is colour-coded; tap a `REPEAT` to change its count, an `IF`/`UNTIL` to cycle its condition. The list scrolls, so there's no length limit. Tap **RUN** and the robot runs your code. |
+| **A real program.** Snap blocks together and they stack up in the list — here: *forward, turn R, jump,* then a *repeat 2* loop with a *forward* **nested inside it** (note the **`1, 2, 3, 4, 4a`** numbering — `4a` lives inside loop `4`). Each block is colour-coded (loops carry a clear **`R`** badge); tap a block to select it, and a `REPEAT` shows a big button that **cycles its count 2→3→4→5**, while an `IF`/`UNTIL` cycles its condition. **`+ add inside`** and **`+ add here`** slots make it obvious where your next step lands. The list scrolls — no length limit. Tap **RUN** and the robot runs your code. |
 
 | ![Maze preview](docs/img/maze-preview.png) |
 |:--|
@@ -88,7 +88,7 @@ hook, and the whole difficulty curve is designed to lead there.
 
 | ![Full toolset](docs/img/tiers.png) |
 |:--|
-| **The full toolset** (a sensing-tier level). All four corner slots are filled, **Backward** is lit, and the program pane has the **MAIN / F1 / F2** function tabs plus **Save▸Lib / Load◂Lib** for the solution library. Select a `REPEAT` to change its count; select an `IF`/`UNTIL` to cycle its condition (**wall / pit / goal**). |
+| **The full toolset** (a sensing-tier level). All four corner slots are filled, **Backward** is lit, and the program pane has the **MAIN / F1 / F2** function tabs plus **Save▸Lib / Load◂Lib** for the solution library (and a **`+brain`** button once NeuroBot unlocks). Here a `repeat` block is **selected**, showing the big **`repeat 2`** button you tap to cycle its count; an `IF`/`UNTIL` shows a button that cycles its condition (**wall / pit / goal**). |
 
 ### Stats & badges
 
