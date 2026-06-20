@@ -177,6 +177,20 @@ static bool tryGenerate(Maze& out, const Difficulty& d, uint32_t seed) {
 
 void generate(Maze& out, uint32_t seedBase, int level) {
   Difficulty d = difficultyFor(level);
+  if (level <= 1) {
+    // The VERY first level is a gentle, guaranteed FORWARD-ONLY win to hook a brand-new
+    // kid: start at the bottom facing up, battery straight ahead at the top of the same
+    // column, a couple of coins on the way. "Tap forward a few times, then RUN" wins.
+    // Turns (and everything else) arrive from level 2 on.
+    out.reset(d.rows, d.cols);
+    out.fill(FLOOR);
+    Pose s; s.row = (int8_t)(d.rows - 1); s.col = 0; s.facing = NORTH;
+    out.setStart(s); out.set(s.row, s.col, START);
+    out.setGoal(0, s.col);                 // directly ahead -> no turn needed
+    out.set(s.row - 1, s.col, COIN);       // a little loot on the straight path
+    if (d.rows > 3) out.set(1, s.col, COIN);
+    return;
+  }
   uint32_t base = seedFor(seedBase, (uint32_t)level);
   for (int attempt = 0; attempt < 8; attempt++) {
     if (tryGenerate(out, d, base + attempt)) return;  // reroll with seed+1 (§6.3)

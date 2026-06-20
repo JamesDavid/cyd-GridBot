@@ -354,11 +354,11 @@ void GameScreen::drawControlPad() {
   cell(1, 0, Glyph::TURN_L, C_TURN, false);            // TURN LEFT
   cell(1, 2, Glyph::TURN_R, C_TURN, false);            // TURN RIGHT
   // The old BACKWARD slot (bottom-centre) is now the NeuroBot brain slot once unlocked;
-  // backward is gone (write a cleaner program instead). Empty until NeuroBot unlocks.
+  // before that it's a padlock like the other growth slots (consistent + previews it).
   if (_profile && _profile->unlocks.neuro)
     button(g, padCell(2, 1), "+brain", ui::rgb(120, 230, 245), C_PANEL);
   else
-    panel(g, padCell(2, 1), C_PANEL);
+    cell(2, 1, Glyph::SENSE, C_DIM, true);  // locked padlock until NeuroBot unlocks (Lv 28)
   // centre avatar — faces the maze's START orientation so the kid can reason about
   // "forward" before running.
   Rect ctr = padCell(1, 1);
@@ -606,8 +606,14 @@ void GameScreen::drawProgramList() {
       label(g, gx + 18, y + 6, lab, C_INK);
     }
   }
-  if (n == 0)
-    label(g, LIST_X + 8, top + 8, "tap pad to add", C_DIM);
+  // friendly first-time onboarding (a 6yo needs to know what to do). Keyed off the real
+  // program being empty — `n` is never 0 because flatten() always adds a "+ add here" row.
+  if (_editList && _editList->empty()) {
+    int hy = top + ROW_H + 8;
+    label(g, LIST_X + 8, hy,      "tap an arrow", C_GO);
+    label(g, LIST_X + 8, hy + 14, "to add a step,", C_DIM);
+    label(g, LIST_X + 8, hy + 28, "then tap RUN!", C_GO);
+  }
 }
 
 void GameScreen::drawBottomBar() {
@@ -658,19 +664,27 @@ void GameScreen::handlePadTap(int x, int y) {
       gb::Node loop = gb::Node::repeatUntil(gb::AT_GOAL);
       loop.body.push_back(gb::Node::neuro(idx));
       appendNodeToTarget(loop);
+    } else {
+      toast("NeuroBot unlocks at Lv 28", C_ACCENT);  // consistent with the corner padlocks
     }
     return;
   }
   // corner growth slots
   const int ci[4] = {0, 0, 2, 2}, cj[4] = {0, 2, 0, 2};
+  const int unlockLv[4] = {6, 10, 20, 15};               // Jump / Repeat / Functions / Sense
+  const char* cname[4] = {"Jump", "Repeat", "Functions", "Sense"};
   for (int s = 0; s < 4; s++) {
-    if (padCell(ci[s], cj[s]).contains(x, y) && cornerUnlocked(s)) {
-      if (s == 0) appendCommand(CMD_JUMP);
-      else if (s == 1) { if (_profile) _profile->stats.commandsUsed[CS_REPEAT]++; appendNodeToTarget(Node::repeat(2)); }
-      else if (s == 2) { if (_profile) _profile->stats.commandsUsed[CS_CALL]++;   appendNodeToTarget(Node::call(1)); }
-      else if (s == 3) { if (_profile) _profile->stats.commandsUsed[CS_SENSE]++;  appendNodeToTarget(Node::repeatUntil(WALL_AHEAD)); }
+    if (!padCell(ci[s], cj[s]).contains(x, y)) continue;
+    if (!cornerUnlocked(s)) {  // a 6yo taps a padlock -> tell them when it opens (no dead tap)
+      char t[28]; snprintf(t, sizeof(t), "%s unlocks at Lv %d", cname[s], unlockLv[s]);
+      toast(t, C_ACCENT);
       return;
     }
+    if (s == 0) appendCommand(CMD_JUMP);
+    else if (s == 1) { if (_profile) _profile->stats.commandsUsed[CS_REPEAT]++; appendNodeToTarget(Node::repeat(2)); }
+    else if (s == 2) { if (_profile) _profile->stats.commandsUsed[CS_CALL]++;   appendNodeToTarget(Node::call(1)); }
+    else if (s == 3) { if (_profile) _profile->stats.commandsUsed[CS_SENSE]++;  appendNodeToTarget(Node::repeatUntil(WALL_AHEAD)); }
+    return;
   }
 }
 
