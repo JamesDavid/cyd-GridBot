@@ -13,6 +13,7 @@ class Audio {
  public:
   void begin();
   void setEnabled(bool on);
+  bool enabled() const { return _on; }
   void blip();   // tap feedback
   void tick();   // step tick
   void win();    // happy fanfare

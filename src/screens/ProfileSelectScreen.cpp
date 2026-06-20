@@ -1,9 +1,12 @@
 #include "screens/ProfileSelectScreen.h"
 #include "assets/Assets.h"
+#include "hal/Audio.h"
 
 using namespace ui;
 
 namespace screens {
+
+static const Rect R_SOUND = {250, 1, 68, 20};  // music on/off toggle
 
 // Up to 6 profile cards in a 3x2 grid, plus a "+ New" card in the next slot.
 static constexpr int COLS = 3, CARD_W = 102, CARD_H = 84, GAP = 4;
@@ -33,6 +36,8 @@ void ProfileSelectScreen::draw() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, SCREEN_W / 2, 3, "Choose a Player", C_ACCENT,
         textdatum_t::top_center, 2);
+  bool snd = hal::audio.enabled();
+  button(g, R_SOUND, snd ? "Music:on" : "Music:off", snd ? C_GO : C_DIM, C_PANEL);
 
   int n = (int)_metas.size();
   if (n > 6) n = 6;
@@ -64,6 +69,15 @@ app::Signal ProfileSelectScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int tx, ty;
   int n = (int)_metas.size(); if (n > 6) n = 6;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
+
+  if (R_SOUND.contains(tx, ty)) {       // toggle music/sound
+    bool on = !hal::audio.enabled();
+    hal::audio.setEnabled(on);
+    if (on) hal::audio.startMusic(hal::kTitleMusic, hal::kTitleMusicLen, true);
+    else hal::audio.stopMusic();
+    draw();
+    return app::Signal::NONE;
+  }
 
   for (int i = 0; i <= n; i++) {        // include the New card at index n
     Rect r = cardRect(i);

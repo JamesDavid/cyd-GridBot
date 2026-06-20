@@ -42,8 +42,8 @@ void App::gotoSelect() {
   _state = State::SELECT;
   _select.begin(&store::profiles);
   _select.enter();
-  hal::audio.setEnabled(true);
-  hal::audio.startMusic(hal::kTitleMusic, hal::kTitleMusicLen, true);  // menu theme
+  if (hal::audio.enabled())  // respect the menu mute toggle
+    hal::audio.startMusic(hal::kTitleMusic, hal::kTitleMusicLen, true);  // menu theme
 }
 
 void App::loadProfileInto(const std::string& id) {
@@ -61,7 +61,8 @@ void App::gotoIntro(uint32_t level) {
   _introLevel = level;
   _state = State::INTRO;
   drawIntro();
-  if (!hal::audio.playing()) hal::audio.startMusic(hal::kTitleMusic, hal::kTitleMusicLen, true);
+  if (hal::audio.enabled() && !hal::audio.playing())
+    hal::audio.startMusic(hal::kTitleMusic, hal::kTitleMusicLen, true);
 }
 
 void App::drawIntro() {

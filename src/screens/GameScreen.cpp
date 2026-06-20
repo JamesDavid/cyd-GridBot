@@ -54,7 +54,7 @@ void GameScreen::begin(Profile* profile, uint32_t level) {
   _par = shortestSolutionLen(_maze, profile && profile->unlocks.jump);
   if (_par <= 0) _par = 1;
   _stepMs = profile ? animStepMs(profile->settings) : 400;
-  hal::audio.setEnabled(profile ? profile->settings.sound : true);
+  // (audio on/off is the session-wide menu toggle, not overridden per-level)
   _view = V_CODE;
   _mode = M_EDIT;
   _auto = false;
