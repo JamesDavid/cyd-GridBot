@@ -17,6 +17,7 @@ enum class Signal : uint8_t {
   EDIT_PROFILE,    // edit the current profile's name/avatar (keeps stats)
   GOTO_DRAW,       // open the pixel editor (custom character/goal)
   DELETE_PROFILE,  // delete the current profile (after multiple confirmations)
+  GOTO_BADGES,     // open the badges gallery
 };
 
 class IScreen {

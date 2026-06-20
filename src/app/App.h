@@ -11,6 +11,7 @@
 #include "screens/ArenaScreen.h"
 #include "screens/RadioScreen.h"
 #include "screens/PixelEditorScreen.h"
+#include "screens/BadgesScreen.h"
 
 namespace app {
 
@@ -23,7 +24,7 @@ class App {
   void debugHome();                       // force the profile-select screen ('H')
 
  private:
-  enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO, DRAW };
+  enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES };
 
   void gotoSelect();
   void gotoIntro(uint32_t level);
@@ -44,6 +45,7 @@ class App {
   screens::ArenaScreen _arena;
   screens::RadioScreen _radio;
   screens::PixelEditorScreen _pixed;
+  screens::BadgesScreen _badges;
   TapDetector _introTap;
   ui::Rect _arenaBtn{90, 196, 140, 28};  // shown on the level intro post-sensing
 };

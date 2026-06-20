@@ -38,6 +38,9 @@ class GameScreen : public app::IScreen {
   void drawBottomBar();
   void drawCell(int r, int c);
   void drawCharacterAt(const gb::Pose& p);
+  void drawCharacterPx(int cx, int cy, gb::Facing facing, int emote);  // emote: 0 none,1 happy,2 dizzy
+  void redrawCellsBetween(const gb::Pose& a, const gb::Pose& b);
+  void winCelebration();
   void mazeGeometry(int& tile, int& ox, int& oy);
   void toast(const char* msg, uint16_t color);
 
@@ -50,6 +53,7 @@ class GameScreen : public app::IScreen {
   void startRun();
   void resetRun();
   void stepOnce(uint32_t now);
+  void settleOutcome(gb::Outcome o);
   void flatten(gb::NodeList& list, int depth, std::vector<Row>& out, uint16_t bracket = 0);
   gb::NodeList* appendTarget();    // where new blocks/commands go (selected body or edit list)
   void appendNodeToTarget(const gb::Node& n);
@@ -70,6 +74,7 @@ class GameScreen : public app::IScreen {
   int _boardCount = 1;
   int _boardIdx = 0;
   gb::Maze _maze;             // active board (copy of _boards[_boardIdx])
+  ui::Biome _biome;           // palette for this level band
   gb::Program _prog;
   gb::Interpreter _it;
   gb::NodeList* _editList = nullptr;  // which body the list edits (MAIN for now)
@@ -89,6 +94,12 @@ class GameScreen : public app::IScreen {
 
   gb::Pose _drawnPose;          // last drawn character pose (for dirty-rect)
   const gb::Node* _failNode = nullptr;
+
+  // smooth movement tween between tiles
+  bool _tween = false;
+  gb::Pose _tweenFrom, _tweenTo;
+  uint32_t _tweenT0 = 0;
+  gb::Outcome _pendingOutcome = gb::OUT_OK;
 
   // level-start maze preview (show the board, then auto-switch to code)
   bool _previewing = false;

@@ -1,5 +1,6 @@
 #include "screens/GameScreen.h"
 
+#include <math.h>
 #include "hal/Display.h"
 #include "hal/Audio.h"
 #include "hal/Led.h"
@@ -43,6 +44,7 @@ void GameScreen::begin(Profile* profile, uint32_t level) {
                                         profile ? profile->seedBase : 0, level);
   _boardIdx = 0;
   _maze = _boards[0];
+  _biome = ui::biomeFor((int)level);
   _prog.clear();
   // Resume the in-progress script for this level if present (SPEC §11.1).
   if (profile && profile->workLevel == level && !profile->work.empty()) {
@@ -61,6 +63,7 @@ void GameScreen::begin(Profile* profile, uint32_t level) {
   _followTail = true;
   _failNode = nullptr;
   _drawnPose = _maze.startPose();
+  _tween = false;
   _it.load(&_prog, &_maze, _maze.startPose());
 }
 
@@ -128,15 +131,15 @@ void GameScreen::drawCell(int r, int c) {
     g.fillRect(x, y, tile - 1, tile - 1, C_BG);
     g.drawRect(x + 1, y + 1, tile - 3, tile - 3, C_FLOOR2);
   } else if (t == WALL) {
-    g.fillRect(x, y, tile - 1, tile - 1, C_WALL);
-    // simple brick courses
-    g.drawFastHLine(x, y + tile / 3, tile - 1, C_WALL_LINE);
-    g.drawFastHLine(x, y + 2 * tile / 3, tile - 1, C_WALL_LINE);
-    g.drawFastVLine(x + tile / 2, y, tile / 3, C_WALL_LINE);
-    g.drawFastVLine(x + tile / 4, y + tile / 3, tile / 3, C_WALL_LINE);
-    g.drawFastVLine(x + 3 * tile / 4, y + tile / 3, tile / 3, C_WALL_LINE);
+    g.fillRect(x, y, tile - 1, tile - 1, _biome.wall);
+    // brick courses, tinted per biome
+    g.drawFastHLine(x, y + tile / 3, tile - 1, _biome.wallLine);
+    g.drawFastHLine(x, y + 2 * tile / 3, tile - 1, _biome.wallLine);
+    g.drawFastVLine(x + tile / 2, y, tile / 3, _biome.wallLine);
+    g.drawFastVLine(x + tile / 4, y + tile / 3, tile / 3, _biome.wallLine);
+    g.drawFastVLine(x + 3 * tile / 4, y + tile / 3, tile / 3, _biome.wallLine);
   } else {
-    g.fillRect(x, y, tile - 1, tile - 1, ((r + c) & 1) ? C_FLOOR : C_FLOOR2);
+    g.fillRect(x, y, tile - 1, tile - 1, ((r + c) & 1) ? _biome.floorA : _biome.floorB);
   }
   if (_maze.isGoal(r, c)) {
     if (_profile && spriteHasPixels(_profile->customGoal))
@@ -152,20 +155,64 @@ static bool spriteHasPixels(const std::vector<uint8_t>& v) {
   return false;
 }
 
-void GameScreen::drawCharacterAt(const Pose& p) {
+void GameScreen::drawCharacterPx(int cx, int cy, Facing facing, int emote) {
   auto& g = hal::display.gfx();
   int tile, ox, oy;
   mazeGeometry(tile, ox, oy);
-  int cx = ox + p.col * tile + tile / 2;
-  int cy = oy + p.row * tile + tile / 2;
   if (_profile && spriteHasPixels(_profile->customChar)) {
     assets::drawCustomSprite(g, cx, cy, tile, _profile->customChar.data());
-    // facing cue so the heading still reads
-    int dr, dc; facingDelta(p.facing, dr, dc);
-    int nx = cx + dc * (tile / 2 - 2), ny = cy + dr * (tile / 2 - 2);
-    g.fillCircle(nx, ny, 2, C_ACCENT);
+    int dr, dc; facingDelta(facing, dr, dc);
+    g.fillCircle(cx + dc * (tile / 2 - 2), cy + dr * (tile / 2 - 2), 2, C_ACCENT);
   } else {
-    assets::drawCharacter(g, cx, cy, tile, _profile ? _profile->avatar : 0, p.facing);
+    assets::drawCharacter(g, cx, cy, tile, _profile ? _profile->avatar : 0, facing);
+  }
+  // emotes: happy = sparkles above; dizzy = red X eyes
+  int eo = tile * 0.11f;
+  if (emote == 1) {
+    g.drawFastVLine(cx - tile / 3, cy - tile / 2, 4, C_ACCENT);
+    g.drawFastHLine(cx - tile / 3 - 2, cy - tile / 2 + 2, 4, C_ACCENT);
+    g.drawFastVLine(cx + tile / 3, cy - tile / 2 - 2, 4, C_ACCENT);
+    g.drawFastHLine(cx + tile / 3 - 2, cy - tile / 2, 4, C_ACCENT);
+  } else if (emote == 2) {
+    for (int s = -1; s <= 1; s += 2) {
+      int ex = cx + s * eo, ey = cy - tile / 12;
+      g.drawLine(ex - 2, ey - 2, ex + 2, ey + 2, C_BAD);
+      g.drawLine(ex - 2, ey + 2, ex + 2, ey - 2, C_BAD);
+    }
+  }
+}
+
+void GameScreen::drawCharacterAt(const Pose& p) {
+  int tile, ox, oy;
+  mazeGeometry(tile, ox, oy);
+  drawCharacterPx(ox + p.col * tile + tile / 2, oy + p.row * tile + tile / 2, p.facing, 0);
+}
+
+// Redraw the static cells the tweening sprite passes over (so it leaves no trail).
+void GameScreen::redrawCellsBetween(const Pose& a, const Pose& b) {
+  int dr = (b.row > a.row) - (b.row < a.row);
+  int dc = (b.col > a.col) - (b.col < a.col);
+  int r = a.row, c = a.col;
+  drawCell(r, c);
+  while (r != b.row || c != b.col) { r += dr; c += dc; drawCell(r, c); }
+}
+
+void GameScreen::winCelebration() {
+  auto& g = hal::display.gfx();
+  int tile, ox, oy; mazeGeometry(tile, ox, oy);
+  int cx = ox + _it.pose().col * tile + tile / 2;
+  int cy = oy + _it.pose().row * tile + tile / 2;
+  const uint16_t cols[3] = {C_ACCENT, C_GO, C_MOVE};
+  for (int f = 0; f < 5; f++) {
+    int rad = 6 + f * 7;
+    for (int a = 0; a < 360; a += 45) {
+      float rr = a * 3.14159f / 180.f;
+      int sx = cx + (int)(rad * cosf(rr)), sy = cy + (int)(rad * sinf(rr));
+      g.fillCircle(sx, sy, 2, cols[f % 3]);
+    }
+    drawCharacterPx(cx, cy - (f % 2 ? 2 : 0), _it.pose().facing, 1);  // happy bounce
+    delay(45);
+    if (f < 4) { drawCell(_it.pose().row, _it.pose().col); }
   }
 }
 
@@ -563,6 +610,7 @@ void GameScreen::resetRun() {
   _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
   _auto = false;
   _drawnPose = _maze.startPose();
+  _tween = false;
   drawMazeView(false);
 }
 
@@ -571,6 +619,7 @@ void GameScreen::advanceBoard() {
   _maze = _boards[_boardIdx];
   _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
   _drawnPose = _maze.startPose();
+  _tween = false;
   drawMazeView(false);
   char buf[24];
   snprintf(buf, sizeof(buf), "Maze %d / %d", _boardIdx + 1, _boardCount);
@@ -602,15 +651,24 @@ void GameScreen::loadFromLibrary() {
 }
 
 void GameScreen::stepOnce(uint32_t now) {
-  (void)now;
   if (_it.finished()) return;
   Pose old = _it.pose();
   Outcome o = _it.step();
-  // dirty-rect: clear the cell we left, redraw the goal/character.
+  bool moved = (old.row != _it.pose().row || old.col != _it.pose().col);
+  if (moved && (o == OUT_OK || o == OUT_WIN)) {
+    // glide between tiles; settleOutcome() runs when the tween lands
+    _tween = true; _tweenFrom = old; _tweenTo = _it.pose();
+    _tweenT0 = now; _pendingOutcome = o;
+    return;
+  }
+  // a turn (no move) or a failure: redraw in place, then resolve immediately
   drawCell(old.row, old.col);
   drawCharacterAt(_it.pose());
   _drawnPose = _it.pose();
+  settleOutcome(o);
+}
 
+void GameScreen::settleOutcome(Outcome o) {
   if (o == OUT_OK) { hal::audio.tick(); return; }
   if (o == OUT_WIN) {
     // Multi-maze generalization level: the same program must clear every board.
@@ -624,7 +682,7 @@ void GameScreen::stepOnce(uint32_t now) {
       _profile->stats.totalWins++;
       _profile->stats.starsTotal += _stars;
     }
-    // win overlay
+    winCelebration();
     auto& g = hal::display.gfx();
     int w = 200, h = 80, x = (SCREEN_W - w) / 2, yy = (SCREEN_H - h) / 2;
     g.fillRoundRect(x, yy, w, h, 10, C_PANEL);
@@ -645,23 +703,18 @@ void GameScreen::stepOnce(uint32_t now) {
   _auto = false;
   hal::audio.fail();
   hal::led.red();
-  // Redden + "shake" the character in place so the failure is visible on the maze
-  // (SPEC §8.3) — don't snap straight back to code.
-  {
-    auto& g = hal::display.gfx();
-    int tile, ox, oy; mazeGeometry(tile, ox, oy);
-    int cx = ox + _it.pose().col * tile + tile / 2;
-    int cy = oy + _it.pose().row * tile + tile / 2;
-    for (int s = 0; s < 3; s++) {  // quick shake
-      g.fillCircle(cx + (s & 1 ? 2 : -2), cy, tile * 0.36f, C_BAD);
-      delay(40);
-      drawCell(_it.pose().row, _it.pose().col);
-      drawCharacterAt(_it.pose());
-      delay(30);
-    }
-    g.fillCircle(cx, cy, tile * 0.36f, C_BAD);
-    g.drawCircle(cx, cy, tile * 0.36f + 1, ui::C_INK);
+  // shake + dizzy (X eyes) so the failure reads clearly (SPEC §8.3)
+  auto& g = hal::display.gfx();
+  int tile, ox, oy; mazeGeometry(tile, ox, oy);
+  int cx = ox + _it.pose().col * tile + tile / 2;
+  int cy = oy + _it.pose().row * tile + tile / 2;
+  for (int s = 0; s < 3; s++) {
+    drawCell(_it.pose().row, _it.pose().col);
+    drawCharacterPx(cx + (s & 1 ? 3 : -3), cy, _it.pose().facing, 2);
+    delay(55);
   }
+  drawCell(_it.pose().row, _it.pose().col);
+  drawCharacterPx(cx, cy, _it.pose().facing, 2);
   const char* msg = (o == OUT_BONK) ? "Bonk! a wall - tap to fix" :
                     (o == OUT_FELL) ? "Splash! a pit - tap to fix" :
                                       "Missed the goal - tap to fix";
@@ -697,11 +750,30 @@ app::Signal GameScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   }
 
   if (_mode == M_RUN) {
-    if (_auto && (_lastStep == 0 || now - _lastStep >= _stepMs)) {
+    if (_tween) {
+      // glide the robot between tiles, then resolve the move's outcome
+      uint32_t dur = (_stepMs > 140) ? (_stepMs - 70) : _stepMs / 2;
+      int tile, ox, oy; mazeGeometry(tile, ox, oy);
+      int fx = ox + _tweenFrom.col * tile + tile / 2, fy = oy + _tweenFrom.row * tile + tile / 2;
+      int gx = ox + _tweenTo.col * tile + tile / 2,   gy = oy + _tweenTo.row * tile + tile / 2;
+      uint32_t el = now - _tweenT0;
+      if (el >= dur) {
+        _tween = false;
+        redrawCellsBetween(_tweenFrom, _tweenTo);
+        drawCharacterAt(_tweenTo);
+        _drawnPose = _tweenTo;
+        settleOutcome(_pendingOutcome);
+      } else {
+        float t = el / (float)dur;
+        int cx = fx + (int)((gx - fx) * t), cy = fy + (int)((gy - fy) * t);
+        redrawCellsBetween(_tweenFrom, _tweenTo);
+        drawCharacterPx(cx, cy, _tweenTo.facing, 0);
+      }
+    } else if (_auto && (_lastStep == 0 || now - _lastStep >= _stepMs)) {
       stepOnce(now);
       _lastStep = now;
     }
-    if (tap && _mode == M_RUN) {
+    if (tap && _mode == M_RUN && !_tween) {
       if (R_STEP.contains(tx, ty)) { _auto = false; stepOnce(now); _lastStep = now; }
       else if (R_RESET.contains(tx, ty)) { resetRun(); }
     }

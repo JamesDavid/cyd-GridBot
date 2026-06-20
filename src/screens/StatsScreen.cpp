@@ -46,8 +46,8 @@ void StatsScreen::draw() {
   char buf[48];
   snprintf(buf, sizeof(buf), "%s - Stats", _p->name.c_str());
   label(g, 6, 3, buf, C_ACCENT, textdatum_t::top_left, 2);
-  snprintf(buf, sizeof(buf), "Badges %d/%d", gb::achievementCount(_p->achievements), gb::ACH_COUNT);
-  label(g, 168, 6, buf, C_FUNC, textdatum_t::top_left);
+  snprintf(buf, sizeof(buf), "Badges %d/%d >", gb::achievementCount(_p->achievements), gb::ACH_COUNT);
+  label(g, 160, 6, buf, C_FUNC, textdatum_t::top_left);
 
   int y = BAND_Y + 2;
   auto line = [&](const char* k, const char* v, uint16_t col) {
@@ -114,6 +114,8 @@ app::Signal StatsScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   if (R_EDIT.contains(tx, ty)) return app::Signal::EDIT_PROFILE;
   if (R_DRAW.contains(tx, ty)) return app::Signal::GOTO_DRAW;
   if (R_DEL.contains(tx, ty)) { _confirm = 1; drawConfirm(); }
+  // tapping the "Badges N/13 >" header opens the gallery
+  if (tx >= 158 && tx < 256 && ty < 22) return app::Signal::GOTO_BADGES;
   return app::Signal::NONE;
 }
 

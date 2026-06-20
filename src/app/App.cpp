@@ -68,9 +68,11 @@ void App::drawIntro() {
   int w = 240, h = 120, x = (SCREEN_W - w) / 2, y = (SCREEN_H - h) / 2;
   g.fillRoundRect(x, y, w, h, 10, C_PANEL);
   g.drawRoundRect(x, y, w, h, 10, C_ACCENT);
-  char buf[24];
+  char buf[32];
+  ui::Biome bm = ui::biomeFor((int)_introLevel);
   snprintf(buf, sizeof(buf), "Level %u", (unsigned)_introLevel);
-  label(g, SCREEN_W / 2, y + 20, buf, C_ACCENT, textdatum_t::middle_center, 2);
+  label(g, SCREEN_W / 2, y + 18, buf, C_ACCENT, textdatum_t::middle_center, 2);
+  label(g, SCREEN_W / 2, y + 36, bm.name, C_DIM, textdatum_t::middle_center);
 
   // newly-unlocked mechanic (compare this level's unlocks to the previous level's)
   gb::Unlocks now = gb::computeUnlocks(_introLevel);
@@ -236,6 +238,9 @@ void App::tick(uint32_t now) {
         _create.enter();
         _state = State::CREATE;
       }
+      else if (s == Signal::GOTO_BADGES) {
+        _badges.begin(&_profile); _badges.enter(); _state = State::BADGES;
+      }
       else if (s == Signal::GOTO_DRAW) {
         _pixed.begin(&_profile); _pixed.enter(); _state = State::DRAW;
       }
@@ -275,6 +280,11 @@ void App::tick(uint32_t now) {
     case State::RADIO: {
       Signal s = _radio.tick(now, tp);
       if (s == Signal::BACK) { saveProfile(); _arena.begin(&_profile); _arena.enter(); _state = State::ARENA; }
+      break;
+    }
+    case State::BADGES: {
+      Signal s = _badges.tick(now, tp);
+      if (s == Signal::BACK) { _stats.begin(&_profile); _stats.enter(); _state = State::STATS; }
       break;
     }
   }
