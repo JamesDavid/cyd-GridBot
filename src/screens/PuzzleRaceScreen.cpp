@@ -22,8 +22,11 @@ static constexpr int LIST_X = 216;
 
 void PuzzleRaceScreen::begin(Profile* profile) {
   _profile = profile;
-  // one shared maze (a meaty mid-size board); both players solve the same one
-  MazeGen::generate(_maze, profile ? profile->seedBase + 999u : 999u, 9);
+  // one shared maze (a meaty mid-size board); both players solve the same one. The
+  // game counter persists across "Again" / re-entry so every round is a fresh board.
+  uint32_t base = (profile ? profile->seedBase : 0) + 999u;
+  MazeGen::generate(_maze, base + _gameNo * 1009u, 9);
+  _gameNo++;
   _prog[0].clear(); _prog[1].clear();
   _dist[0] = _dist[1] = -1;
   _player = 0;

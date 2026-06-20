@@ -34,6 +34,7 @@ class PuzzleRaceScreen : public app::IScreen {
   int _dist[2] = {-1, -1};
   Phase _phase = Phase::AUTHOR;
   uint32_t _deadline = 0;
+  uint32_t _gameNo = 0;   // increments each game (incl. "Again") so the maze varies
   int _shownSec = -1;     // last drawn countdown value (avoid per-tick flicker)
   app::TapDetector _tap;
 };
