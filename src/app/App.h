@@ -15,6 +15,7 @@
 #include "screens/ShopScreen.h"
 #include "screens/PuzzleRaceScreen.h"
 #include "screens/ChallengeScreen.h"
+#include "screens/NeuroLessonScreen.h"
 
 namespace app {
 
@@ -28,9 +29,10 @@ class App {
   void debugGrantCoins(uint32_t n);       // grant coins for testing ('C <n>')
   void debugAutoRun();                    // GAME: solve + run paused ('A')
   void debugStep();                       // advance the current run/match one tick ('N')
+  void debugNeuroLesson();                // open the single-neuron lesson ('B')
 
  private:
-  enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE };
+  enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE, NEURO_LESSON };
 
   void gotoSelect();
   void gotoIntro(uint32_t level);
@@ -56,6 +58,7 @@ class App {
   screens::PuzzleRaceScreen _puzzle;
   screens::ChallengeScreen _challenge;
   bool _inChallenge = false;  // the GAME screen is running a seed challenge, not campaign
+  screens::NeuroLessonScreen _neuro;
   TapDetector _introTap;
   ui::Rect _arenaBtn{90, 196, 140, 28};  // shown on the level intro post-sensing
 };

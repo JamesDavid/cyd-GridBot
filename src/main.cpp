@@ -76,6 +76,9 @@ static void handleSerialLine(const String& line) {
   } else if (c == 'N') {
     gApp.debugStep();
     Serial.println("STEP");
+  } else if (c == 'B') {
+    gApp.debugNeuroLesson();
+    Serial.println("NEURO");
   }
 }
 #endif

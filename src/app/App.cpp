@@ -142,6 +142,13 @@ void App::debugStep() {
   else if (_state == State::ARENA) _arena.debugStep();
 }
 
+void App::debugNeuroLesson() {
+  hal::audio.stopMusic();
+  _neuro.begin();
+  _neuro.enter();
+  _state = State::NEURO_LESSON;
+}
+
 void App::debugFastPlay(uint32_t target) {
   if (_profile.id.empty()) {
     std::vector<store::ProfileMeta> metas;
@@ -324,6 +331,11 @@ void App::tick(uint32_t now) {
     case State::PUZZLE: {
       Signal s = _puzzle.tick(now, tp);
       if (s == Signal::BACK) { _arena.begin(&_profile); _arena.enter(); _state = State::ARENA; }
+      break;
+    }
+    case State::NEURO_LESSON: {
+      Signal s = _neuro.tick(now, tp);
+      if (s == Signal::BACK) gotoSelect();
       break;
     }
     case State::CHALLENGE: {
