@@ -209,14 +209,13 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
 
 ## What's next
 
-**Recently shipped:** ✅ smooth movement tween · ✅ win celebration + robot emotes ·
-✅ five **level biomes** · ✅ a 13-badge **achievements gallery** · ✅ **breadcrumb trails**
-(per-biome outlines of where the robot's been) · ✅ Sumo (PUSH) · ✅ a one-click **online
-flasher**.
+**Recently shipped:** ✅ a **chiptune menu theme** + win fanfare + badge chime ·
+✅ smooth movement tween · ✅ win celebration + robot emotes · ✅ five **level biomes** ·
+✅ a 13-badge **achievements gallery** · ✅ **breadcrumb trails** (per-biome outlines of
+where the robot's been) · ✅ Sumo (PUSH) · ✅ a one-click **online flasher**.
 
 Still on deck (full list in **[BACKLOG.md](BACKLOG.md)**):
 
-- **Music** — a chiptune loop + per-event jingles (SFX are in; tunes are next).
 - **Puzzle Race** multiplayer — both players get a timer to code the *same* maze; furthest
   progress (or closest to the goal) wins. One of several planned mode types.
 - **Smarter arena bots & strategic boards** so Races are more often decisive, plus the

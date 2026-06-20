@@ -42,6 +42,8 @@ void App::gotoSelect() {
   _state = State::SELECT;
   _select.begin(&store::profiles);
   _select.enter();
+  hal::audio.setEnabled(true);
+  hal::audio.startMusic(hal::kTitleMusic, hal::kTitleMusicLen, true);  // menu theme
 }
 
 void App::loadProfileInto(const std::string& id) {
@@ -59,6 +61,7 @@ void App::gotoIntro(uint32_t level) {
   _introLevel = level;
   _state = State::INTRO;
   drawIntro();
+  if (!hal::audio.playing()) hal::audio.startMusic(hal::kTitleMusic, hal::kTitleMusicLen, true);
 }
 
 void App::drawIntro() {
@@ -98,6 +101,7 @@ void App::drawIntro() {
 }
 
 void App::gotoGame() {
+  hal::audio.stopMusic();  // quiet for gameplay (step ticks would clash)
   _state = State::GAME;
   _game.begin(&_profile, _introLevel);
   _game.enter();
@@ -177,6 +181,7 @@ void App::debugFastPlay(uint32_t target) {
 }
 
 void App::tick(uint32_t now) {
+  hal::audio.update(now);  // advance the background melody (no-op if not playing)
   hal::TouchPoint tp = hal::touch.read();
 
   switch (_state) {
@@ -208,6 +213,7 @@ void App::tick(uint32_t now) {
       int x, y;
       if (_introTap.tapped(tp, now, x, y)) {
         if (_profile.unlocks.sense && _arenaBtn.contains(x, y)) {
+          hal::audio.stopMusic();
           _arena.begin(&_profile); _arena.enter(); _state = State::ARENA;
         } else {
           gotoGame();
@@ -233,6 +239,7 @@ void App::tick(uint32_t now) {
         if (isNew) {
           for (int i = 0; i < gb::ACH_COUNT; i++)
             if (isNew & (1u << i)) { _newBadge = gb::achievementName(i); break; }
+          hal::audio.badge();  // achievement chime
         }
         saveProfile();  // autosave on WIN (SPEC §11)
         gotoIntro(_profile.level);

@@ -19,7 +19,9 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [ ] **Daily/shared-seed challenge**: everyone plays the same maze from a seed code.
 - [ ] **Coin collectibles + a tiny shop** for sprite colours / themes (ties to the
       pixel editor and the coin-economy motif).
-- [ ] **Music**: a short chiptune loop + win jingle (gate behind settings.sound).
+- [x] **Music**: non-blocking chiptune menu theme (loops on select/intro) + a win
+      fanfare + a badge chime; SFX briefly override and the melody resumes. (Future:
+      an in-game mute toggle / per-screen tracks.)
 
 ## Campaign polish (deferred niceties)
 - [x] Brick-red walls + void (background-colour) pits so hazards read clearly.
