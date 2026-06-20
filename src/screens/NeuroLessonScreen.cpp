@@ -19,7 +19,7 @@ static const Rect R_RST  = {174, (int16_t)(BOTBAR_Y + 2), 64, 26};
 static const Rect R_BACK = {242, (int16_t)(BOTBAR_Y + 2), 72, 26};
 
 static const char* TITLES[3] = {"Neuron: watch it learn", "Multi-class: 3 actions", "Hidden layer: XOR"};
-static const char* RULES[3]  = {"turn if WALL or PIT", "jump if pit, turn if wall, else go", "ON if exactly one"};
+static const char* RULES[3]  = {"turn if WALL or PIT", "jump if pit, turn if wall, else go", "ON if exactly one of A, B"};
 
 void NeuroLessonScreen::begin(int mode) {
   _mode = mode;
@@ -103,9 +103,12 @@ void NeuroLessonScreen::draw() {
     snprintf(bb, sizeof(bb), "b%+.2f", _p.b); label(g, OX, OY + 7, bb, C_BG, textdatum_t::middle_center);
     label(g, 8, 150, "weights & bias update as it learns", C_DIM);
   } else {
-    // 2 inputs -> hidden row -> outputs (a layered blob — "more neurons")
-    g.fillCircle(30, 70, 12, C_MOVE); label(g, 30, 70, "wall", C_BG, textdatum_t::middle_center);
-    g.fillCircle(30, 120, 12, C_PANEL_HI); label(g, 30, 120, "pit", C_INK, textdatum_t::middle_center);
+    // 2 inputs -> hidden row -> outputs (a layered blob — "more neurons").
+    // mode 1 reacts to wall/pit; mode 2 (XOR) is an abstract logic gate over two inputs A,B.
+    const char* nA = (_mode == 2) ? "A" : "wall";
+    const char* nB = (_mode == 2) ? "B" : "pit";
+    g.fillCircle(30, 70, 12, C_MOVE); label(g, 30, 70, nA, C_BG, textdatum_t::middle_center);
+    g.fillCircle(30, 120, 12, C_PANEL_HI); label(g, 30, 120, nB, C_INK, textdatum_t::middle_center);
     int outs = (_mode == 1) ? 3 : 1;
     for (int j = 0; j < 4; j++) {                 // hidden layer
       int hy = 50 + j * 30;
@@ -125,9 +128,10 @@ void NeuroLessonScreen::draw() {
   for (int i = 0; i < N_EX; i++) {
     int y = TOPBAR_H + 28 + i * 38;
     int wall = (int)DX[i * 2], pit = (int)DX[i * 2 + 1];
-    // a bright word when the sensor is ON, dim when OFF -> you read why each row decides
-    label(g, ex0, y, wall ? "WALL" : "wall", wall ? C_MOVE : C_LOCK);
-    label(g, ex0 + 34, y, pit ? "PIT" : "pit", pit ? C_SENSE : C_LOCK);
+    // a bright word when the input is ON, dim when OFF -> you read why each row decides.
+    // modes 0/1 are wall/pit sensors; mode 2 (XOR) is two abstract inputs A,B.
+    label(g, ex0, y, _mode == 2 ? (wall ? "A" : "a") : (wall ? "WALL" : "wall"), wall ? C_MOVE : C_LOCK);
+    label(g, ex0 + 34, y, _mode == 2 ? (pit ? "B" : "b") : (pit ? "PIT" : "pit"), pit ? C_SENSE : C_LOCK);
     label(g, ex0 + 58, y, "->", C_DIM);
     int act = decision(i), want = correctClass(_mode, i);
     bool ok = (act == want);

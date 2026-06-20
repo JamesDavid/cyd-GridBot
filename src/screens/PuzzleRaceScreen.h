@@ -22,6 +22,7 @@ class PuzzleRaceScreen : public app::IScreen {
   enum class Phase : uint8_t { AUTHOR, HANDOFF, RESULT };
   void attachEditor();   // bind the shared editor to the current player's program
   void drawAuthor();
+  void drawButtons();    // bottom-bar DONE + "see the maze" (redrawn after editor taps)
   void drawBoard();      // peek: show the shared maze full-screen
   void drawHandoff();
   void drawResult();

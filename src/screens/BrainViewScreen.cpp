@@ -71,9 +71,10 @@ void BrainViewScreen::draw() {
 
   // ---- the network: inputs (left) -> hidden (mid) -> outputs (right) ----
   int IX = 96, HX = 168, OX = 238;
-  int iy0 = BAND_Y + 4, idy = 16;
-  int hy0 = BAND_Y + 8, hdy = 20;
-  int oy0 = BAND_Y + 14, ody = 28;
+  // node columns centred vertically in the band (was scrunched at the top)
+  int iy0 = BAND_Y + 22, idy = 16;
+  int hy0 = BAND_Y + 26, hdy = 20;
+  int oy0 = BAND_Y + 32, ody = 28;
   // dim wiring
   for (int i = 0; i < SENSOR_COUNT_FOR_BRAIN; i++)
     for (int j = 0; j < _brain.nHid; j++) g.drawLine(IX, iy0 + i * idy, HX, hy0 + j * hdy, C_LOCK);
@@ -99,7 +100,7 @@ void BrainViewScreen::draw() {
   label(g, HX - 14, BAND_Y, "THINKS", C_SENSE);
   label(g, OX - 6, BAND_Y, "DOES", C_GO);
   char v[24]; snprintf(v, sizeof(v), "decides: %s", OUTLBL[_action]);
-  label(g, 6, moy + 50, v, ui::rgb(120, 230, 245));
+  label(g, SCREEN_W / 2, BOTBAR_Y - 16, v, ui::rgb(120, 230, 245), textdatum_t::top_center);
 
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_STEP, "Step", C_GO, C_PANEL);

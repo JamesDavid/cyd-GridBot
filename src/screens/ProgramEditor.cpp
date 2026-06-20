@@ -252,8 +252,10 @@ void ProgramEditor::drawProgramList() {
       bool on = (_editList == lists[i]);
       button(g, r, tabs[i], on ? C_ACCENT : C_DIM, on ? C_PANEL_HI : C_PANEL);
     }
-    button(g, funcTabRect(3), "S>L", C_GO, C_PANEL);
-    button(g, funcTabRect(4), "L<L", C_FUNC, C_PANEL);
+    if (_cfg.library) {  // library save/load is host-opt-in (e.g. off during a timed race)
+      button(g, funcTabRect(3), "S>L", C_GO, C_PANEL);
+      button(g, funcTabRect(4), "L<L", C_FUNC, C_PANEL);
+    }
   }
 
   int top = listTop();
@@ -359,8 +361,8 @@ ProgramEditor::Action ProgramEditor::handleListTap(int x, int y) {
         drawProgramList(); return Action::NONE;
       }
     }
-    if (funcTabRect(3).contains(x, y)) { hal::audio.blip(); return Action::SAVE_LIB; }
-    if (funcTabRect(4).contains(x, y)) { hal::audio.blip(); return Action::LOAD_LIB; }
+    if (_cfg.library && funcTabRect(3).contains(x, y)) { hal::audio.blip(); return Action::SAVE_LIB; }
+    if (_cfg.library && funcTabRect(4).contains(x, y)) { hal::audio.blip(); return Action::LOAD_LIB; }
   }
   if (x < LIST_X) return Action::NONE;
   int top = listTop();

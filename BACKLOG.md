@@ -90,6 +90,16 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [ ] Author the arena bot in the Code view (currently uses the latest library entry).
 - [x] Hotseat (2 kids, 1 device) lock-in / handoff screen (Arena + Puzzle Race).
 
+## NeuroBot / on-device ML
+- [ ] **Draw-the-path training** (imitation learning by demonstration). On the "Train
+      the brain" page, let the kid tap tiles to lay down the path they want the robot to
+      take, then distill the brain to follow *that* path (it's the same `distillSolver`
+      machinery, just imitating a hand-drawn route instead of the BFS solver). A great,
+      tangible "teach by showing" mode alongside Teach (solver) / Evolve (score).
+- [ ] More ML topics the same engine could host (from the lessons discussion):
+      regularization/overfitting, batching, reward shaping, exploration-vs-exploitation
+      sliders, and a tiny recurrent/memory cell.
+
 ## Code architecture / refactor
 - [ ] **Migrate `GameScreen` onto the shared `ProgramEditor`.** The authoring UI
       (control pad + nested program list + tap handling) was extracted into

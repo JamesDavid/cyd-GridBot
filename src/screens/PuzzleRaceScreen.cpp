@@ -43,7 +43,8 @@ void PuzzleRaceScreen::attachEditor() {
     cfg.avatar = _profile->avatar;
     cfg.customChar = &_profile->customChar;
   }
-  cfg.func = false;   // no library Save/Load mid-race
+  cfg.func = _profile && _profile->unlocks.func;  // SAME editor: real F1/F2 function tabs
+  cfg.library = false;  // ...but no library Save/Load mid-race (would be a pre-canned-bot cheat)
   cfg.neuro = false;  // a brain would need training; not in a timed race
   cfg.facing = _maze.startPose().facing;
   _editor.attach(&_prog[_player], cfg, _par, _profile);
@@ -63,10 +64,17 @@ void PuzzleRaceScreen::drawAuthor() {
   char t[28]; snprintf(t, sizeof(t), "Player %d - program it!", _player + 1);
   label(g, 6, 4, t, _player == 0 ? C_GO : C_FUNC);
   _editor.draw();  // the same control pad + program list as the campaign
+  drawButtons();
+  // timer drawn each tick over the top bar
+}
+
+// The editor's program pane fills the full right side down to the screen bottom, so it
+// repaints over this bottom bar when you tap the pad — redraw the buttons after editor taps.
+void PuzzleRaceScreen::drawButtons() {
+  auto& g = hal::display.gfx();
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_DONE, "DONE >", C_GO, C_PANEL);
   button(g, R_PEEK, "see the maze", C_ACCENT, C_PANEL);
-  // timer drawn each tick over the top bar
 }
 
 void PuzzleRaceScreen::drawBoard() {
@@ -164,6 +172,7 @@ app::Signal PuzzleRaceScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       if (R_PEEK.contains(tx, ty)) { _peeking = true; drawBoard(); return app::Signal::NONE; }
       // everything else goes to the shared editor; RUN there = run it now (lock in + score)
       if (_editor.handleTap(tx, ty) == ProgramEditor::Action::RUN) { lockIn(now); }
+      else drawButtons();  // the editor may have repainted its pane over our bottom bar
     }
     return app::Signal::NONE;
   }

@@ -19,6 +19,7 @@ namespace screens {
 // but is passed explicitly so non-campaign hosts (Puzzle Race, lessons) can choose.
 struct EditorConfig {
   bool jump = true, repeat = true, call = true, sense = true, func = false, neuro = false;
+  bool library = false;  // show the Save>Lib / Load<Lib buttons (func tabs are separate, via `func`)
   int avatar = 0;
   gb::Facing facing = gb::EAST;
   const std::vector<uint8_t>* customChar = nullptr;  // optional custom sprite for the centre

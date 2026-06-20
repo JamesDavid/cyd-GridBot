@@ -187,6 +187,7 @@ void App::debugFastPlay(uint32_t target) {
     _profile.stats.totalWins++;
     _profile.stats.levelsCompleted++;
     _profile.stats.starsTotal += stars;
+    if (stars == 3) _profile.stats.threeStarWins++;  // so debug fast-play earns Bright Spark too
     _profile.stats.currentStreak++;
     _profile.level = lvl + 1;
     _profile.unlocks = gb::computeUnlocks(_profile.level);
@@ -259,10 +260,14 @@ void App::tick(uint32_t now) {
         _profile.stats.levelsCompleted++;
         if (_game.lastStars() == 3) _profile.stats.threeStarWins++;
         if (!_game.program().brains.empty()) _profile.stats.neuroWins++;  // cleared with a brain
-        _profile.workLevel = 0;
-        _profile.work.clear();
         _profile.level = _introLevel + 1;
         _profile.unlocks = gb::computeUnlocks(_profile.level);
+        // Carry your winning program into the next level — the whole point of the game is
+        // "write ONE program (e.g. a wall-follower) and watch it solve mazes it's never
+        // seen." A hardcoded path won't fit the new maze (tweak it — that's what motivates
+        // loops/sensing); a general solver just hits RUN and wins. (SPEC §7.1)
+        _profile.work = _game.program();
+        _profile.workLevel = _profile.level;
         // unlock + celebrate any newly-earned achievements
         uint32_t want = gb::evaluateAchievements(_profile);
         uint32_t isNew = want & ~_profile.achievements;

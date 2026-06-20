@@ -57,10 +57,11 @@ void BrainMapScreen::draw() {
     label(g, X, 104, "Pit (1)", C_TURN);
     label(g, X, 116, "a hole right in front?", C_DIM);
     label(g, X, 134, "Goal (3)", C_ACCENT);
-    label(g, X, 146, "battery: ahead? right? far?", C_DIM);
+    label(g, X, 146, "battery: ahead, right, far", C_DIM);
     label(g, X, 164, "Enemy (3)", C_BAD);
-    label(g, X, 176, "a rival: ahead? right? far?", C_DIM);
-    label(g, X, 196, "all from the robot's own view", C_DIM);
+    label(g, X, 176, "a rival: ahead, right, far", C_DIM);
+    label(g, 6, 190, "all relative to the robot's heading", C_DIM);
+    label(g, 6, 201, "ahead/right are signed: minus = behind/left", C_DIM);
   } else if (_page == 1) {
     label(g, X, 40, "WHAT IT DOES", CYAN);
     label(g, X, 54, "it picks the strongest one", C_DIM);
