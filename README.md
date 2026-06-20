@@ -106,6 +106,12 @@ hook, and the whole difficulty curve is designed to lead there.
 |:--|:--|
 | **Meadow** (early levels) — green floors and hedges. | **Nebula** (sensing tier) — purple space-brick. Five biomes (Meadow → Cavern → Glacier → Circuit → Nebula) shift the palette as you climb, so progress *feels* like a journey. |
 
+### Coins & gems to collect
+
+| ![Collectibles](docs/img/collectibles.png) |
+|:--|
+| **Grab loot on the way to the goal.** Gold **coins** sit right on the route — scoop them up for spendable currency. Bright cyan **gems** (✦) are the real prize: they sit on a *detour off the path*, so you have to steer your robot out of its way to grab one — and collecting every gem on a board pays an **all-clear bonus**. Spend it all in the **shop** on robot colours and emojis. |
+
 ### Draw your own robot
 
 | ![Pixel editor](docs/img/pixel-editor.png) |
@@ -205,9 +211,9 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
   bots correctly draw).
 - ESP-NOW radio battle/trade is built but **hardware-pending** — it needs two physical
   boards to verify end-to-end.
-- No animation tweening yet (robots hop tile-to-tile); music and richer juice are planned.
-- The on-screen mini-map, collectibles, fog levels, and a badge gallery are reserved but
-  not built.
+- Richer juice (particle burst + star fly-in on win) is still planned, though the core
+  is in: smooth tile-to-tile tween, breadcrumb trail, win celebration, and bonk shake.
+- The on-screen mini-map and fog levels are reserved but not built.
 
 ---
 
@@ -215,7 +221,7 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
 
 **Recently shipped:** ✅ **Puzzle Race** (shared-maze, beat-the-clock coding contest) ·
 ✅ **smarter arena bots** ("Ace" navigates the board) so Races are more often decisive ·
-✅ **coin collectibles + a sprite-colour & emoji shop** · ✅ a **chiptune menu theme** +
+✅ **coin & gem collectibles + a sprite-colour & emoji shop** · ✅ a **chiptune menu theme** +
 win fanfare + badge chime · ✅ smooth movement tween · ✅ five **level biomes** ·
 ✅ a 13-badge **achievements gallery** · ✅ **breadcrumb trails** · ✅ Sumo (PUSH) ·
 ✅ a one-click **online flasher**.

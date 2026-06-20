@@ -146,6 +146,30 @@ static bool tryGenerate(Maze& out, const Difficulty& d, uint32_t seed) {
     }
   }
 
+  // STAR gems: a riskier bonus than coins — placed on a FLOOR cell that is OFF the
+  // solution path but orthogonally ADJACENT to it, so the kid must steer a one-tile
+  // detour to grab one (always reachable: step off the path and back). Optional, so
+  // solvability/win logic is unaffected (STAR tiles are walkable). Larger boards only.
+  if (R + C >= 12) {
+    int wantGems = (int)rng.below(3), gotGems = 0;  // 0..2
+    const int dR[4] = {-1, 1, 0, 0}, dC[4] = {0, 0, -1, 1};
+    for (int r = 0; r < R && gotGems < wantGems; r++) {
+      for (int c = 0; c < C && gotGems < wantGems; c++) {
+        if (path[r * C + c] || out.at(r, c) != FLOOR) continue;
+        bool nextToPath = false;
+        for (int k = 0; k < 4; k++) {
+          int nr = r + dR[k], nc = c + dC[k];
+          // a WALKABLE path neighbour (a pit-gap path cell isn't walkable, so a gem
+          // beside one would be stranded) — guarantees the detour is reachable.
+          if (out.inBounds(nr, nc) && path[nr * C + nc] && out.isWalkable(nr, nc))
+            nextToPath = true;
+        }
+        if (!nextToPath) continue;
+        if (rng.chance(35)) { out.set(r, c, STAR); gotGems++; }
+      }
+    }
+  }
+
   // Verify (cheap safety net, §6.3). The carved path is always walkable, so this
   // essentially never fails, but the assert protects against edge cases.
   return shortestSolutionLen(out, d.allowPitGaps) > 0;

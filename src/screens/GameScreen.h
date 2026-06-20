@@ -100,6 +100,12 @@ class GameScreen : public app::IScreen {
   bool _visited[gb::MAZE_MAX_CELLS] = {false};  // breadcrumb trail
   bool _coinTaken[gb::MAZE_MAX_CELLS] = {false};
   int _coinsThisRun = 0;
+  // STAR gems: a rarer bonus collectible placed on a detour OFF the path, so you must
+  // route to grab them. Grabbing every gem on a board pays a bonus on the win.
+  bool _gemTaken[gb::MAZE_MAX_CELLS] = {false};
+  int _gemsThisRun = 0;
+  int _gemTotal = 0;          // gems on the active board
+  void recountGems();         // count STAR tiles on _maze into _gemTotal
   const gb::Node* _failNode = nullptr;
 
   // smooth movement tween between tiles

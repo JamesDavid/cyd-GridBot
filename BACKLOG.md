@@ -7,21 +7,22 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [x] **Achievements / badges** (13): First Steps, Bright Spark, Hopper, Looper,
       Architect, Sixth Sense, Champion, On Fire, Unstoppable, Explorer, Veteran,
       Artist, Star Collector. Sticky bitmask in the profile, count on the stats
-      header, celebrated on the level-intro when earned. (Future: a badges gallery
-      screen with icons.)
-- [ ] **Juice**: smooth tween between tiles, a little dust/trail, particle burst +
-      star fly-in on win, gentle screen-shake on bonk (character shake already added).
-- [ ] **Character emotes**: happy bounce on win, dizzy/✖-eyes on bonk, splash on a pit.
+      header, celebrated on the level-intro when earned, **+ a badges gallery screen
+      with icons** (reachable from Stats).
+- [x] **Juice**: smooth tile-to-tile tween, breadcrumb trail, win celebration, and a
+      character shake on bonk. (Future: particle burst + star fly-in on win.)
+- [x] **Character emotes**: happy face on win, dizzy/✖-eyes on bonk. (Future: pit splash.)
 - [ ] **Drag-to-reorder** program lines; an **Undo** button for edits.
-- [ ] **Level biomes/themes**: vary the floor/wall palette per level band (grass,
-      cave, ice, space) so progress feels visual.
+- [x] **Level biomes/themes**: floor/wall palette varies per level band (Meadow,
+      Cavern, Glacier, Circuit, Nebula) so progress feels visual.
 - [ ] **In-game speed slider** + a one-line **hint** ("par is N") toggle.
 - [ ] **Daily/shared-seed challenge**: everyone plays the same maze from a seed code.
-- [ ] **Coin collectibles + a tiny shop** for sprite colours / themes (ties to the
-      pixel editor and the coin-economy motif).
+- [x] **Coin collectibles + a shop** for sprite colours **and emojis** (ties to the
+      pixel editor and the coin-economy motif). Coins sit on the path; **STAR gems**
+      are a rarer bonus on a detour off it (see Campaign polish).
 - [x] **Music**: non-blocking chiptune menu theme (loops on select/intro) + a win
-      fanfare + a badge chime; SFX briefly override and the melody resumes. (Future:
-      an in-game mute toggle / per-screen tracks.)
+      fanfare + a badge chime; SFX briefly override and the melody resumes, **plus an
+      in-game mute toggle** on the home screen. (Future: per-screen tracks.)
 
 ## Campaign polish (deferred niceties)
 - [x] Brick-red walls + void (background-colour) pits so hazards read clearly.
@@ -30,12 +31,15 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [x] Bigger chrome titles; compressed unlock curve (sensing at L22, not L55);
       multi-maze challenges interspersed every 5th level past sensing.
 - [x] Failure feedback on the maze before returning to code (see below).
-- [ ] Smooth tile-to-tile character tween during animation (currently discrete hops).
+- [x] Smooth tile-to-tile character tween during animation (glides between tiles).
 - [ ] Press animation on buttons (brief depress + release) beyond the colour change.
 - [ ] Optional persistent mini-map in the Code view (SPEC §10; per-profile setting,
       default off). Field reserved in `Settings.miniMap`.
-- [ ] Collectibles (coins/stars to grab before the goal) — tile types `COIN`/`STAR`
-      already reserved in the model (SPEC §16.3). Off for v1.
+- [x] Collectibles (coins/stars to grab before the goal) — tile types `COIN`/`STAR`.
+      **Coins** sprinkle on the solution path (passive bonus currency). **STAR gems**
+      are a rarer bonus placed on a reachable detour OFF the path, so you must steer to
+      grab them; collecting every gem on a board pays an all-clear coin bonus on the
+      win. Both spend in the shop. Generation is gem-reachability unit-tested.
 - [ ] Fog levels (limited view) as an alternative sensing backdrop (SPEC §7.1). We
       ship the one-program-many-mazes variant instead.
 - [ ] `ELSE` branch and `ON_COLOR` condition (intentionally deferred, SPEC §16.4).
@@ -72,10 +76,11 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
       bounce, fall-out, win check). Determinism proven by byte-identical log test.
 - [x] Symmetric arena generation (mirrored hazards, equidistant starts).
 - [x] Race demo screen: player's library bot (or wall-follower) vs a house AI bot.
-- [ ] Sumo match type (`PUSH` verb) and Zap (`FIRE` verb) on the shared tick engine.
-- [ ] Fuller AI bot roster (always-forward, ENEMY_NEAR hunter) + opponent picker UI.
+- [x] Sumo match type (`PUSH` verb) on the shared tick engine. (Zap / `FIRE` verb still open.)
+- [x] Fuller AI bot roster — **Rusty** (always-forward), **Bolt** (dasher), **Vex**
+      (ENEMY_NEAR hunter), **Ace** (solves the board on the fly) — + an opponent picker UI.
 - [ ] Author the arena bot in the Code view (currently uses the latest library entry).
-- [ ] Hotseat (2 kids, 1 device) lock-in / handoff screen.
+- [x] Hotseat (2 kids, 1 device) lock-in / handoff screen (Arena + Puzzle Race).
 
 ## Hardware / platform
 - [ ] Resolve the §1.1 2-USB panel question on the real unit (ILI9341 vs ST7789,
@@ -103,3 +108,11 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [x] Per-profile UUID for cross-session friend recognition (in the radio friend-card).
 - [ ] Touch reliability tuning on the resistive panel (lower Z-threshold / re-cal flow);
       `X` serial command clears calibration to force a re-cal.
+
+## Distribution
+- [x] **Online flasher**: a GitHub Pages page (`docs/`) with ESP Web Tools so anyone can
+      flash the current build from the browser over USB — no clone/toolchain needed.
+      `docs/firmware/gridbot-merged.bin` + `docs/manifest.json` regenerated per release.
+- [x] CYD purchase link in the README + flasher page for people who need the hardware.
+- [ ] Tagged GitHub releases with versioned merged-firmware artifacts + a changelog.
+- [ ] Animated gameplay/arena GIFs auto-regenerated from on-device capture in CI.

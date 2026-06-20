@@ -44,6 +44,7 @@ void GameScreen::begin(Profile* profile, uint32_t level) {
                                         profile ? profile->seedBase : 0, level);
   _boardIdx = 0;
   _maze = _boards[0];
+  recountGems();
   _biome = ui::biomeFor((int)level);
   _prog.clear();
   // Resume the in-progress script for this level if present (SPEC §11.1).
@@ -66,6 +67,8 @@ void GameScreen::begin(Profile* profile, uint32_t level) {
   _tween = false;
   for (auto& v : _visited) v = false;
   for (auto& v : _coinTaken) v = false;
+  for (auto& v : _gemTaken) v = false;
+  _gemsThisRun = 0;
   _coinsThisRun = 0;
   _it.load(&_prog, &_maze, _maze.startPose());
 }
@@ -152,6 +155,16 @@ void GameScreen::drawCell(int r, int c) {
       g.fillCircle(cx, cy, rad, C_ACCENT);
       g.drawCircle(cx, cy, rad, ui::rgb(180, 130, 0));
       g.fillCircle(cx - rad / 3, cy - rad / 3, 1, C_INK);  // shine
+    }
+    // a STAR gem (rarer bonus): a bright cyan 4-point sparkle, distinct from the coin
+    if (t == STAR && !_gemTaken[r * _maze.cols() + c]) {
+      int cx = x + tile / 2, cy = y + tile / 2, rad = tile / 4;
+      uint16_t gem = ui::rgb(120, 230, 245);
+      g.fillTriangle(cx, cy - rad, cx - rad / 3, cy, cx + rad / 3, cy, gem);  // N
+      g.fillTriangle(cx, cy + rad, cx - rad / 3, cy, cx + rad / 3, cy, gem);  // S
+      g.fillTriangle(cx - rad, cy, cx, cy - rad / 3, cx, cy + rad / 3, gem);  // W
+      g.fillTriangle(cx + rad, cy, cx, cy - rad / 3, cx, cy + rad / 3, gem);  // E
+      g.fillCircle(cx, cy, rad / 3, C_INK);  // bright core
     }
   }
   if (_maze.isGoal(r, c)) {
@@ -616,6 +629,8 @@ void GameScreen::startRun() {
   }
   for (auto& v : _visited) v = false;
   for (auto& v : _coinTaken) v = false;
+  for (auto& v : _gemTaken) v = false;
+  _gemsThisRun = 0;
   _coinsThisRun = 0;   // fresh breadcrumb trail
   _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
   _mode = M_RUN;
@@ -629,8 +644,11 @@ void GameScreen::startRun() {
 void GameScreen::resetRun() {
   _boardIdx = 0;
   _maze = _boards[0];
+  recountGems();
   for (auto& v : _visited) v = false;
   for (auto& v : _coinTaken) v = false;
+  for (auto& v : _gemTaken) v = false;
+  _gemsThisRun = 0;
   _coinsThisRun = 0;
   _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
   _auto = false;
@@ -645,6 +663,8 @@ void GameScreen::beginAutoRun() {
   _editList = &_prog.main;
   for (auto& v : _visited) v = false;
   for (auto& v : _coinTaken) v = false;
+  for (auto& v : _gemTaken) v = false;
+  _gemsThisRun = 0;
   _coinsThisRun = 0;
   _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
   _mode = M_RUN;
@@ -662,11 +682,21 @@ void GameScreen::debugStep() {
   if (_mode == M_RUN && !_tween && !_it.finished()) stepOnce(millis());
 }
 
+void GameScreen::recountGems() {
+  _gemTotal = 0;
+  for (int r = 0; r < _maze.rows(); r++)
+    for (int c = 0; c < _maze.cols(); c++)
+      if (_maze.at(r, c) == STAR) _gemTotal++;
+}
+
 void GameScreen::advanceBoard() {
   _boardIdx++;
   _maze = _boards[_boardIdx];
+  recountGems();
   for (auto& v : _visited) v = false;
   for (auto& v : _coinTaken) v = false;
+  for (auto& v : _gemTaken) v = false;
+  _gemsThisRun = 0;
   _coinsThisRun = 0;
   _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
   _drawnPose = _maze.startPose();
@@ -706,10 +736,13 @@ void GameScreen::stepOnce(uint32_t now) {
   Pose old = _it.pose();
   _visited[old.row * _maze.cols() + old.col] = true;  // drop a breadcrumb
   Outcome o = _it.step();
-  // collect a coin if we landed on one
+  // collect a coin or a gem if we landed on one
   int ci = _it.pose().row * _maze.cols() + _it.pose().col;
-  if (_maze.at(_it.pose().row, _it.pose().col) == COIN && !_coinTaken[ci]) {
+  Tile here = _maze.at(_it.pose().row, _it.pose().col);
+  if (here == COIN && !_coinTaken[ci]) {
     _coinTaken[ci] = true; _coinsThisRun++; hal::audio.blip();
+  } else if (here == STAR && !_gemTaken[ci]) {
+    _gemTaken[ci] = true; _gemsThisRun++; hal::audio.badge();  // sparkly chime
   }
   bool moved = (old.row != _it.pose().row || old.col != _it.pose().col);
   if (moved && (o == OUT_OK || o == OUT_WIN)) {
@@ -735,25 +768,36 @@ void GameScreen::settleOutcome(Outcome o) {
     _stars = starsFor(_writtenCount, _par);
     hal::audio.win();
     hal::led.green();
+    // gems pay out in coins; grabbing every gem on the board adds an all-clear bonus
+    bool allGems = _gemTotal > 0 && _gemsThisRun == _gemTotal;
+    int gemCoins = _gemsThisRun * 3 + (allGems ? 5 : 0);
     if (_profile) {
       _profile->stats.totalWins++;
       _profile->stats.starsTotal += _stars;
-      _profile->coins += _coinsThisRun;  // keep collected coins on a win
+      _profile->coins += _coinsThisRun + gemCoins;  // keep collected coins+gems on a win
     }
     winCelebration();
     auto& g = hal::display.gfx();
-    int w = 210, h = 90, x = (SCREEN_W - w) / 2, yy = (SCREEN_H - h) / 2;
+    bool showGems = _gemsThisRun > 0;
+    int w = 210, h = showGems ? 108 : 90, x = (SCREEN_W - w) / 2, yy = (SCREEN_H - h) / 2;
     g.fillRoundRect(x, yy, w, h, 10, C_PANEL);
     g.drawRoundRect(x, yy, w, h, 10, C_GO);
     label(g, SCREEN_W / 2, yy + 20, "YOU WIN!", C_GO, textdatum_t::middle_center, 2);
-    char st[24];
+    char st[28];
     snprintf(st, sizeof(st), "%d star%s", _stars, _stars == 1 ? "" : "s");
     label(g, SCREEN_W / 2, yy + 44, st, C_ACCENT, textdatum_t::middle_center);
-    if (_coinsThisRun > 0) {
-      snprintf(st, sizeof(st), "+%d coins!", _coinsThisRun);
-      label(g, SCREEN_W / 2, yy + 60, st, ui::rgb(255, 210, 60), textdatum_t::middle_center);
+    int totalCoins = _coinsThisRun + gemCoins, ly = yy + 60;
+    if (totalCoins > 0) {
+      snprintf(st, sizeof(st), "+%d coins!", totalCoins);
+      label(g, SCREEN_W / 2, ly, st, ui::rgb(255, 210, 60), textdatum_t::middle_center);
+      ly += 16;
     }
-    label(g, SCREEN_W / 2, yy + 78, "tap to continue", C_DIM, textdatum_t::middle_center);
+    if (showGems) {
+      if (allGems) snprintf(st, sizeof(st), "All %d gems! +5", _gemTotal);
+      else         snprintf(st, sizeof(st), "%d/%d gems", _gemsThisRun, _gemTotal);
+      label(g, SCREEN_W / 2, ly, st, ui::rgb(120, 230, 245), textdatum_t::middle_center);
+    }
+    label(g, SCREEN_W / 2, yy + h - 12, "tap to continue", C_DIM, textdatum_t::middle_center);
     return;
   }
   // failure (BONK / FELL / DONE_NO_WIN)

@@ -108,6 +108,35 @@ void test_solver_wins_across_curve() {
   TEST_ASSERT_TRUE(checked >= 400);
 }
 
+// STAR gems are an OPTIONAL bonus: they must be walkable, never on start/goal, always
+// have a walkable orthogonal neighbour (so the robot can step onto them), and must not
+// break solvability. They should also actually appear somewhere across the sweep.
+void test_gems_reachable_and_optional() {
+  int totalGems = 0;
+  const int dR[4] = {-1, 1, 0, 0}, dC[4] = {0, 0, -1, 1};
+  for (uint32_t sb = 1; sb <= 25; sb++) {
+    for (int level = 1; level <= 60; level += 2) {
+      Maze m; MazeGen::generate(m, sb, level);
+      for (int r = 0; r < m.rows(); r++)
+        for (int c = 0; c < m.cols(); c++) {
+          if (m.at(r, c) != STAR) continue;
+          totalGems++;
+          TEST_ASSERT_TRUE(m.isWalkable(r, c));            // can be stepped on
+          TEST_ASSERT_FALSE(m.isGoal(r, c));               // not the goal
+          Pose s = m.startPose();
+          TEST_ASSERT_FALSE(r == s.row && c == s.col);     // not the start
+          bool neigh = false;                              // reachable from an adjacent tile
+          for (int k = 0; k < 4; k++)
+            if (m.isWalkable(r + dR[k], c + dC[k])) neigh = true;
+          TEST_ASSERT_TRUE(neigh);
+        }
+      // solvability is unaffected (gems are walkable, off the required path)
+      TEST_ASSERT_TRUE(shortestSolutionLen(m, difficultyFor(level).allowPitGaps) > 0);
+    }
+  }
+  TEST_ASSERT_TRUE(totalGems > 0);  // the feature actually produces gems
+}
+
 void test_star_math() {
   TEST_ASSERT_EQUAL(3, starsFor(5, 5));    // == par
   TEST_ASSERT_EQUAL(3, starsFor(4, 5));    // under par
@@ -124,6 +153,7 @@ int main(int, char**) {
   RUN_TEST(test_start_faces_open_cell);
   RUN_TEST(test_grid_sizes_follow_curve);
   RUN_TEST(test_solver_wins_across_curve);
+  RUN_TEST(test_gems_reachable_and_optional);
   RUN_TEST(test_star_math);
   return UNITY_END();
 }
