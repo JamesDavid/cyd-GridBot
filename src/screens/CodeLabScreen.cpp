@@ -7,13 +7,13 @@ namespace screens {
 
 struct Item { const char* title; const char* sub; uint16_t col; };
 static const int N = 5;
-// In unlock order: Move (start), Jump (L6), Repeat (L10), Functions (L15), Sense (L22).
+// In unlock order: Move (start), Jump (L6), Repeat (L10), Sense (L15), Functions (L20).
 static const Item ITEMS[N] = {
   {"1. Move", "forward & turn", C_MOVE},
   {"2. Jump", "leap over a pit", C_GO},
   {"3. Repeat", "do steps again and again", C_LOOP},
-  {"4. Functions", "name steps, call them", C_FUNC},
-  {"5. Sense", "react with IF", C_SENSE},
+  {"4. Sense", "react with IF", C_SENSE},
+  {"5. Functions", "name steps, call them", C_FUNC},
 };
 
 static Rect rowRect(int i) { return {10, (int16_t)(44 + i * 32), 300, 30}; }

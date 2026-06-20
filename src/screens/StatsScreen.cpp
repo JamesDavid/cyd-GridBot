@@ -76,7 +76,7 @@ void StatsScreen::draw() {
   y += 14;
   const CmdStat order[6] = {CS_FWD, CS_TURN, CS_JUMP, CS_REPEAT, CS_CALL, CS_SENSE};
   const char* nm[6] = {"Fwd", "Turn", "Jump", "Loop", "Func", "Sense"};
-  const int lvl[6] = {1, 1, 6, 10, 15, 22};
+  const int lvl[6] = {1, 1, 6, 10, 20, 15};
   const gb::Unlocks& u = _p->unlocks;
   const bool unl[6] = {true, true, u.jump, u.repeat, u.func, u.sense};
   uint16_t maxv = 1;

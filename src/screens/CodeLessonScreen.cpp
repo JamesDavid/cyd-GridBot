@@ -32,7 +32,7 @@ void CodeLessonScreen::setup(int lesson) {
       _maze.reset(1, 6); _maze.fill(FLOOR); _maze.setStart(pose(0, 0, EAST)); _maze.setGoal(0, 5);
       { Node rep = Node::repeat(5); rep.body.push_back(Node::command(CMD_FWD)); _prog.main.push_back(rep); }
       break;
-    default:  // Sense / If (case 4 — last to unlock)
+    case 3:  // Sense / If (unlocks L15, before Functions)
       _title = "Sense"; _concept = "IF lets the robot react: if a wall is ahead, turn.";
       MazeGen::generateSpiral(_maze, 5, 5);
       { Node loop = Node::repeatUntil(AT_GOAL);
@@ -40,7 +40,7 @@ void CodeLessonScreen::setup(int lesson) {
         loop.body.push_back(iff); loop.body.push_back(Node::command(CMD_FWD));
         _prog.main.push_back(loop); }
       break;
-    case 3:  // Functions
+    default:  // Functions (case 4 — last block to unlock, L20)
       _title = "Functions"; _concept = "A function is steps you name once and CALL many times.";
       _maze.reset(1, 5); _maze.fill(FLOOR); _maze.setStart(pose(0, 0, EAST)); _maze.setGoal(0, 4);
       _prog.f1.push_back(Node::command(CMD_FWD));

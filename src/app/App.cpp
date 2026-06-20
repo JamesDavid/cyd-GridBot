@@ -83,8 +83,9 @@ void App::drawIntro() {
   const char* newText = nullptr;
   if (now.jump && !prev.jump) newText = "New: Jump!";
   else if (now.repeat && !prev.repeat) newText = "New: Repeat loops!";
+  else if (now.sense && !prev.sense) newText = "New: Sensing!";
   else if (now.func && !prev.func) newText = "New: Functions!";
-  else if (now.sense && !prev.sense) newText = "New: Sensing + NeuroBot!";  // both unlock at L22
+  else if (now.neuro && !prev.neuro) newText = "New: NeuroBot!";
   if (newText) label(g, SCREEN_W / 2, y + 50, newText, C_GO, textdatum_t::middle_center);
   if (_newBadge) {
     char b[40]; snprintf(b, sizeof(b), "Badge: %s!", _newBadge);

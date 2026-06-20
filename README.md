@@ -40,9 +40,10 @@ once you can *write* the rules, GridBot teaches you to *grow* them with a neural
 - **Relative control teaches sequencing.** The robot moves along *its own heading*, so
   "forward" depends on where it's facing — kids have to run the program in their head.
   (An absolute N/S/E/W pad would be easier and teach nothing; we deliberately don't.)
-- **It grows with the kid.** Command tiers unlock over the first ~22 levels — Jump, Repeat
-  loops, Functions, and Sensing — and then a whole **machine-learning** mode opens up, so a
-  5-year-old and a 12-year-old both have something to chew on, on the same device.
+- **It grows with the kid.** Command tiers unlock in a deliberate order — Jump, Repeat
+  loops, then **Sensing** (`if` — the wall-follower payoff), then **Functions** (so you can
+  wrap sensing logic in one), and finally a whole **machine-learning** mode — so a 5-year-old
+  and a 12-year-old both have something to chew on, on the same device.
 - **It's a real piece of engineering on a $10 board.** Always-solvable procedural mazes, an
   explicit-stack interpreter (no recursion, fully steppable), on-device neural nets with
   hand-rolled backprop, a pixel-art editor, an ESP-NOW radio link, and a from-scratch UI —
@@ -88,11 +89,11 @@ once you can *write* the rules, GridBot teaches you to *grow* them with a neural
 
 | ![Level intro](docs/img/level-intro.png) |
 |:--|
-| **A title card per level.** Each level opens with a quick card — its number, its **biome** name, and a banner for anything **newly unlocked** (here, *"New: Sensing + NeuroBot!"* — the level-22 graduation that opens both the sensing tier *and* the whole machine-learning mode) or any **badge** you just earned. Past the sensing tier, an **ARENA** button appears here too. |
+| **A title card per level.** Each level opens with a quick card — its number, its **biome** name, and a banner for anything **newly unlocked** (here, *"New: Sensing!"* — the `if` / `repeat-until` tier that makes the never-seen-maze wall-follower possible) or any **badge** you just earned. From the sensing tier on, an **ARENA** button appears here too. |
 
 | ![The full toolset](docs/img/tiers.png) |
 |:--|
-| **The full toolset** (a sensing-tier level). All four corner slots are filled — **Jump / Repeat / Call / Sense** — the **`+brain`** slot is live, and the program pane carries the **MAIN / F1 / F2** function tabs plus **S▸L / L◂L** to save and load from your solution library. Each tier is a real new idea: Jump (leap a pit), Repeat (count loops), Functions (name & reuse steps), and Sense (`if` / `repeat-until` — the robot *reacts*, which is what unlocks the never-seen-maze wall-follower). |
+| **The full toolset** (a sensing-tier level). All four corner slots are filled — **Jump / Repeat / Call / Sense** — the **`+brain`** slot is live, and the program pane carries the **MAIN / F1 / F2** function tabs plus **S▸L / L◂L** to save and load from your solution library. Each tier is a real new idea, in order: Jump (leap a pit), Repeat (count loops), Sense (`if` / `repeat-until` — the robot *reacts*, which unlocks the never-seen-maze wall-follower), then Functions (name & reuse steps — *now* you can wrap that sensing logic in one). |
 
 ### Stats & badges — *proof you're getting good*
 
@@ -156,7 +157,7 @@ once you can *write* the rules, GridBot teaches you to *grow* them with a neural
 
 | ![CodeLab](docs/img/codelab.png) |
 |:--|
-| **CodeLab** has a lesson for each core block, in unlock order — **Move**, **Jump**, **Repeat**, **Functions**, and **Sense** (`if`). |
+| **CodeLab** has a lesson for each core block, in unlock order — **Move**, **Jump**, **Repeat**, **Sense** (`if`), and **Functions**. |
 
 | ![A CodeLab lesson](docs/img/codelab-lesson.png) |
 |:--|
@@ -164,9 +165,10 @@ once you can *write* the rules, GridBot teaches you to *grow* them with a neural
 
 ### NeuroBot — *stop writing the rules, start training them*
 
-> A late-game **graduation** (unlocks with the sensing tier). GridBot teaches *you write the
-> rules*; **NeuroBot teaches you grow them** — the contrast between symbolic and learned AI is
-> itself the lesson. It reuses the whole engine: the same maze, editor, Arena, and radio trade.
+> A late-game **graduation** (unlocks at **level 28**, a few levels after Sensing — you learn
+> `if` logic first, *then* move on to training it). GridBot teaches *you write the rules*;
+> **NeuroBot teaches you grow them** — the contrast between symbolic and learned AI is itself
+> the lesson. It reuses the whole engine: the same maze, editor, Arena, and radio trade.
 
 | ![NeuroLab](docs/img/neurolab-hub.png) |
 |:--|

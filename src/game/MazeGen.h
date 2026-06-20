@@ -21,9 +21,10 @@ struct Difficulty {
 
 Difficulty difficultyFor(int level);
 
-// Sensing tier unlocks here (SPEC §7). Multi-maze "generalization" challenges
-// (one program must clear 2-3 boards, SPEC §7.1) are then interspersed every 5th
-// level — so most levels stay regular mazes and variety is preserved.
+// The multi-maze "generalization" tier (SPEC §7.1): from here, one program must clear
+// 2-3 boards, interspersed every 5th level — so most levels stay regular mazes and
+// variety is preserved. NOTE: the sense/`if` BLOCK itself unlocks earlier (level 15, see
+// computeUnlocks); these harder "one rule, many mazes" challenges come a bit later.
 constexpr int SENSE_LEVEL = 22;
 constexpr int MAX_BOARDS = 3;
 inline bool isMultiLevel(int level) { return level >= SENSE_LEVEL && (level % 5 == 0); }

@@ -94,9 +94,9 @@ inline Unlocks computeUnlocks(uint32_t level) {
   Unlocks u;
   u.jump     = level >= 6;
   u.repeat   = level >= 10;
-  u.func     = level >= 15;
-  u.sense    = level >= 22;
-  u.neuro    = level >= 22;  // graduation: NeuroBot unlocks with the sensing tier
+  u.sense    = level >= 15;  // if / repeat-until: the wall-follower payoff, taught first
+  u.func     = level >= 20;  // functions come AFTER sensing, so you can wrap if-logic in one
+  u.neuro    = level >= 28;  // graduation: train a brain, a few levels after sensing/if logic
   return u;
 }
 
