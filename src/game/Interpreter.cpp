@@ -86,14 +86,14 @@ Outcome Interpreter::execCmd(Cmd cmd) {
     case CMD_FWD:    facingDelta(_pose.facing, dr, dc); return move(dr, dc);
     case CMD_BACK:   facingDelta(_pose.facing, dr, dc); return move(-dr, -dc);
     case CMD_JUMP:   return jump();
-    case CMD_PUSH:   return OUT_OK;  // arena verb — resolved by the match engine (§18)
-    case CMD_FIRE:   return OUT_OK;  // arena verb — resolved by the match engine (§18)
+    case CMD_FIRE:   return OUT_OK;  // "zap" — arena verb, resolved by the match engine (§18)
   }
   return OUT_OK;
 }
 
 Outcome Interpreter::step() {
   if (_finished) return _last;
+  _lastCmd = CMD_FWD;  // default: a step that runs no primitive is "not an attack"
 
   // Internal guard: a single step() must terminate even if blocks push frames with
   // no primitive (e.g. REPEAT 0, IF false). Bounds the per-step frame churn.
@@ -125,6 +125,7 @@ Outcome Interpreter::step() {
         fr.ip++;  // consume before executing (fr may dangle after this loop turn)
         if (++_prim > _stepCap) { finish(OUT_DONE_NO_WIN); return OUT_DONE_NO_WIN; }
         _current = &n;
+        _lastCmd = n.cmd;
         Outcome o = execCmd(n.cmd);
         if (o != OUT_OK) { finish(o); return o; }
         return OUT_OK;  // exactly one primitive executed
@@ -164,7 +165,8 @@ Outcome Interpreter::step() {
         float s[SENSOR_COUNT];
         senseEgo(*_maze, _pose, _enemy, s);
         int act = _prog->brains[n.brainIdx].argmax(s);
-        Outcome o = execCmd(kBrainAction[act]);
+        _lastCmd = kBrainAction[act];
+        Outcome o = execCmd(_lastCmd);
         if (o != OUT_OK) { finish(o); return o; }
         return OUT_OK;  // exactly one primitive executed
       }

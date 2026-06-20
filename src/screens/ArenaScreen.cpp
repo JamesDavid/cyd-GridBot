@@ -25,13 +25,15 @@ static void buildNeuroBot(Program& p, const Maze& m, const Pose& start, uint32_t
 }
 
 static const Rect R_BACK = {6, (int16_t)(BOTBAR_Y + 2), 100, 26};
-static const Rect R_TYPE = {110, (int16_t)(BOTBAR_Y + 2), 90, 26};
-static const Rect R_AI   = {6,  60, 150, 30};
-static const Rect R_HOT  = {164, 60, 150, 30};
-static const Rect R_RADIO= {6, 96, 308, 24};
-static const Rect R_PUZ  = {6, 124, 308, 24};
-static const Rect R_CHAL = {6, 152, 308, 24};
-static const Rect R_TRAIN= {6, 180, 308, 24};   // NeuroBot: train a fighter vs AI
+// Level 1 — pick the OPPONENT first (who you play against)
+static const Rect R_OPP_AI    = {20, 56,  280, 40};
+static const Rect R_OPP_HOT   = {20, 104, 280, 40};
+static const Rect R_OPP_RADIO = {20, 152, 280, 40};
+// Level 2 — pick the GAME (depends on the opponent); vertical slots reused per branch
+static const Rect R_G1 = {20, 56,  280, 34};
+static const Rect R_G2 = {20, 94,  280, 34};
+static const Rect R_G3 = {20, 132, 280, 34};
+static const Rect R_G4 = {20, 170, 280, 34};
 static const Rect R_READY= {84, 150, 150, 34};
 
 static Program dashProgram() {
@@ -65,7 +67,7 @@ void ArenaScreen::buildCandidates() {
   // House battle-bots: themed names + characters to go up against.
   _cands.push_back({"Rusty", alwaysForwardProgram(), 5, "charges blindly", true, false});
   _cands.push_back({"Bolt",  dashProgram(),          6, "fast & straight", true, false});
-  _cands.push_back({"Vex",   hunterProgram(),        7, "hunts & shoves",  true, false});
+  _cands.push_back({"Vex",   hunterProgram(),        7, "hunts & zaps",    true, false});
   // Ace solves the board on the fly — a real navigator (program built at match start).
   _cands.push_back({"Ace",   Program{},              3, "solves the maze", true, true});
   // Pre-trained NeuroBots: their brain (a neural net) is trained on the board at match
@@ -83,23 +85,42 @@ int ArenaScreen::houseBotIndex(const char* name) const {
 void ArenaScreen::enter() { drawMenu(); }
 
 // ---- menus ----------------------------------------------------------------
+// Two levels: pick WHO you play (Computer / Hotseat / Radio), then WHICH game.
 void ArenaScreen::drawMenu() {
   _phase = Phase::MENU;
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Arena", C_ACCENT, textdatum_t::top_left, 2);
-  label(g, SCREEN_W / 2, 36, "Pick an opponent", C_INK, textdatum_t::top_center);
-  button(g, R_AI, "vs House AI", C_GO, C_PANEL);
-  button(g, R_HOT, "Hotseat 2P", C_FUNC, C_PANEL);
-  button(g, R_RADIO, "Radio: battle / trade a friend", C_MOVE, C_PANEL);
-  button(g, R_PUZ, "Puzzle Race: same maze, beat the clock", C_LOOP, C_PANEL);
-  button(g, R_CHAL, "Seed Challenge: race a friend on one board", C_SENSE, C_PANEL);
-  if (_profile && _profile->unlocks.neuro)  // NeuroBot: prep a trained brain to battle
-    button(g, R_TRAIN, "Train a fighter vs AI (NeuroBot)", ui::rgb(120, 230, 245), C_PANEL);
+  label(g, SCREEN_W / 2, 38, "Who do you want to play?", C_INK, textdatum_t::top_center);
+  button(g, R_OPP_AI,    "vs Computer", C_GO, C_PANEL);
+  button(g, R_OPP_HOT,   "Hotseat - 2 players, 1 device", C_FUNC, C_PANEL);
+  button(g, R_OPP_RADIO, "Radio - a friend nearby", C_MOVE, C_PANEL);
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
-  button(g, R_TYPE, _type == MatchType::RACE ? "Race" : "Sumo", C_ACCENT, C_PANEL);
+}
+
+// Level 2: the games available for the chosen opponent (_hotseat picks the branch).
+void ArenaScreen::drawGameType() {
+  _phase = Phase::GAMETYPE;
+  auto& g = hal::display.gfx();
+  g.fillScreen(C_BG);
+  g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
+  label(g, 6, 3, _hotseat ? "Hotseat" : "vs Computer", C_ACCENT, textdatum_t::top_left, 2);
+  label(g, SCREEN_W / 2, 38, "Pick a game", C_INK, textdatum_t::top_center);
+  if (_hotseat) {
+    button(g, R_G1, "Race - first to the goal", C_GO, C_PANEL);
+    button(g, R_G2, "Sumo - shove them off", C_ACCENT, C_PANEL);
+    button(g, R_G3, "Puzzle Race - beat the clock", C_LOOP, C_PANEL);
+    button(g, R_G4, "Seed Challenge - same board", C_SENSE, C_PANEL);
+  } else {
+    button(g, R_G1, "Race - first to the goal", C_GO, C_PANEL);
+    button(g, R_G2, "Sumo - shove them off", C_ACCENT, C_PANEL);
+    if (_profile && _profile->unlocks.neuro)
+      button(g, R_G3, "Train a fighter (NeuroBot)", ui::rgb(120, 230, 245), C_PANEL);
+  }
+  g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
+  button(g, R_BACK, "< Opponents", C_INK, C_PANEL);
 }
 
 static constexpr int PICK_ROWH = 26, PICK_TOP = BAND_Y + 4;
@@ -272,17 +293,22 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   switch (_phase) {
     case Phase::MENU:
       if (R_BACK.contains(tx, ty)) return app::Signal::BACK;
-      if (R_RADIO.contains(tx, ty)) return app::Signal::GOTO_RADIO;
-      if (R_PUZ.contains(tx, ty)) return app::Signal::GOTO_PUZZLE;
-      if (R_CHAL.contains(tx, ty)) return app::Signal::GOTO_CHALLENGE;
-      if (_profile && _profile->unlocks.neuro && R_TRAIN.contains(tx, ty)) return app::Signal::GOTO_ARENA_TRAIN;
-      if (R_TYPE.contains(tx, ty)) {
-        _type = (_type == MatchType::RACE) ? MatchType::SUMO : MatchType::RACE;
-        drawMenu();
-      } else if (R_AI.contains(tx, ty)) {
-        _hotseat = false; _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);  // you pick your bot; house auto
-      } else if (R_HOT.contains(tx, ty)) {
-        _hotseat = true; _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
+      if (R_OPP_RADIO.contains(tx, ty)) return app::Signal::GOTO_RADIO;  // radio screen has its own battle/trade
+      else if (R_OPP_AI.contains(tx, ty))  { _hotseat = false; drawGameType(); }
+      else if (R_OPP_HOT.contains(tx, ty)) { _hotseat = true;  drawGameType(); }
+      break;
+    case Phase::GAMETYPE:
+      if (R_BACK.contains(tx, ty)) { drawMenu(); break; }  // < Opponents
+      if (R_G1.contains(tx, ty)) {  // Race (both branches)
+        _type = MatchType::RACE; _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
+      } else if (R_G2.contains(tx, ty)) {  // Sumo (both branches)
+        _type = MatchType::SUMO; _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
+      } else if (_hotseat && R_G3.contains(tx, ty)) {
+        return app::Signal::GOTO_PUZZLE;
+      } else if (_hotseat && R_G4.contains(tx, ty)) {
+        return app::Signal::GOTO_CHALLENGE;
+      } else if (!_hotseat && _profile && _profile->unlocks.neuro && R_G3.contains(tx, ty)) {
+        return app::Signal::GOTO_ARENA_TRAIN;
       }
       break;
     case Phase::PICK1:

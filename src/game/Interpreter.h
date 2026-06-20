@@ -38,6 +38,10 @@ class Interpreter {
   int primCount() const { return _prim; }
   // The node whose command was last executed — for highlighting a failing step.
   const Node* currentNode() const { return _current; }
+  // The actual primitive run by the last step() — incl. the action a NEURO brain
+  // chose. The arena reads this to resolve PUSH/FIRE (a brain's node is N_NEURO, so
+  // inspecting currentNode() can't see the move it picked). CMD_FWD when none ran.
+  Cmd lastCmd() const { return _lastCmd; }
 
   bool evalCond(Cond c) const;  // exposed for tests/arena resolution
 
@@ -67,6 +71,7 @@ class Interpreter {
   bool _finished = false;
   Outcome _last = OUT_OK;
   const Node* _current = nullptr;
+  Cmd _lastCmd = CMD_FWD;  // effective primitive of the last step() (see lastCmd())
 };
 
 }  // namespace gb

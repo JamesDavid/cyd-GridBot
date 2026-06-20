@@ -46,14 +46,16 @@ ArenaOutcome Arena::tick() {
   Pose before[2];
   Outcome out[2] = {OUT_OK, OUT_OK};
   bool moved[2] = {false, false};
-  bool pushing[2] = {false, false};
+  bool zapping[2] = {false, false};
   for (int i = 0; i < 2; i++) {
     before[i] = _bot[i].it.pose();
     if (_bot[i].alive && !_bot[i].done && !_bot[i].it.finished()) {
       out[i] = _bot[i].it.step();
       moved[i] = true;
-      const Node* n = _bot[i].it.currentNode();
-      pushing[i] = (n && n->type == N_CMD && n->cmd == CMD_PUSH);
+      // "zap" (CMD_FIRE) is the Sumo attack — used by the hunter bot and by a trained
+      // brain's 5th output. Read the effective primitive so a NEURO bot's zap counts
+      // (its node is N_NEURO, so currentNode() can't reveal the move it picked).
+      zapping[i] = (_bot[i].it.lastCmd() == CMD_FIRE);
     }
   }
 
@@ -78,10 +80,10 @@ ArenaOutcome Arena::tick() {
     else if (out[i] == OUT_DONE_NO_WIN) { _bot[i].done = true; }
   }
 
-  // 3) Attacks resolve AFTER moves (SPEC §18.1). PUSH shoves the enemy one tile in
-  // the pusher's facing; into a PIT / off-board = out (Sumo, SPEC §18.2).
+  // 3) Attacks resolve AFTER moves (SPEC §18.1). A zap shoves the enemy one tile in
+  // the zapper's facing; into a PIT / off-board = out (Sumo, SPEC §18.2).
   for (int i = 0; i < 2; i++) {
-    if (!pushing[i] || !_bot[i].alive) continue;
+    if (!zapping[i] || !_bot[i].alive) continue;
     int j = 1 - i;
     if (!_bot[j].alive) continue;
     int dr, dc; facingDelta(_bot[i].it.pose().facing, dr, dc);

@@ -12,7 +12,7 @@ enum Facing : uint8_t { NORTH = 0, EAST = 1, SOUTH = 2, WEST = 3 };
 
 // Primitive commands (SPEC §8.1).
 enum Cmd : uint8_t { CMD_FWD, CMD_BACK, CMD_TURN_L, CMD_TURN_R, CMD_JUMP,
-                     CMD_PUSH, CMD_FIRE };  // PUSH/FIRE are arena-only (§18.2)
+                     CMD_FIRE };  // FIRE ("zap") is the arena attack — shoves a rival (§18.2)
 
 // Conditions for IF / REPEAT_UNTIL (SPEC §8.1). ENEMY_* are arena-only (§18.3).
 enum Cond : uint8_t { WALL_AHEAD, PIT_AHEAD, AT_GOAL, ENEMY_AHEAD, ENEMY_NEAR };

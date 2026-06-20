@@ -28,12 +28,12 @@ inline Program alwaysForwardProgram() {
   return p;
 }
 
-// Sumo hunter: push when the enemy is right ahead, otherwise advance (SPEC §18.4).
+// Sumo hunter: zap when the enemy is right ahead, otherwise advance (SPEC §18.4).
 inline Program hunterProgram() {
   Program p;
   Node loop = Node::repeatUntil(AT_GOAL);  // AT_GOAL never true in Sumo -> runs to cap
   Node iff = Node::ifCond(ENEMY_AHEAD);
-  iff.body.push_back(Node::command(CMD_PUSH));
+  iff.body.push_back(Node::command(CMD_FIRE));
   loop.body.push_back(iff);
   loop.body.push_back(Node::command(CMD_FWD));
   p.main.push_back(loop);

@@ -75,22 +75,48 @@ void test_arena_replay_independent_of_instances() {
   TEST_ASSERT_EQUAL((int)a1.outcome(), (int)a2.outcome());
 }
 
-// Sumo: a pusher shoves an idler standing in front of a pit -> idler out, pusher wins.
-void test_sumo_push_into_pit() {
+// Sumo: a zapper shoves an idler standing in front of a pit -> idler out, zapper wins.
+void test_sumo_zap_into_pit() {
   Maze m;
   m.reset(1, 4);
   m.fill(FLOOR);
   m.set(0, 3, PIT);                 // pit at the right end
-  Pose s0; s0.row = 0; s0.col = 1; s0.facing = EAST;  // pusher
+  Pose s0; s0.row = 0; s0.col = 1; s0.facing = EAST;  // zapper
   Pose s1; s1.row = 0; s1.col = 2; s1.facing = WEST;  // victim, just left of the pit
-  // pusher program: PUSH repeatedly
-  Program pusher;
+  // zapper program: FIRE ("zap") repeatedly
+  Program zapper;
   Node loop = Node::repeatUntil(AT_GOAL);
-  loop.body.push_back(Node::command(CMD_PUSH));
-  pusher.main.push_back(loop);
+  loop.body.push_back(Node::command(CMD_FIRE));
+  zapper.main.push_back(loop);
   Program idle;  // empty -> stands still then done
   Arena ar;
-  ar.setup(&m, &pusher, &idle, s0, s1, MatchType::SUMO, 50);
+  ar.setup(&m, &zapper, &idle, s0, s1, MatchType::SUMO, 50);
+  ArenaOutcome o = ar.run();
+  TEST_ASSERT_EQUAL((int)ArenaOutcome::BOT0, (int)o);
+  TEST_ASSERT_FALSE(ar.alive(1));
+}
+
+// A trained brain that always picks "zap" (output 4) must shove like a code FIRE.
+// This exercises the N_NEURO -> lastCmd() path the arena now reads — the original bug
+// was that a brain's chosen action was invisible to Sumo combat resolution.
+void test_sumo_brain_zap_shoves() {
+  Maze m;
+  m.reset(1, 4);
+  m.fill(FLOOR);
+  m.set(0, 3, PIT);
+  Pose s0; s0.row = 0; s0.col = 1; s0.facing = EAST;   // brain zapper
+  Pose s1; s1.row = 0; s1.col = 2; s1.facing = WEST;   // victim by the pit
+  Program zapper;
+  uint8_t idx = zapper.addBrain(1);
+  Net& brain = zapper.brains[idx];
+  brain.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
+  for (int k = 0; k < 5; k++) brain.b2[k] = (k == 4) ? 100.f : -100.f;  // force argmax = zap
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(Node::neuro(idx));
+  zapper.main.push_back(loop);
+  Program idle;
+  Arena ar;
+  ar.setup(&m, &zapper, &idle, s0, s1, MatchType::SUMO, 50);
   ArenaOutcome o = ar.run();
   TEST_ASSERT_EQUAL((int)ArenaOutcome::BOT0, (int)o);
   TEST_ASSERT_FALSE(ar.alive(1));
@@ -176,7 +202,8 @@ int main(int, char**) {
   RUN_TEST(test_arena_match_plays_out);
   RUN_TEST(test_arena_faster_bot_wins);
   RUN_TEST(test_arena_replay_independent_of_instances);
-  RUN_TEST(test_sumo_push_into_pit);
+  RUN_TEST(test_sumo_zap_into_pit);
+  RUN_TEST(test_sumo_brain_zap_shoves);
   RUN_TEST(test_sumo_deterministic);
   return UNITY_END();
 }

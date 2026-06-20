@@ -21,11 +21,12 @@ class ArenaScreen : public app::IScreen {
   void debugStep();   // capture aid: advance the match one tick, paused
 
  private:
-  enum class Phase : uint8_t { MENU, PICK1, HANDOFF, PICK2, BOARD, DONE };
+  enum class Phase : uint8_t { MENU, GAMETYPE, PICK1, HANDOFF, PICK2, BOARD, DONE };
   struct Candidate { std::string name; gb::Program prog; uint8_t avatar; std::string style; bool house; bool smart; bool neuro = false; };
 
   void buildCandidates();
   void drawMenu();
+  void drawGameType();
   void drawPick(int player);
   ui::Rect pickRowRect(int i) const;
   int pickVisible() const;
