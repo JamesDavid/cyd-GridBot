@@ -49,10 +49,9 @@ void drawGlyph(LGFX& g, Glyph gl, int cx, int cy, int s, uint16_t color) {
     case Glyph::PLAY:
       g.fillTriangle(cx - h / 2, cy - h, cx - h / 2, cy + h, cx + h, cy, color);
       break;
-    case Glyph::REPEAT:
-      g.drawCircle(cx, cy, h - 1, color);
-      g.drawCircle(cx, cy, h - 2, color);
-      g.fillTriangle(cx + h - 1, cy - 4, cx + h - 1, cy + 4, cx + h + 4, cy, color);
+    case Glyph::REPEAT:  // a clear "R" badge (matches the CALL "F"), not a cryptic ring
+      g.drawRoundRect(cx - h, cy - h, s, s, 2, color);
+      ui::label(g, cx, cy, "R", color, textdatum_t::middle_center);
       break;
     case Glyph::CALL:
       g.drawRect(cx - h, cy - h / 2, s, h, color);
