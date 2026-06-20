@@ -7,12 +7,13 @@ namespace screens {
 
 struct Item { const char* title; const char* sub; uint16_t col; };
 static const int N = 5;
+// In unlock order: Move (start), Jump (L6), Repeat (L10), Functions (L15), Sense (L22).
 static const Item ITEMS[N] = {
   {"1. Move", "forward & turn", C_MOVE},
-  {"2. Repeat", "do steps again and again", C_LOOP},
-  {"3. Sense", "react with IF", C_SENSE},
+  {"2. Jump", "leap over a pit", C_GO},
+  {"3. Repeat", "do steps again and again", C_LOOP},
   {"4. Functions", "name steps, call them", C_FUNC},
-  {"5. Jump", "leap over a pit", C_GO},
+  {"5. Sense", "react with IF", C_SENSE},
 };
 
 static Rect rowRect(int i) { return {10, (int16_t)(44 + i * 32), 300, 30}; }
@@ -31,7 +32,7 @@ void CodeLabScreen::draw() {
     g.fillRoundRect(r.x, r.y, r.w, r.h, 5, C_PANEL);
     g.drawRoundRect(r.x, r.y, r.w, r.h, 5, ITEMS[i].col);
     label(g, r.x + 10, r.y + 3, ITEMS[i].title, ITEMS[i].col);
-    label(g, r.x + 140, r.y + 11, ITEMS[i].sub, C_DIM);
+    label(g, r.x + 10, r.y + 16, ITEMS[i].sub, C_DIM);  // full-width 2nd line (no overflow)
   }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);

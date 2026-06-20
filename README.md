@@ -4,7 +4,9 @@
 Display.** Kids snap together commands — *forward, turn, jump, loop, function, sense* —
 hit **RUN**, and watch their little robot try to reach the battery. It bonks a wall? They
 fix one line and try again. It never ends, it gets harder, and new programming powers
-unlock as they go.
+unlock as they go. And once they've mastered *writing* the rules, a late-game **NeuroBot**
+mode graduates them to *training* them — backprop, Q-learning, and evolution, teaching how
+a neural-net brain actually learns, all on the same $10 board.
 
 | ![Gameplay](docs/img/gameplay.gif) |
 |:--|
@@ -192,9 +194,9 @@ hook, and the whole difficulty curve is designed to lead there.
 |:--|
 | **The neuro interface.** Open it from the **`train brain >`** line under a brain block. **Teach** it (distil the optimal solver into the brain by backprop — reliable) or **Evolve** it (no teacher, just a score), watch its path solve the maze, then **Use it**. The trained brain saves *with* your program — so it persists and **trades & battles over the radio** like any other bot. |
 
-| ![Train a fighter vs AI](docs/img/neuro-arena-train.png) |
+| ![Train a fighter vs AI](docs/img/neuro-arena.gif) |
 |:--|
-| **Train a fighter for the Arena.** A new **"Train a fighter vs AI"** mode off the Arena menu: evolve (or Teach) a brain to **beat an AI opponent on a real arena board** — fitness comes from *winning actual matches*, not just reaching the goal. **Save** it to your library and it shows up as a pickable Arena fighter, ready to battle a friend's bot over the radio. So kids can *prep their bots for battle*. |
+| **Train a fighter for the Arena.** A **"Train a fighter vs AI"** mode off the Arena menu: **Evolve** (or **Teach**) a brain to **beat an AI opponent on a real arena board** — fitness comes from *winning actual matches*, not just reaching the goal. Watch its path form against the red AI's start, generation by generation. **Save** it to your library and it shows up as a pickable Arena fighter, ready to battle a friend's bot over the radio. So kids can *prep their bots for battle*. |
 
 ---
 
@@ -209,7 +211,14 @@ hook, and the whole difficulty curve is designed to lead there.
   steppable (animate one command at a time, or single-step to debug) and memory-bounded.
   A step cap stops runaway sense-loops with a friendly "your loop never finished."
 - **One AST everywhere.** Player programs, saved library scripts, and AI opponents are the
-  *same* shape — so the bot you build in the campaign drops straight into the arena.
+  *same* shape — so the bot you build in the campaign drops straight into the arena. A
+  **trained brain is just another node** (`N_NEURO`) in that AST.
+- **On-device machine learning (NeuroBot).** A from-scratch **MLP with hand-rolled backprop**,
+  **tabular Q-learning**, and **neuroevolution** — all in fixed memory (no heap, no
+  TensorFlow). A trained brain runs as a `NEURO` node that *senses → picks an action → moves*,
+  so it's **neurosymbolic**: explicit code plus a learned policy, stepped by the same
+  interpreter. Brains train on-device (distil the solver, or evolve) fast enough to *watch*,
+  serialize **with** the program, and so persist, trade, and battle like any other bot.
 - **Tiny art, big personality.** Robots and batteries are vector-drawn (a few hundred bytes
   of code, scalable to any tile size), plus optional 16×16 custom sprites — no SD card, no
   PROGMEM bitmap dump.
@@ -260,6 +269,9 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
   photographed headlessly — it even caught a bad test fixture the first time it ran.
 - **A deterministic multi-bot arena** — same inputs → byte-identical match log, proven by
   test, which hands you fair rematches and replays for free.
+- **Neural nets on a no-PSRAM ESP32** — a tiny MLP + backprop, Q-learning, and evolution in a
+  few KB, with a learned brain embedded as an interpreter node (neurosymbolic) and trained
+  on-device (distillation/evolution) fast enough to animate. ~66 host tests cover the lot.
 
 **Still open / known limits**
 - Arena AI bots are simple; a left-turn "wall-follower" only truly solves spirals, so

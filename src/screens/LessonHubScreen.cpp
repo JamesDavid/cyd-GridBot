@@ -31,7 +31,7 @@ void LessonHubScreen::draw() {
     g.fillRoundRect(r.x, r.y, r.w, r.h, 5, C_PANEL);
     g.drawRoundRect(r.x, r.y, r.w, r.h, 5, LESSONS[i].col);
     label(g, r.x + 10, r.y + 3, LESSONS[i].title, LESSONS[i].col);
-    label(g, r.x + 140, r.y + 11, LESSONS[i].sub, C_DIM);
+    label(g, r.x + 10, r.y + 16, LESSONS[i].sub, C_DIM);  // full-width 2nd line (no overflow)
   }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);

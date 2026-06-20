@@ -26,12 +26,12 @@ void CodeLessonScreen::setup(int lesson) {
       _prog.main.push_back(Node::command(CMD_TURN_L));
       _prog.main.push_back(Node::command(CMD_FWD));
       break;
-    case 1:  // Repeat
+    case 2:  // Repeat
       _title = "Repeat"; _concept = "A repeat loop runs the steps inside it again and again.";
       _maze.reset(1, 6); _maze.fill(FLOOR); _maze.setStart(pose(0, 0, EAST)); _maze.setGoal(0, 5);
       { Node rep = Node::repeat(5); rep.body.push_back(Node::command(CMD_FWD)); _prog.main.push_back(rep); }
       break;
-    case 2:  // Sense / If
+    default:  // Sense / If (case 4 — last to unlock)
       _title = "Sense"; _concept = "IF lets the robot react: if a wall is ahead, turn.";
       MazeGen::generateSpiral(_maze, 5, 5);
       { Node loop = Node::repeatUntil(AT_GOAL);
@@ -45,7 +45,7 @@ void CodeLessonScreen::setup(int lesson) {
       _prog.f1.push_back(Node::command(CMD_FWD));
       for (int i = 0; i < 4; i++) _prog.main.push_back(Node::call(1));
       break;
-    default:  // Jump
+    case 1:  // Jump (unlocks at level 6, before Repeat)
       _title = "Jump"; _concept = "Jump leaps over a single pit to the tile beyond.";
       _maze.reset(1, 5); _maze.fill(FLOOR); _maze.set(0, 2, PIT);
       _maze.setStart(pose(0, 0, EAST)); _maze.setGoal(0, 4);
