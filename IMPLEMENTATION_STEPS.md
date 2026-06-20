@@ -188,3 +188,25 @@ Determinism (`spec.md` §6.2 seeds, §18.1 no-RNG matches) is what makes channel
 
 Otherwise: \*\*proceed autonomously, one green slice at a time, phase by phase.\*\*
 
+
+
+\---
+
+
+
+\## Phase D — Online flasher (web install, distribution)
+
+\- \*\*Objective:\*\* anyone can flash the current firmware straight from a web page — no clone, no PlatformIO, no toolchain — using \*\*ESP Web Tools\*\* (WebSerial in Chrome/Edge).
+
+\- \*\*Do:\*\*
+
+&#x20; 1. Build the firmware, then produce a single \*\*merged image\*\* with `esptool merge_bin` (bootloader @0x1000 + partitions @0x8000 + boot\_app0 @0xe000 + app @0x10000) into `docs/firmware/gridbot-merged.bin`.
+
+&#x20; 2. Add a GitHub Pages site under \*\*`docs/`\*\*: an `index.html` that loads the `esp-web-tools` web component and an `<esp-web-install-button manifest="manifest.json">`; a `manifest.json` describing the ESP32 build and the merged binary at offset 0.
+
+&#x20; 3. Enable \*\*GitHub Pages\*\* (Settings → Pages → deploy from `main`/`docs`). Note: Pages on a \*\*private\*\* repo needs GitHub Pro (or make the repo public) for the URL to be reachable.
+
+\- \*\*Refresh on release:\*\* re-run `merge_bin` and bump `manifest.json` `version` whenever the firmware changes, so the web flasher serves the current build.
+
+\- \*\*Autonomous check:\*\* the merged bin's size ≈ app + bootloader + partitions; `index.html` + `manifest.json` validate; the page loads the install button (the actual flash needs a real board + a WebSerial browser).
+

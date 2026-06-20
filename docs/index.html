@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GridBot — flash it in your browser</title>
+  <meta name="description" content="Flash GridBot — a kid-facing coding game for the $10 Cheap Yellow Display — straight from your browser. No clone, no toolchain." />
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+  <style>
+    :root {
+      --bg: #181a26; --panel: #282c40; --panelhi: #3c425c; --ink: #eef0f8;
+      --dim: #8c92a8; --accent: #ffc400; --go: #40c878; --move: #60aaff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: radial-gradient(1200px 600px at 50% -10%, #232746, var(--bg));
+      color: var(--ink); font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      line-height: 1.55; -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 40px 20px 80px; }
+    header { text-align: center; }
+    h1 { font-size: 2.6rem; margin: 0 0 6px; letter-spacing: -0.5px; }
+    h1 .bot { color: var(--accent); }
+    .tag { color: var(--dim); font-size: 1.15rem; margin: 0 0 28px; }
+    .hero {
+      width: 100%; max-width: 480px; border-radius: 14px; display: block; margin: 0 auto 28px;
+      box-shadow: 0 14px 40px rgba(0,0,0,.45); image-rendering: pixelated;
+      border: 1px solid var(--panelhi);
+    }
+    .flash {
+      background: var(--panel); border: 1px solid var(--panelhi); border-radius: 14px;
+      padding: 26px; text-align: center; margin: 0 auto 30px;
+    }
+    .flash h2 { margin: 0 0 6px; }
+    esp-web-install-button { display: inline-block; margin: 14px 0 6px; }
+    esp-web-install-button[install-supported] .unsupported { display: none; }
+    .btn {
+      --esp-tools-button-color: #181a26;
+      --esp-tools-button-background-color: var(--go);
+      font-weight: 700;
+    }
+    .note { color: var(--dim); font-size: .92rem; margin-top: 10px; }
+    .unsupported {
+      color: #ffb3b3; background: #3a2330; border: 1px solid #5a2f3f;
+      border-radius: 10px; padding: 10px 14px; margin-top: 12px; font-size: .92rem;
+    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 24px 0; }
+    .grid img { width: 100%; border-radius: 10px; border: 1px solid var(--panelhi); image-rendering: pixelated; }
+    .feat { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 22px; margin: 8px 0 0; padding: 0; list-style: none; }
+    .feat li { color: var(--ink); padding-left: 4px; }
+    .feat li b { color: var(--accent); }
+    a { color: var(--move); }
+    footer { color: var(--dim); text-align: center; margin-top: 40px; font-size: .9rem; }
+    h2 { margin-top: 34px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Grid<span class="bot">Bot</span></h1>
+      <p class="tag">Teach a kid to code, one maze at a time — on a $10 touchscreen.</p>
+      <img class="hero" src="img/maze-view.png" alt="GridBot maze: a robot navigating to a battery past brick walls and pits" />
+    </header>
+
+    <div class="flash">
+      <h2>⚡ Flash it from your browser</h2>
+      <p>Plug your <b>CYD (ESP32-2432S028R)</b> into USB and click — no download, no toolchain.</p>
+      <esp-web-install-button manifest="manifest.json">
+        <button slot="activate" class="btn">Install GridBot</button>
+        <span slot="unsupported" class="unsupported">
+          Your browser can't talk to USB devices. Open this page in <b>Chrome</b> or <b>Edge</b> on a desktop.
+        </span>
+        <span slot="not-allowed" class="unsupported">
+          Serial access was blocked — allow it and try again.
+        </span>
+      </esp-web-install-button>
+      <p class="note">Uses WebSerial (Chrome/Edge, desktop). It erases the board and installs the latest GridBot build.</p>
+    </div>
+
+    <h2>What you get</h2>
+    <ul class="feat">
+      <li><b>Five command tiers</b> unlock as you climb</li>
+      <li><b>Always-solvable</b> procedural mazes</li>
+      <li><b>Loops, functions & sensing</b> — real algorithms</li>
+      <li><b>Battle arena</b> with rival robot AIs</li>
+      <li><b>Pixel editor</b> — draw your own robot</li>
+      <li><b>13 badges</b> to collect</li>
+      <li><b>Level biomes</b> as you progress</li>
+      <li><b>Two-player</b> hotseat &amp; radio battle/trade</li>
+    </ul>
+
+    <h2>Peek inside</h2>
+    <div class="grid">
+      <img src="img/code-view.png" alt="The code view: a robot d-pad and a program list" />
+      <img src="img/arena-pick.png" alt="Arena: pick a battle-bot opponent" />
+      <img src="img/pixel-editor.png" alt="Pixel editor: draw your own robot" />
+      <img src="img/badges.png" alt="Badges gallery" />
+    </div>
+
+    <footer>
+      Free for personal &amp; educational use (PolyForm Noncommercial). Built with
+      <a href="https://claude.com/claude-code">Claude Code</a>.<br />
+      Flashing tech by <a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools</a>.
+    </footer>
+  </div>
+</body>
+</html>

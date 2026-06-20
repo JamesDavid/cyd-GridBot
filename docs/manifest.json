@@ -1,0 +1,13 @@
+{
+  "name": "GridBot",
+  "version": "1.0",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32",
+      "parts": [
+        { "path": "firmware/gridbot-merged.bin", "offset": 0 }
+      ]
+    }
+  ]
+}
