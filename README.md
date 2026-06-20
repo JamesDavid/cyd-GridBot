@@ -120,7 +120,7 @@ hook, and the whole difficulty curve is designed to lead there.
 
 | ![Pick an opponent](docs/img/arena-pick.png) |
 |:--|
-| **Battle-bots with personalities.** Face off against **Rusty** ("charges blindly"), **Bolt** ("fast & straight"), **Tank** ("hugs the walls"), or **Vex** ("hunts & shoves") — each a robot with its own style. Any program you save to your **library** in the campaign joins this roster as your own fighter. |
+| **Battle-bots with personalities.** Face off against **Rusty** ("charges blindly"), **Bolt** ("fast & straight"), **Vex** ("hunts & shoves"), or **Ace** ("solves the maze" — a real navigator that plots a path through the board on the fly). Any program you save to your **library** in the campaign joins this roster as your own fighter. |
 
 | ![Arena match](docs/img/arena.gif) |
 |:--|
@@ -129,6 +129,10 @@ hook, and the whole difficulty curve is designed to lead there.
 | ![Radio](docs/img/radio.png) |
 |:--|
 | **Radio friend (ESP-NOW).** Two GridBots within range can **battle** — both screens run the *same* deterministic match from a shared seed — or **trade**, Pokémon-style: send a friend your favourite bot (and your custom robot art) and get theirs into your library. |
+
+| ![Puzzle Race](docs/img/puzzle-race.png) | ![Puzzle Race result](docs/img/puzzle-race-result.png) |
+|:--|:--|
+| **Puzzle Race — same maze, beat the clock.** A code-authoring contest instead of a live battle: both players see the *same* maze and get **45 seconds** to write a program for it (hotseat — Player 1 locks in, then passes the device). When the dust settles, each robot runs and is scored by how close it gets to the goal — **whoever ends up nearest wins** (reach it outright for the cleanest win). | A tense little "can you out-code your friend?" mode that rewards thinking under pressure. |
 
 ---
 
@@ -209,18 +213,19 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
 
 ## What's next
 
-**Recently shipped:** ✅ a **chiptune menu theme** + win fanfare + badge chime ·
-✅ smooth movement tween · ✅ win celebration + robot emotes · ✅ five **level biomes** ·
-✅ a 13-badge **achievements gallery** · ✅ **breadcrumb trails** (per-biome outlines of
-where the robot's been) · ✅ Sumo (PUSH) · ✅ a one-click **online flasher**.
+**Recently shipped:** ✅ **Puzzle Race** (shared-maze, beat-the-clock coding contest) ·
+✅ **smarter arena bots** ("Ace" navigates the board) so Races are more often decisive ·
+✅ **coin collectibles + a sprite-colour & emoji shop** · ✅ a **chiptune menu theme** +
+win fanfare + badge chime · ✅ smooth movement tween · ✅ five **level biomes** ·
+✅ a 13-badge **achievements gallery** · ✅ **breadcrumb trails** · ✅ Sumo (PUSH) ·
+✅ a one-click **online flasher**.
 
 Still on deck (full list in **[BACKLOG.md](BACKLOG.md)**):
 
-- **Puzzle Race** multiplayer — both players get a timer to code the *same* maze; furthest
-  progress (or closest to the goal) wins. One of several planned mode types.
-- **Smarter arena bots & strategic boards** so Races are more often decisive, plus the
-  **Zap** verb (FIRE), AI-roster opponents, and library-bot tournaments.
-- **Coin collectibles + a sprite-colour shop**, and **daily shared-seed challenges**.
+- More **mode types** — relay, co-op (two bots must both reach goals), king-of-the-hill —
+  building on the Puzzle Race / Race / Sumo set.
+- The **Zap** verb (FIRE), AI-roster opponents, and library-bot **tournaments**.
+- **Daily shared-seed challenges** and a leaderboard.
 - **Verify the radio link** end-to-end on two boards (battle + Pokémon-style trade are
   built but hardware-pending), and an optional **mini-map** in the Code view.
 
