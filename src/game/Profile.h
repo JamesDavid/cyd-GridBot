@@ -60,17 +60,27 @@ struct Profile {
 
   // Named, reusable solutions (SPEC §11.1). Bounded ~8-12.
   std::vector<LibEntry> library;
+
+  // Optional custom 16x16 sprites drawn in the pixel editor (palette indices,
+  // 0 = empty). Empty vector = use the roster art for this avatar. Shareable.
+  std::vector<uint8_t> customChar;
+  std::vector<uint8_t> customGoal;
 };
+
+constexpr int PIX_DIM = 16;
+constexpr int PIX_CELLS = PIX_DIM * PIX_DIM;
 
 // Unlock gating by level (SPEC §7). Sticky: once reached, stays unlocked. This is
 // the single source of truth; ProfileStore persists the resulting flags.
 inline Unlocks computeUnlocks(uint32_t level) {
+  // Compressed curve so the conceptual payoff (sensing, SPEC §7.1) arrives soon —
+  // the whole toolset is unlocked within ~22 levels rather than 55.
   Unlocks u;
-  u.backward = level >= 4;
-  u.jump     = level >= 9;
-  u.repeat   = level >= 15;
-  u.func     = level >= 25;
-  u.sense    = level >= 55;
+  u.backward = level >= 3;
+  u.jump     = level >= 6;
+  u.repeat   = level >= 10;
+  u.func     = level >= 15;
+  u.sense    = level >= 22;
   return u;
 }
 

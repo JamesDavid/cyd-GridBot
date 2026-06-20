@@ -48,7 +48,7 @@ void RadioScreen::drawChoice() {
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
-  label(g, 6, 4, "Radio - find a friend", C_ACCENT);
+  label(g, 6, 3, "Radio Friend", C_ACCENT, textdatum_t::top_left, 2);
   button(g, R_BATTLE, "Battle a friend", C_GO, C_PANEL);
   button(g, R_TRADE, "Trade a bot", C_FUNC, C_PANEL);
   label(g, SCREEN_W / 2, 160, "(needs a friend's CYD nearby)", C_DIM, textdatum_t::top_center);

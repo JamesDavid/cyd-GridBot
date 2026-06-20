@@ -10,6 +10,7 @@
 #include "screens/StatsScreen.h"
 #include "screens/ArenaScreen.h"
 #include "screens/RadioScreen.h"
+#include "screens/PixelEditorScreen.h"
 
 namespace app {
 
@@ -17,9 +18,10 @@ class App {
  public:
   void begin();
   void tick(uint32_t now);
+  void debugGoToLevel(uint32_t level);  // playtest aid (serial 'G <n>')
 
  private:
-  enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO };
+  enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO, DRAW };
 
   void gotoSelect();
   void gotoIntro(uint32_t level);
@@ -38,6 +40,7 @@ class App {
   screens::StatsScreen _stats;
   screens::ArenaScreen _arena;
   screens::RadioScreen _radio;
+  screens::PixelEditorScreen _pixed;
   TapDetector _introTap;
   ui::Rect _arenaBtn{90, 196, 140, 28};  // shown on the level intro post-sensing
 };

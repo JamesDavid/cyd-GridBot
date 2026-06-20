@@ -30,8 +30,8 @@ void ProfileSelectScreen::draw() {
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
-  label(g, SCREEN_W / 2, 4, "GridBot - Choose a Player", C_ACCENT,
-        textdatum_t::top_center);
+  label(g, SCREEN_W / 2, 3, "Choose a Player", C_ACCENT,
+        textdatum_t::top_center, 2);
 
   int n = (int)_metas.size();
   if (n > 6) n = 6;

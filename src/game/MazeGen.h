@@ -21,11 +21,12 @@ struct Difficulty {
 
 Difficulty difficultyFor(int level);
 
-// Sensing tier begins at this level (SPEC §7). At/after it, a level is a
-// "generalization" set: one program must clear 2-3 boards (SPEC §7.1).
-constexpr int SENSE_LEVEL = 55;
+// Sensing tier unlocks here (SPEC §7). Multi-maze "generalization" challenges
+// (one program must clear 2-3 boards, SPEC §7.1) are then interspersed every 5th
+// level — so most levels stay regular mazes and variety is preserved.
+constexpr int SENSE_LEVEL = 22;
 constexpr int MAX_BOARDS = 3;
-inline bool isMultiLevel(int level) { return level >= SENSE_LEVEL; }
+inline bool isMultiLevel(int level) { return level >= SENSE_LEVEL && (level % 5 == 0); }
 
 namespace MazeGen {
 // Fill `out` with the maze for (seedBase, level). Always solvable (SPEC §6).

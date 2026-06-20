@@ -26,4 +26,11 @@ void drawCharacter(LGFX& g, int cx, int cy, int tile, int avatar, gb::Facing fac
 // Draw the themed goal token (cheese/carrot/egg…) centred in the tile.
 void drawGoalToken(LGFX& g, int cx, int cy, int tile, int avatar);
 
+// Pixel-editor palette: index 0 = empty (not drawn), 1..8 = colours.
+constexpr int PALETTE_N = 9;
+extern const uint16_t PIXEL_PALETTE[PALETTE_N];
+
+// Draw a custom 16x16 sprite (palette indices) centred in the tile, scaled to fit.
+void drawCustomSprite(LGFX& g, int cx, int cy, int tile, const uint8_t* pix);
+
 }  // namespace assets

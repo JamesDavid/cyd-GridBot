@@ -29,6 +29,26 @@ static std::string genUuid() {
   return std::string(buf);
 }
 
+static std::string toHex(const std::vector<uint8_t>& v) {
+  static const char* H = "0123456789abcdef";
+  std::string s;
+  s.reserve(v.size() * 2);
+  for (uint8_t b : v) { s += H[b >> 4]; s += H[b & 0xF]; }
+  return s;
+}
+static int hexNibble(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  return 0;
+}
+static void fromHex(const char* s, std::vector<uint8_t>& v) {
+  v.clear();
+  if (!s) return;
+  for (size_t i = 0; s[i] && s[i + 1]; i += 2)
+    v.push_back((uint8_t)((hexNibble(s[i]) << 4) | hexNibble(s[i + 1])));
+}
+
 static void profileToJson(const gb::Profile& p, JsonObject o) {
   o["id"] = p.id;
   o["uuid"] = p.uuid;
@@ -70,6 +90,8 @@ static void profileToJson(const gb::Profile& p, JsonObject o) {
       gb::programToJson(e.program, le["program"].to<JsonObject>());
     }
   }
+  if (!p.customChar.empty()) o["cchar"] = toHex(p.customChar);
+  if (!p.customGoal.empty()) o["cgoal"] = toHex(p.customGoal);
 }
 
 static void profileFromJson(JsonObjectConst o, gb::Profile& p) {
@@ -117,6 +139,8 @@ static void profileFromJson(JsonObjectConst o, gb::Profile& p) {
       p.library.push_back(e);
     }
   }
+  if (o["cchar"].is<const char*>()) fromHex(o["cchar"], p.customChar);
+  if (o["cgoal"].is<const char*>()) fromHex(o["cgoal"], p.customGoal);
 }
 
 // ---- store ops ------------------------------------------------------------

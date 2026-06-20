@@ -6,8 +6,9 @@ using namespace gb;
 
 namespace screens {
 
-static const Rect R_BACK = {6, (int16_t)(BOTBAR_Y + 2), 120, 26};
-static const Rect R_EDIT = {180, (int16_t)(BOTBAR_Y + 2), 134, 26};
+static const Rect R_BACK = {6, (int16_t)(BOTBAR_Y + 2), 92, 26};
+static const Rect R_EDIT = {102, (int16_t)(BOTBAR_Y + 2), 104, 26};
+static const Rect R_DRAW = {210, (int16_t)(BOTBAR_Y + 2), 104, 26};
 static const char* CMD_NAMES[CS_COUNT] = {"Fwd","Back","Turn","Jump","Loop","Func","Sense"};
 
 void StatsScreen::enter() { draw(); }
@@ -20,8 +21,8 @@ void StatsScreen::draw() {
   const Stats& s = _p->stats;
 
   char buf[48];
-  snprintf(buf, sizeof(buf), "%s  -  Stats", _p->name.c_str());
-  label(g, 6, 4, buf, C_ACCENT);
+  snprintf(buf, sizeof(buf), "%s - Stats", _p->name.c_str());
+  label(g, 6, 3, buf, C_ACCENT, textdatum_t::top_left, 2);
   assets::drawCharacter(g, SCREEN_W - 16, 11, 16, _p->avatar, gb::SOUTH);
 
   int y = BAND_Y + 4;
@@ -55,7 +56,8 @@ void StatsScreen::draw() {
   }
 
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
-  button(g, R_EDIT, "Edit name/char", C_ACCENT, C_PANEL);
+  button(g, R_EDIT, "Edit name", C_ACCENT, C_PANEL);
+  button(g, R_DRAW, "Draw sprite", C_FUNC, C_PANEL);
 }
 
 app::Signal StatsScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
@@ -63,6 +65,7 @@ app::Signal StatsScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   if (_tap.tapped(tp, now, tx, ty)) {
     if (R_BACK.contains(tx, ty)) return app::Signal::BACK;
     if (R_EDIT.contains(tx, ty)) return app::Signal::EDIT_PROFILE;
+    if (R_DRAW.contains(tx, ty)) return app::Signal::GOTO_DRAW;
   }
   return app::Signal::NONE;
 }

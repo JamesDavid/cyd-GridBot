@@ -44,7 +44,7 @@ void ProfileCreateScreen::draw() {
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
-  label(g, SCREEN_W / 2, 4, _edit ? "Edit Player" : "New Player", C_ACCENT, textdatum_t::top_center);
+  label(g, SCREEN_W / 2, 3, _edit ? "Edit Player" : "New Player", C_ACCENT, textdatum_t::top_center, 2);
 
   drawNameField();
 

@@ -56,7 +56,7 @@ void ArenaScreen::drawMenu() {
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
-  label(g, 6, 4, "Arena", C_ACCENT);
+  label(g, 6, 3, "Arena", C_ACCENT, textdatum_t::top_left, 2);
   label(g, SCREEN_W / 2, 36, "Pick an opponent", C_INK, textdatum_t::top_center);
   button(g, R_AI, "vs House AI", C_GO, C_PANEL);
   button(g, R_HOT, "Hotseat 2P", C_FUNC, C_PANEL);

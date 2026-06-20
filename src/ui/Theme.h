@@ -28,8 +28,9 @@ constexpr uint16_t C_LOCK      = rgb(70, 74, 96);
 // Maze tile colours.
 constexpr uint16_t C_FLOOR     = rgb(52, 58, 82);
 constexpr uint16_t C_FLOOR2    = rgb(46, 52, 74);     // checker
-constexpr uint16_t C_WALL      = rgb(96, 104, 140);
-constexpr uint16_t C_PIT       = rgb(8, 9, 14);
+constexpr uint16_t C_WALL      = rgb(156, 64, 52);    // brick red
+constexpr uint16_t C_WALL_LINE = rgb(120, 44, 36);    // brick mortar lines
+constexpr uint16_t C_PIT       = rgb(8, 9, 14);       // (legacy) — pits drawn as void
 
 // Layout bands.
 constexpr int SCREEN_W = 320, SCREEN_H = 240;

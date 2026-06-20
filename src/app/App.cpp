@@ -78,6 +78,19 @@ void App::gotoGame() {
   _game.enter();
 }
 
+void App::debugGoToLevel(uint32_t level) {
+  if (_profile.id.empty()) {
+    std::vector<store::ProfileMeta> metas;
+    store::profiles.listProfiles(metas);
+    if (!metas.empty()) loadProfileInto(metas[0].id);
+    else loadProfileInto(store::profiles.createProfile("Dev", 0));
+  }
+  _profile.level = level;
+  _profile.unlocks = gb::computeUnlocks(level);
+  saveProfile();
+  gotoIntro(level);
+}
+
 void App::tick(uint32_t now) {
   hal::TouchPoint tp = hal::touch.read();
 
@@ -138,6 +151,22 @@ void App::tick(uint32_t now) {
         _create.beginEdit(_profile.name, _profile.avatar);
         _create.enter();
         _state = State::CREATE;
+      }
+      else if (s == Signal::GOTO_DRAW) {
+        _pixed.begin(&_profile); _pixed.enter(); _state = State::DRAW;
+      }
+      break;
+    }
+    case State::DRAW: {
+      Signal s = _pixed.tick(now, tp);
+      if (s == Signal::BACK) {
+        // drop all-empty sprites so they fall back to the roster art
+        auto allZero = [](const std::vector<uint8_t>& v) {
+          for (uint8_t b : v) if (b) return false; return true; };
+        if (allZero(_profile.customChar)) _profile.customChar.clear();
+        if (allZero(_profile.customGoal)) _profile.customGoal.clear();
+        saveProfile();
+        _stats.begin(&_profile); _stats.enter(); _state = State::STATS;
       }
       break;
     }

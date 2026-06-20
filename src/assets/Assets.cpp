@@ -24,6 +24,31 @@ const RosterEntry& roster(int avatar) {
   return kRoster[avatar];
 }
 
+const uint16_t PIXEL_PALETTE[PALETTE_N] = {
+  0,                       // 0 = empty (sentinel, never drawn)
+  rgb(232, 72, 72),        // red
+  rgb(255, 140, 50),       // orange
+  rgb(255, 210, 70),       // yellow
+  rgb(80, 200, 120),       // green
+  rgb(96, 170, 255),       // blue
+  rgb(180, 130, 255),      // purple
+  rgb(245, 245, 250),      // white
+  rgb(20, 20, 28),         // black
+};
+
+void drawCustomSprite(LGFX& g, int cx, int cy, int tile, const uint8_t* pix) {
+  int px = tile / 16;
+  if (px < 1) px = 1;
+  int x0 = cx - px * 8, y0 = cy - px * 8;
+  for (int r = 0; r < 16; r++) {
+    for (int c = 0; c < 16; c++) {
+      uint8_t idx = pix[r * 16 + c];
+      if (idx == 0 || idx >= PALETTE_N) continue;
+      g.fillRect(x0 + c * px, y0 + r * px, px, px, PIXEL_PALETTE[idx]);
+    }
+  }
+}
+
 void drawCharacter(LGFX& g, int cx, int cy, int tile, int avatar, gb::Facing facing) {
   const RosterEntry& e = roster(avatar);
   int r = tile * 0.36f;

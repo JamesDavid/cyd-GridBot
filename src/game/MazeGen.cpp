@@ -6,13 +6,14 @@ namespace gb {
 
 // SPEC §7 difficulty curve. Tunable constants, not hard rules.
 Difficulty difficultyFor(int level) {
+  // Compressed to match the unlock curve (jump@6, repeat@10, func@15, sense@22).
   Difficulty d{};
-  if (level <= 3)        { d.rows = 4; d.cols = 4; d.pitDensityPct = 0;  d.wallDensityPct = 8;  d.allowPitGaps = false; }
-  else if (level <= 8)   { d.rows = 5; d.cols = 5; d.pitDensityPct = 6;  d.wallDensityPct = 16; d.allowPitGaps = false; }
-  else if (level <= 14)  { d.rows = 5; d.cols = 6; d.pitDensityPct = 12; d.wallDensityPct = 18; d.allowPitGaps = true; }
-  else if (level <= 24)  { d.rows = 6; d.cols = 7; d.pitDensityPct = 16; d.wallDensityPct = 20; d.allowPitGaps = true; }
-  else if (level <= 39)  { d.rows = 6; d.cols = 8; d.pitDensityPct = 18; d.wallDensityPct = 22; d.allowPitGaps = true; }
-  else if (level <= 54)  { d.rows = 8; d.cols = 10; d.pitDensityPct = 20; d.wallDensityPct = 24; d.allowPitGaps = true; }
+  if (level <= 2)        { d.rows = 4; d.cols = 4; d.pitDensityPct = 0;  d.wallDensityPct = 8;  d.allowPitGaps = false; }
+  else if (level <= 5)   { d.rows = 5; d.cols = 5; d.pitDensityPct = 0;  d.wallDensityPct = 16; d.allowPitGaps = false; }
+  else if (level <= 9)   { d.rows = 5; d.cols = 6; d.pitDensityPct = 10; d.wallDensityPct = 18; d.allowPitGaps = true; }   // jump@6
+  else if (level <= 14)  { d.rows = 6; d.cols = 7; d.pitDensityPct = 14; d.wallDensityPct = 20; d.allowPitGaps = true; }   // repeat@10
+  else if (level <= 21)  { d.rows = 6; d.cols = 8; d.pitDensityPct = 16; d.wallDensityPct = 22; d.allowPitGaps = true; }   // func@15
+  else if (level <= 34)  { d.rows = 8; d.cols = 9; d.pitDensityPct = 20; d.wallDensityPct = 24; d.allowPitGaps = true; }   // sense@22
   else                   { d.rows = 8; d.cols = 10; d.pitDensityPct = 24; d.wallDensityPct = 26; d.allowPitGaps = true; }
   d.minPathLen = (d.rows + d.cols);
   return d;

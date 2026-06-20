@@ -51,6 +51,12 @@ static void handleSerialLine(const String& line) {
     hal::touch.clearCalibration();
     Serial.println("calib cleared, rebooting");
     delay(100); ESP.restart();
+  } else if (c == 'G') {
+    int lvl = 1;
+    if (sscanf(line.c_str() + 1, "%d", &lvl) == 1) {
+      gApp.debugGoToLevel((uint32_t)lvl);
+      Serial.printf("GOTO level %d\n", lvl);
+    }
   }
 }
 #endif

@@ -106,9 +106,11 @@ inline void runAll() {
   {
     gb::Program wf = gb::wallFollowerProgram();
     bool allWin = true;
+    int multiLvl = gb::SENSE_LEVEL;
+    while (!gb::isMultiLevel(multiLvl)) multiLvl++;   // first multi-maze level
     for (uint32_t sb = 1; sb <= 5; sb++) {
       gb::Maze boards[gb::MAX_BOARDS];
-      int nb = gb::MazeGen::generateBoards(boards, gb::MAX_BOARDS, sb, gb::SENSE_LEVEL + 2);
+      int nb = gb::MazeGen::generateBoards(boards, gb::MAX_BOARDS, sb, multiLvl);
       for (int i = 0; i < nb; i++) {
         gb::Interpreter it; it.load(&wf, &boards[i], boards[i].startPose(), 2000);
         if (it.runToEnd() != gb::OUT_WIN) allWin = false;

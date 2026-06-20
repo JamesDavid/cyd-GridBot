@@ -17,7 +17,10 @@ def open_port(serial, port):
     ser.port = port; ser.baudrate = 115200; ser.timeout = 2
     ser.dtr = False; ser.rts = False
     ser.open()
-    time.sleep(2.5)
+    # Force a clean reset to a known state (profile select) so navigation is
+    # deterministic: pulse EN low via RTS.
+    ser.setRTS(True); time.sleep(0.12); ser.setRTS(False)
+    time.sleep(3.0)
     ser.reset_input_buffer()
     return ser
 
@@ -70,7 +73,7 @@ def main():
         elif op == "wait":
             time.sleep(float(parts[1]))
         elif op == "key":
-            ser.write((parts[1] + "\n").encode()); ser.flush()
+            ser.write((" ".join(parts[1:]) + "\n").encode()); ser.flush()
     ser.close()
 
 if __name__ == "__main__":

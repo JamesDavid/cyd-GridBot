@@ -85,6 +85,7 @@ class GameScreen : public app::IScreen {
   int _stars = 0;
   int _selected = -1;   // selected program-list row
   int _scroll = 0;
+  bool _followTail = true;  // keep the newest command in view as you add
 
   gb::Pose _drawnPose;          // last drawn character pose (for dirty-rect)
   const gb::Node* _failNode = nullptr;

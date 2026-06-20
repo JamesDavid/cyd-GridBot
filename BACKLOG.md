@@ -3,7 +3,29 @@
 The living list of planned/possible work. The README shows only the juiciest
 highlights and links here. Items are grouped; checked = done, unchecked = future.
 
+## Playtest ideas — make it more fun (from on-device playtesting)
+- [ ] **Achievements / badges**: first win, first 3-star, "used a loop", "wrote a
+      function", first sensing clear, first arena win, traded a bot, drew a sprite,
+      win-streak milestones. Show on the stats screen; celebrate on unlock.
+- [ ] **Juice**: smooth tween between tiles, a little dust/trail, particle burst +
+      star fly-in on win, gentle screen-shake on bonk (character shake already added).
+- [ ] **Character emotes**: happy bounce on win, dizzy/✖-eyes on bonk, splash on a pit.
+- [ ] **Drag-to-reorder** program lines; an **Undo** button for edits.
+- [ ] **Level biomes/themes**: vary the floor/wall palette per level band (grass,
+      cave, ice, space) so progress feels visual.
+- [ ] **In-game speed slider** + a one-line **hint** ("par is N") toggle.
+- [ ] **Daily/shared-seed challenge**: everyone plays the same maze from a seed code.
+- [ ] **Coin collectibles + a tiny shop** for sprite colours / themes (ties to the
+      pixel editor and the coin-economy motif).
+- [ ] **Music**: a short chiptune loop + win jingle (gate behind settings.sound).
+
 ## Campaign polish (deferred niceties)
+- [x] Brick-red walls + void (background-colour) pits so hazards read clearly.
+- [x] Program list scrolls (auto-follows newest + tappable scrollbar) and the pane
+      extends full-height — no command-count limit on screen.
+- [x] Bigger chrome titles; compressed unlock curve (sensing at L22, not L55);
+      multi-maze challenges interspersed every 5th level past sensing.
+- [x] Failure feedback on the maze before returning to code (see below).
 - [ ] Smooth tile-to-tile character tween during animation (currently discrete hops).
 - [ ] Press animation on buttons (brief depress + release) beyond the colour change.
 - [ ] Optional persistent mini-map in the Code view (SPEC §10; per-profile setting,

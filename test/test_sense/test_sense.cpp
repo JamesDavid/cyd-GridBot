@@ -27,7 +27,8 @@ void test_wall_follower_clears_generated_set() {
   Program wf = wallFollowerProgram();
   int sets = 0;
   for (uint32_t sb = 1; sb <= 10; sb++) {
-    for (int level = SENSE_LEVEL; level <= SENSE_LEVEL + 12; level++) {
+    for (int level = SENSE_LEVEL; level <= SENSE_LEVEL + 40; level++) {
+      if (!isMultiLevel(level)) continue;  // only the interspersed multi-maze levels
       Maze boards[MAX_BOARDS];
       int n = MazeGen::generateBoards(boards, MAX_BOARDS, sb, level);
       TEST_ASSERT_TRUE(n >= 2);
@@ -43,7 +44,7 @@ void test_wall_follower_clears_generated_set() {
       sets++;
     }
   }
-  TEST_ASSERT_TRUE(sets >= 100);
+  TEST_ASSERT_TRUE(sets >= 50);
 }
 
 void test_normal_level_single_board() {

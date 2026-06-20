@@ -14,14 +14,16 @@ using namespace gb;
 
 namespace screens {
 
+static bool spriteHasPixels(const std::vector<uint8_t>& v);
+
 // ---- layout rects (320x240, SPEC §10) -------------------------------------
 static constexpr int PAD_X0 = 6, PAD_Y0 = BAND_Y + 2, PAD_CELL = 50, PAD_PITCH = 52;
 static Rect padCell(int i, int j) { return {(int16_t)(PAD_X0 + j * PAD_PITCH),
                                             (int16_t)(PAD_Y0 + i * PAD_PITCH),
                                             PAD_CELL, PAD_CELL}; }
 static const Rect R_CLEAR  = {6, 179, 48, 30};
-static const Rect R_DELPAD = {58, 179, 46, 30};   // delete selected line (big target)
-static const Rect R_RUNPAD = {108, 179, 54, 30};
+static const Rect R_DELPAD = {58, 179, 46, 30};    // delete selected line
+static const Rect R_RUNPAD = {108, 179, 54, 30};   // RUN sits with CLEAR/DEL
 static constexpr int LIST_X = 166, LIST_W = 320 - 166;
 static const Rect R_DEL = {298, 24, 16, 16};
 static const Rect R_RMINUS = {246, 24, 18, 16};   // repeat count -
@@ -57,6 +59,7 @@ void GameScreen::begin(Profile* profile, uint32_t level) {
   _auto = false;
   _selected = -1;
   _scroll = 0;
+  _followTail = true;
   _failNode = nullptr;
   _drawnPose = _maze.startPose();
   _it.load(&_prog, &_maze, _maze.startPose());
@@ -111,14 +114,33 @@ void GameScreen::drawCell(int r, int c) {
   mazeGeometry(tile, ox, oy);
   int x = ox + c * tile, y = oy + r * tile;
   Tile t = _maze.at(r, c);
-  uint16_t bg = ((r + c) & 1) ? C_FLOOR : C_FLOOR2;
-  if (t == WALL) bg = C_WALL;
-  else if (t == PIT) bg = C_PIT;
-  g.fillRect(x, y, tile - 1, tile - 1, bg);
-  if (t == PIT) g.fillCircle(x + tile / 2, y + tile / 2, tile / 3, C_BG);
-  if (_maze.isGoal(r, c))
-    assets::drawGoalToken(g, x + tile / 2, y + tile / 2, tile,
-                          _profile ? _profile->avatar : 0);
+  if (t == PIT) {
+    // a pit reads as a hole: fill with the background (looks "missing"), thin rim
+    g.fillRect(x, y, tile - 1, tile - 1, C_BG);
+    g.drawRect(x + 1, y + 1, tile - 3, tile - 3, C_FLOOR2);
+  } else if (t == WALL) {
+    g.fillRect(x, y, tile - 1, tile - 1, C_WALL);
+    // simple brick courses
+    g.drawFastHLine(x, y + tile / 3, tile - 1, C_WALL_LINE);
+    g.drawFastHLine(x, y + 2 * tile / 3, tile - 1, C_WALL_LINE);
+    g.drawFastVLine(x + tile / 2, y, tile / 3, C_WALL_LINE);
+    g.drawFastVLine(x + tile / 4, y + tile / 3, tile / 3, C_WALL_LINE);
+    g.drawFastVLine(x + 3 * tile / 4, y + tile / 3, tile / 3, C_WALL_LINE);
+  } else {
+    g.fillRect(x, y, tile - 1, tile - 1, ((r + c) & 1) ? C_FLOOR : C_FLOOR2);
+  }
+  if (_maze.isGoal(r, c)) {
+    if (_profile && spriteHasPixels(_profile->customGoal))
+      assets::drawCustomSprite(g, x + tile / 2, y + tile / 2, tile, _profile->customGoal.data());
+    else
+      assets::drawGoalToken(g, x + tile / 2, y + tile / 2, tile, _profile ? _profile->avatar : 0);
+  }
+}
+
+static bool spriteHasPixels(const std::vector<uint8_t>& v) {
+  if (v.size() != (size_t)gb::PIX_CELLS) return false;
+  for (uint8_t b : v) if (b) return true;
+  return false;
 }
 
 void GameScreen::drawCharacterAt(const Pose& p) {
@@ -127,7 +149,15 @@ void GameScreen::drawCharacterAt(const Pose& p) {
   mazeGeometry(tile, ox, oy);
   int cx = ox + p.col * tile + tile / 2;
   int cy = oy + p.row * tile + tile / 2;
-  assets::drawCharacter(g, cx, cy, tile, _profile ? _profile->avatar : 0, p.facing);
+  if (_profile && spriteHasPixels(_profile->customChar)) {
+    assets::drawCustomSprite(g, cx, cy, tile, _profile->customChar.data());
+    // facing cue so the heading still reads
+    int dr, dc; facingDelta(p.facing, dr, dc);
+    int nx = cx + dc * (tile / 2 - 2), ny = cy + dr * (tile / 2 - 2);
+    g.fillCircle(nx, ny, 2, C_ACCENT);
+  } else {
+    assets::drawCharacter(g, cx, cy, tile, _profile ? _profile->avatar : 0, p.facing);
+  }
 }
 
 void GameScreen::drawMazeView(bool peek) {
@@ -233,6 +263,7 @@ void GameScreen::appendNodeToTarget(const Node& n) {
   appendTarget()->push_back(n);
   _selected = -1;
   _failNode = nullptr;  // editing clears the failure highlight
+  _followTail = true;   // scroll so the newest command is visible
   hal::audio.blip();
   drawProgramList();
 }
@@ -269,7 +300,9 @@ static void nodeLabel(const Node& n, char* buf, size_t bn, Glyph& gl, uint16_t& 
 
 void GameScreen::drawProgramList() {
   auto& g = hal::display.gfx();
-  g.fillRect(LIST_X, BAND_Y, LIST_W, BAND_H, C_PANEL);
+  // the program pane extends to the very bottom (the bottom-bar RUN is gone), so
+  // more commands fit on screen.
+  g.fillRect(LIST_X, BAND_Y, LIST_W, SCREEN_H - BAND_Y, C_PANEL);
   const char* body = (_editList == &_prog.f1) ? "F1" : (_editList == &_prog.f2) ? "F2" : "MAIN";
   char hdr[28];
   _writtenCount = programWrittenCount(_prog);
@@ -307,11 +340,22 @@ void GameScreen::drawProgramList() {
   }
 
   int top = listTop();
-  int visible = (BOTBAR_Y - top) / ROW_H;
+  int visible = (SCREEN_H - top) / ROW_H;  // pane now reaches the screen bottom
+  if (_followTail && n > visible) _scroll = n - visible;  // keep newest in view
   if (_selected >= 0 && _selected < _scroll) _scroll = _selected;
   if (_selected >= _scroll + visible) _scroll = _selected - visible + 1;
   if (_scroll > n - visible) _scroll = (n > visible) ? n - visible : 0;
   if (_scroll < 0) _scroll = 0;
+
+  // scrollbar (tappable) when the program overflows the visible rows
+  if (n > visible) {
+    int trackX = LIST_X + LIST_W - 5, trackY = top, trackH = visible * ROW_H;
+    g.fillRect(trackX, trackY, 3, trackH, C_PANEL_HI);
+    int thumbH = trackH * visible / n;
+    if (thumbH < 8) thumbH = 8;
+    int thumbY = trackY + (trackH - thumbH) * _scroll / (n - visible);
+    g.fillRect(trackX, thumbY, 3, thumbH, C_ACCENT);
+  }
 
   for (int vi = 0; vi < visible; vi++) {
     int ri = _scroll + vi;
@@ -345,13 +389,17 @@ void GameScreen::drawProgramList() {
 
 void GameScreen::drawBottomBar() {
   auto& g = hal::display.gfx();
-  g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   if (_mode == M_RUN) {
+    g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
     button(g, R_STEP, "STEP", C_INK, C_PANEL);
     button(g, R_RESET, "RESET", C_INK, C_PANEL);
+  } else if (_view == V_CODE) {
+    // only the VIEW toggle on the left; the program pane owns the right side
+    g.fillRect(0, BOTBAR_Y, LIST_X - 2, BOTBAR_H, C_BG);
+    button(g, R_TOGGLE, "VIEW: Maze", C_ACCENT, C_PANEL);
   } else {
-    const char* t = (_view == V_CODE) ? "VIEW: Maze" : "VIEW: Code";
-    button(g, R_TOGGLE, t, C_ACCENT, C_PANEL);
+    g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
+    button(g, R_TOGGLE, "VIEW: Code", C_ACCENT, C_PANEL);
     button(g, R_RUNBAR, "RUN >", C_GO, C_PANEL);
   }
 }
@@ -433,14 +481,26 @@ void GameScreen::handleListTap(int x, int y) {
   }
   if (x < LIST_X) return;
   int top = listTop();
-  int visible = (BOTBAR_Y - top) / ROW_H;
+  int visible = (SCREEN_H - top) / ROW_H;
+  std::vector<Row> rows;
+  flatten(*_editList, 0, rows);
+  int n = (int)rows.size();
+
+  // scrollbar zone (right edge): page up/down
+  if (x >= LIST_X + LIST_W - 9 && n > visible) {
+    _followTail = false;
+    if (y < top + visible * ROW_H / 2) _scroll -= visible - 1;
+    else _scroll += visible - 1;
+    if (_scroll < 0) _scroll = 0;
+    if (_scroll > n - visible) _scroll = n - visible;
+    drawProgramList();
+    return;
+  }
   for (int vi = 0; vi < visible; vi++) {
     int yy = top + vi * ROW_H;
     if (y >= yy && y < yy + ROW_H) {
       int ri = _scroll + vi;
-      std::vector<Row> rows;
-      flatten(*_editList, 0, rows);
-      if (ri < (int)rows.size()) { _selected = (ri == _selected) ? -1 : ri; hal::audio.blip(); }
+      if (ri < n) { _selected = (ri == _selected) ? -1 : ri; _followTail = false; hal::audio.blip(); }
       drawProgramList();
       drawControlPad();  // refresh DEL enabled state
       return;
