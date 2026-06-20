@@ -102,9 +102,13 @@ hook, and the whole difficulty curve is designed to lead there.
 
 ### Themed worlds
 
-| ![Meadow biome](docs/img/biome-meadow.png) | ![Nebula biome](docs/img/maze-preview.png) |
-|:--|:--|
-| **Meadow** (early levels) — green floors and hedges. | **Nebula** (sensing tier) — purple space-brick. Five biomes (Meadow → Cavern → Glacier → Circuit → Nebula) shift the palette as you climb, so progress *feels* like a journey. |
+| ![Meadow biome](docs/img/biome-meadow.png) |
+|:--|
+| **Meadow** (early levels) — green floors and hedges. |
+
+| ![Nebula biome](docs/img/maze-preview.png) |
+|:--|
+| **Nebula** (sensing tier) — purple space-brick. Five biomes (Meadow → Cavern → Glacier → Circuit → Nebula) shift the palette as you climb, so progress *feels* like a journey. |
 
 ### Coins & gems to collect
 
@@ -136,9 +140,13 @@ hook, and the whole difficulty curve is designed to lead there.
 |:--|
 | **Radio friend (ESP-NOW).** Two GridBots within range can **battle** — both screens run the *same* deterministic match from a shared seed — or **trade**, Pokémon-style: send a friend your favourite bot (and your custom robot art) and get theirs into your library. |
 
-| ![Puzzle Race](docs/img/puzzle-race.png) | ![Puzzle Race result](docs/img/puzzle-race-result.png) |
-|:--|:--|
-| **Puzzle Race — same maze, beat the clock.** A code-authoring contest instead of a live battle: both players see the *same* maze and get **45 seconds** to write a program for it (hotseat — Player 1 locks in, then passes the device). When the dust settles, each robot runs and is scored by how close it gets to the goal — **whoever ends up nearest wins** (reach it outright for the cleanest win). | A tense little "can you out-code your friend?" mode that rewards thinking under pressure. |
+| ![Puzzle Race](docs/img/puzzle-race.png) |
+|:--|
+| **Puzzle Race — same maze, beat the clock.** A code-authoring contest instead of a live battle: both players see the *same* maze and get **45 seconds** to write a program for it (hotseat — Player 1 locks in, then passes the device). When the dust settles, each robot runs and is scored by how close it gets to the goal — **whoever ends up nearest wins** (reach it outright for the cleanest win). A tense little "can you out-code your friend?" mode that rewards thinking under pressure. |
+
+| ![Puzzle Race result](docs/img/puzzle-race-result.png) |
+|:--|
+| The result screen scores each player by how close their robot got to the battery. |
 
 ### NeuroBot — stop *writing* the rules, start *training* them
 
@@ -150,13 +158,25 @@ hook, and the whole difficulty curve is designed to lead there.
 |:--|
 | **NeuroLab** — a lesson for each way machines actually learn, each small enough to *watch*. |
 
-| ![Watch a neuron learn](docs/img/neuro-neuron.gif) | ![Q-learning value spreads](docs/img/neuro-qlearning.gif) | ![Evolution](docs/img/neuro-evolution.gif) |
-|:--|:--|:--|
-| **Backprop** — a neuron guesses, sees how wrong it is, and nudges its weights. Tap *Train* and watch the error fall and every example flip ✗→ok. (Then: multi-class go/turn/jump, and a hidden layer to crack **XOR** — what one neuron provably can't.) | **Reinforcement (Q-learning)** — no code, no teacher: the robot tries the maze over and over and **value spreads back from the battery**, with arrows showing the policy it discovered. | **Evolution** — a herd of random brains; the ones that get furthest **breed**. Watch the best one's path improve and the fitness curve climb, generation by generation. |
+| ![Watch a neuron learn](docs/img/neuro-neuron.gif) |
+|:--|
+| **Backprop** — a neuron guesses, sees how wrong it is, and nudges its weights. Tap *Train* and watch the error fall and every example flip ✗→ok. (Then: multi-class go/turn/jump, and a hidden layer to crack **XOR** — what one neuron provably can't.) |
 
-| ![The NEURO block](docs/img/neuro-block.png) | ![Train the brain](docs/img/neuro-train.png) |
-|:--|:--|
-| **A brain is a block in your program.** Drop a **`brain`** node into the normal editor next to your loops and ifs — *neurosymbolic* programming: explicit code for the easy parts, a trained brain for the tricky bit. | **The neuro interface.** **Teach** it (distil the optimal solver into the brain by backprop — reliable) or **Evolve** it (no teacher, just a score), watch its path solve the maze, then **Use it**. The trained brain saves *with* your program — so it persists and **trades & battles over the radio** like any other bot. |
+| ![Q-learning value spreads](docs/img/neuro-qlearning.gif) |
+|:--|
+| **Reinforcement (Q-learning)** — no code, no teacher: the robot tries the maze over and over and **value spreads back from the battery**, with arrows showing the policy it discovered. |
+
+| ![Evolution](docs/img/neuro-evolution.gif) |
+|:--|
+| **Evolution** — a herd of random brains; the ones that get furthest **breed**. Watch the best one's path improve and the fitness curve climb, generation by generation. |
+
+| ![The NEURO block](docs/img/neuro-block.png) |
+|:--|
+| **A brain is a block in your program.** Drop a **`brain`** node into the normal editor next to your loops and ifs — *neurosymbolic* programming: explicit code for the easy parts, a trained brain for the tricky bit. |
+
+| ![Train the brain](docs/img/neuro-train.png) |
+|:--|
+| **The neuro interface.** **Teach** it (distil the optimal solver into the brain by backprop — reliable) or **Evolve** it (no teacher, just a score), watch its path solve the maze, then **Use it**. The trained brain saves *with* your program — so it persists and **trades & battles over the radio** like any other bot. |
 
 ---
 
