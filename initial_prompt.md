@@ -46,3 +46,19 @@ maze" game — for the **CYD ESP32-2432S028R** board, autonomously, phase by pha
 - Firmware (no upload): `C:/Users/James/.platformio/penv/Scripts/platformio.exe run -e cyd_gridbot`
 - Self-test firmware:   `… run -e cyd_gridbot_selftest`
 - Host tests:           `export PATH="/c/msys64/ucrt64/bin:$PATH"; … test -e native`
+
+## How it actually resolved (refinements during the build)
+
+- **PIO_DEBUG loop → USB serial.** The reference loop is HTTP/OTA/screenshot over WiFi;
+  GridBot has no networking, so the loop was implemented over **USB serial** instead:
+  firmware commands `S` (screenshot via panel readback), `T x y` (inject tap), `H` (home),
+  `G n` / `P n` (jump / auto-play levels), plus host scripts `scripts/shot.py` and
+  `scripts/drive.py`. Every README screenshot was captured this way.
+- **Flashing target:** the human authorised **COM3** (COM5 is a different project — never
+  touch it). On-device self-test (`cyd_gridbot_selftest`) passes 12/12 on the real board.
+- **Beyond the spec phases:** the human directed an extended autonomous push — implement
+  the backlog, play/win every level to unlock all tiers, audit every screen for looks +
+  usability, add an achievements system, and "make it awesome." All logged in `BACKLOG.md`;
+  unbuilt ideas (juice, music, Puzzle-Race mode, biomes, badge gallery) remain there.
+- **Deliverables:** `README.md` (+ `HARDWARE_SETUP.md`, `BACKLOG.md`, `LICENSE`), tagged
+  `v0.0`…`v1.0`.
