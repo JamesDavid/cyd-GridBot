@@ -41,9 +41,10 @@ class GameScreen : public app::IScreen {
   enum Mode : uint8_t { M_EDIT, M_RUN, M_WIN, M_FAIL };
 
   // flattened program-list row (rebuilt each list draw)
-  // addSlot rows are synthetic "+ add inside" affordances under a block (node = the
-  // block); they aren't real program nodes (index = -1).
-  struct Row { gb::Node* node; gb::NodeList* list; int index; int depth; uint16_t bracket; bool addSlot; };
+  // addSlot rows are synthetic "+ add inside" affordances under a block; trainSlot rows
+  // are the "train this brain" line under a NEURO node (node = the brain). Neither is a
+  // real program node (index = -1).
+  struct Row { gb::Node* node; gb::NodeList* list; int index; int depth; uint16_t bracket; bool addSlot; bool trainSlot = false; };
 
   // ---- drawing ----
   void drawChrome();

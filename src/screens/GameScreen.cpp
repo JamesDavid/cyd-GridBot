@@ -385,6 +385,9 @@ void GameScreen::flatten(NodeList& list, int depth, std::vector<Row>& out, uint1
       // a slot to add INSIDE the block (the parent block's own "+ add inside" + the
       // global "+ add here" cover everything outside, so no separate "+ add outside").
       out.push_back({&nd, &nd.body, -1, depth + 1, br, true});
+    } else if (nd.type == N_NEURO) {
+      // a "train this brain" line directly under the brain node
+      out.push_back({&nd, &list, -1, depth + 1, ui::rgb(120, 230, 245), false, true});
     }
   }
   // a general "+ add here" at the end of the top level (node = null marks it)
@@ -488,7 +491,7 @@ void GameScreen::drawProgramList() {
     int ctr[8] = {0};
     std::string seg[8];
     for (int i = 0; i < n; i++) {
-      if (rows[i].addSlot) continue;  // the "+ add inside" slot has no number
+      if (rows[i].addSlot || rows[i].trainSlot) continue;  // synthetic rows have no number
       int d = rows[i].depth; if (d > 7) d = 7;
       ctr[d]++;
       for (int k = d + 1; k < 8; k++) ctr[k] = 0;
@@ -551,6 +554,12 @@ void GameScreen::drawProgramList() {
     }
     int gx = LIST_X + 24 + row.depth * 12;
 
+    if (row.trainSlot) {
+      // the "train this brain" line under a NEURO node — a tappable button
+      Rect tr = {(int16_t)(gx + 2), (int16_t)(y + 1), 120, (int16_t)(ROW_H - 3)};
+      button(g, tr, "train brain >", ui::rgb(120, 230, 245), C_PANEL_HI);
+      continue;
+    }
     if (row.addSlot) {
       // clear "where will my next step go?" affordances
       const char* txt = !row.node ? (sel ? "+ adding here"   : "+ add here")
@@ -573,9 +582,6 @@ void GameScreen::drawProgramList() {
     } else if (sel && (nd->type == N_IF || nd->type == N_REPEAT_UNTIL)) {
       label(g, gx + 18, y + 6, nd->type == N_IF ? "if" : "until", C_SENSE);
       button(g, condRect(y), condName(nd->cond), C_SENSE, C_PANEL_HI);
-    } else if (sel && nd->type == N_NEURO) {
-      label(g, gx + 18, y + 6, "brain", ui::rgb(120, 230, 245));
-      button(g, condRect(y), "train >", ui::rgb(120, 230, 245), C_PANEL_HI);
     } else {
       label(g, gx + 18, y + 6, lab, C_INK);
     }
@@ -685,6 +691,8 @@ void GameScreen::handleListTap(int x, int y) {
     if (y >= yy && y < yy + ROW_H) {
       int ri = _scroll + vi;
       if (ri >= n) { drawProgramList(); return; }
+      // tap the "train brain" line -> open the neuro interface
+      if (rows[ri].trainSlot) { _pendingNeuro = rows[ri].node->brainIdx; hal::audio.blip(); return; }
       // inline controls on the currently-selected block row (big, mid-pane)
       if (ri == _selected && !rows[ri].addSlot) {
         Node* sn = rows[ri].node;
@@ -698,10 +706,6 @@ void GameScreen::handleListTap(int x, int y) {
             sn->cond = (sn->cond == WALL_AHEAD) ? PIT_AHEAD
                      : (sn->cond == PIT_AHEAD) ? AT_GOAL : WALL_AHEAD;
             hal::audio.blip(); drawProgramList(); return;
-          }
-        } else if (sn->type == N_NEURO) {
-          if (condRect(yy).contains(x, y)) {  // "train >" -> open the neuro interface
-            _pendingNeuro = sn->brainIdx; hal::audio.blip(); return;
           }
         }
       }
