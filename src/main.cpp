@@ -63,6 +63,9 @@ static void handleSerialLine(const String& line) {
       gApp.debugFastPlay((uint32_t)lvl);
       Serial.printf("PLAYED to level %d\n", lvl);
     }
+  } else if (c == 'H') {
+    gApp.debugHome();
+    Serial.println("HOME");
   }
 }
 #endif

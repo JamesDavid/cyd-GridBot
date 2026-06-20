@@ -61,7 +61,10 @@ void Touch::clearCalibration() {
 }
 
 void Touch::inject(int x, int y) {
-  _injX = x; _injY = y; _injCount = 3;  // pressed for a few reads, then released
+  // Exactly ONE pressed read, then released — so a synthetic tap is consumed by a
+  // single screen and never cascades through a transition (each new screen's tap
+  // detector would otherwise see the still-held press as a fresh tap).
+  _injX = x; _injY = y; _injCount = 1;
 }
 
 TouchPoint Touch::read() {

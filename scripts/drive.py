@@ -22,6 +22,8 @@ def open_port(serial, port):
     ser.setRTS(True); time.sleep(0.12); ser.setRTS(False)
     time.sleep(3.0)
     ser.reset_input_buffer()
+    ser.write(b"H\n"); ser.flush()  # force the home screen for deterministic nav
+    time.sleep(0.4)
     return ser
 
 def read_exact(ser, n):

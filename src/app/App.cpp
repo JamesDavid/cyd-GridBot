@@ -109,6 +109,8 @@ void App::debugGoToLevel(uint32_t level) {
   gotoIntro(level);
 }
 
+void App::debugHome() { gotoSelect(); }
+
 void App::debugFastPlay(uint32_t target) {
   if (_profile.id.empty()) {
     std::vector<store::ProfileMeta> metas;
