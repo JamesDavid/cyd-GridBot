@@ -176,7 +176,11 @@ hook, and the whole difficulty curve is designed to lead there.
 
 | ![Train the brain](docs/img/neuro-train.png) |
 |:--|
-| **The neuro interface.** **Teach** it (distil the optimal solver into the brain by backprop — reliable) or **Evolve** it (no teacher, just a score), watch its path solve the maze, then **Use it**. The trained brain saves *with* your program — so it persists and **trades & battles over the radio** like any other bot. |
+| **The neuro interface.** Open it from the **`train brain >`** line under a brain block. **Teach** it (distil the optimal solver into the brain by backprop — reliable) or **Evolve** it (no teacher, just a score), watch its path solve the maze, then **Use it**. The trained brain saves *with* your program — so it persists and **trades & battles over the radio** like any other bot. |
+
+| ![Train a fighter vs AI](docs/img/neuro-arena-train.png) |
+|:--|
+| **Train a fighter for the Arena.** A new **"Train a fighter vs AI"** mode off the Arena menu: evolve (or Teach) a brain to **beat an AI opponent on a real arena board** — fitness comes from *winning actual matches*, not just reaching the goal. **Save** it to your library and it shows up as a pickable Arena fighter, ready to battle a friend's bot over the radio. So kids can *prep their bots for battle*. |
 
 ---
 
