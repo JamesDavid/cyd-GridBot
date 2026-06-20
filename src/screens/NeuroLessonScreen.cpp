@@ -118,19 +118,22 @@ void NeuroLessonScreen::draw() {
     label(g, 8, 152, cap, C_DIM);
   }
 
-  // ---- the four situations (right) ----
+  // ---- the four situations (right): every wall/pit combination, in words ----
   int ex0 = 150;
+  label(g, ex0, TOPBAR_H + 14, "what it sees", C_DIM);
+  label(g, ex0 + 90, TOPBAR_H + 14, "it does", C_DIM);
   for (int i = 0; i < N_EX; i++) {
-    int y = TOPBAR_H + 18 + i * 42;
+    int y = TOPBAR_H + 28 + i * 38;
     int wall = (int)DX[i * 2], pit = (int)DX[i * 2 + 1];
-    g.fillRoundRect(ex0, y, 16, 16, 3, wall ? C_MOVE : C_PANEL); g.drawRoundRect(ex0, y, 16, 16, 3, C_DIM);
-    g.fillRoundRect(ex0 + 20, y, 16, 16, 3, pit ? C_PANEL_HI : C_PANEL); g.drawRoundRect(ex0 + 20, y, 16, 16, 3, C_DIM);
-    label(g, ex0 + 40, y + 4, "->", C_DIM);
+    // a bright word when the sensor is ON, dim when OFF -> you read why each row decides
+    label(g, ex0, y, wall ? "WALL" : "wall", wall ? C_MOVE : C_LOCK);
+    label(g, ex0 + 34, y, pit ? "PIT" : "pit", pit ? C_SENSE : C_LOCK);
+    label(g, ex0 + 58, y, "->", C_DIM);
     int act = decision(i), want = correctClass(_mode, i);
     bool ok = (act == want);
     uint16_t ac = (_mode == 1) ? (act == 0 ? C_GO : act == 1 ? C_ACCENT : C_MOVE) : (act ? C_ACCENT : C_GO);
-    label(g, ex0 + 58, y + 4, actionName(_mode, act), ac);
-    label(g, ex0 + 134, y + 4, ok ? "ok" : "X", ok ? C_GO : C_BAD);
+    label(g, ex0 + 74, y, actionName(_mode, act), ac);
+    label(g, ex0 + 134, y, ok ? "ok" : "X", ok ? C_GO : C_BAD);
   }
 
   int ly = TOPBAR_H + 18 + N_EX * 42 - 6;
