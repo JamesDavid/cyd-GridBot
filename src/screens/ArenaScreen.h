@@ -22,12 +22,14 @@ class ArenaScreen : public app::IScreen {
 
  private:
   enum class Phase : uint8_t { MENU, PICK1, HANDOFF, PICK2, BOARD, DONE };
-  struct Candidate { std::string name; gb::Program prog; uint8_t avatar; std::string style; bool house; bool smart; };
+  struct Candidate { std::string name; gb::Program prog; uint8_t avatar; std::string style; bool house; bool smart; bool neuro = false; };
 
   void buildCandidates();
   void drawMenu();
   void drawPick(int player);
   ui::Rect pickRowRect(int i) const;
+  int pickVisible() const;
+  bool pickScrollTap(int x, int y);  // handle a tap in the scrollbar zone
   int houseBotIndex(const char* name) const;
   void drawHandoff();
   void startMatch();
@@ -42,6 +44,7 @@ class ArenaScreen : public app::IScreen {
   gb::MatchType _type = gb::MatchType::RACE;
   bool _hotseat = false;
   int _pick0 = -1, _pick1 = -1;
+  int _pickScroll = 0;  // first visible candidate row in the (scrollable) pick list
 
   gb::Maze _maze;
   gb::Pose _s0, _s1;

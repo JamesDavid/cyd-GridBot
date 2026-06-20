@@ -5,11 +5,24 @@
 #include "game/MazeGen.h"
 #include "game/Bots.h"
 #include "game/Score.h"
+#include "game/Distill.h"
 
 using namespace ui;
 using namespace gb;
 
 namespace screens {
+
+// A pre-trained NeuroBot: distil a brain to navigate this board (from `start`), then
+// drive with a NEURO node. Reliable + competent, and an actual neural net to battle.
+static void buildNeuroBot(Program& p, const Maze& m, const Pose& start, uint32_t seed) {
+  p.clear();
+  uint8_t idx = p.addBrain(seed);
+  Maze mm = m; mm.setStart(start);
+  distillSolver(p.brains[idx], mm, true, 500);
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(Node::neuro(idx));
+  p.main.push_back(loop);
+}
 
 static const Rect R_BACK = {6, (int16_t)(BOTBAR_Y + 2), 100, 26};
 static const Rect R_TYPE = {110, (int16_t)(BOTBAR_Y + 2), 90, 26};
@@ -55,6 +68,10 @@ void ArenaScreen::buildCandidates() {
   _cands.push_back({"Vex",   hunterProgram(),        7, "hunts & shoves",  true, false});
   // Ace solves the board on the fly — a real navigator (program built at match start).
   _cands.push_back({"Ace",   Program{},              3, "solves the maze", true, true});
+  // Pre-trained NeuroBots: their brain (a neural net) is trained on the board at match
+  // start, then drives them — battle an actual trained brain.
+  _cands.push_back({"Neura",  Program{}, 2, "a trained brain",  true, false, true});
+  _cands.push_back({"Cortex", Program{}, 4, "an evolved brain", true, false, true});
 }
 
 int ArenaScreen::houseBotIndex(const char* name) const {
@@ -85,8 +102,12 @@ void ArenaScreen::drawMenu() {
   button(g, R_TYPE, _type == MatchType::RACE ? "Race" : "Sumo", C_ACCENT, C_PANEL);
 }
 
+static constexpr int PICK_ROWH = 26, PICK_TOP = BAND_Y + 4;
+int ArenaScreen::pickVisible() const { return (BAND_H - 8) / PICK_ROWH; }
+
 ui::Rect ArenaScreen::pickRowRect(int i) const {
-  return {6, (int16_t)(BAND_Y + 6 + i * 26), 308, 24};
+  // screen rect for candidate i given the current scroll (off-screen if not in view)
+  return {6, (int16_t)(PICK_TOP + (i - _pickScroll) * PICK_ROWH), 300, 24};
 }
 
 void ArenaScreen::drawPick(int player) {
@@ -95,14 +116,35 @@ void ArenaScreen::drawPick(int player) {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   char t[28]; snprintf(t, sizeof(t), "Player %d: pick a bot", player + 1);
   label(g, 6, 3, t, C_ACCENT, textdatum_t::top_left, 2);
-  for (int i = 0; i < (int)_cands.size(); i++) {
+  int n = (int)_cands.size(), vis = pickVisible();
+  if (_pickScroll > n - vis) _pickScroll = (n > vis) ? n - vis : 0;
+  if (_pickScroll < 0) _pickScroll = 0;
+  for (int i = _pickScroll; i < n && i < _pickScroll + vis; i++) {
     Rect r = pickRowRect(i);
     const Candidate& c = _cands[i];
-    g.fillRoundRect(r.x, r.y, r.w, r.h, 5, c.house ? C_PANEL : C_PANEL_HI);
-    assets::drawCharacter(g, r.x + 16, r.cy(), 22, c.avatar, gb::SOUTH);
-    label(g, r.x + 36, r.y + 3, c.name.c_str(), c.house ? C_INK : C_GO);
-    label(g, r.x + 36, r.y + 13, c.style.c_str(), C_DIM);
+    g.fillRoundRect(r.x, r.y, r.w, r.h, 4, c.house ? C_PANEL : C_PANEL_HI);
+    assets::drawCharacter(g, r.x + 13, r.cy(), 17, c.avatar, gb::SOUTH);
+    label(g, r.x + 30, r.y + 2, c.name.c_str(), c.neuro ? ui::rgb(120, 230, 245) : c.house ? C_INK : C_GO);
+    label(g, r.x + 110, r.y + 5, c.style.c_str(), C_DIM);
   }
+  // scrollbar (tap top/bottom half to page) when the roster overflows
+  if (n > vis) {
+    int trackX = SCREEN_W - 8, trackH = vis * PICK_ROWH;
+    g.fillRect(trackX, PICK_TOP, 4, trackH, C_PANEL_HI);
+    int thumbH = trackH * vis / n; if (thumbH < 10) thumbH = 10;
+    int thumbY = PICK_TOP + (trackH - thumbH) * _pickScroll / (n - vis);
+    g.fillRect(trackX, thumbY, 4, thumbH, C_ACCENT);
+  }
+}
+
+bool ArenaScreen::pickScrollTap(int x, int y) {
+  int n = (int)_cands.size(), vis = pickVisible();
+  if (n <= vis || x < SCREEN_W - 14) return false;
+  _pickScroll += (y < PICK_TOP + vis * PICK_ROWH / 2) ? -(vis - 1) : (vis - 1);
+  if (_pickScroll > n - vis) _pickScroll = n - vis;
+  if (_pickScroll < 0) _pickScroll = 0;
+  hal::audio.blip();
+  return true;
 }
 
 void ArenaScreen::drawHandoff() {
@@ -118,9 +160,11 @@ void ArenaScreen::drawHandoff() {
 void ArenaScreen::startMatch() {
   hal::audio.stopMusic();  // the board uses step-tick SFX; silence the battle theme
   MazeGen::generateArena(_maze, _profile ? _profile->seedBase + 7u : 7u, _s0, _s1);
-  // Smart bots build their program from the actual board (navigate the maze).
+  // Smart bots solve the board; NeuroBots train a brain on it — both at match start.
   if (_cands[_pick0].smart) solveMazeFrom(_maze, _s0, true, _cands[_pick0].prog);
+  else if (_cands[_pick0].neuro) buildNeuroBot(_cands[_pick0].prog, _maze, _s0, 7u + (uint32_t)_cands[_pick0].avatar * 13u);
   if (_cands[_pick1].smart) solveMazeFrom(_maze, _s1, true, _cands[_pick1].prog);
+  else if (_cands[_pick1].neuro) buildNeuroBot(_cands[_pick1].prog, _maze, _s1, 7u + (uint32_t)_cands[_pick1].avatar * 13u);
   const Program& p0 = _cands[_pick0].prog;
   const Program& p1 = _cands[_pick1].prog;
   _arena.setup(&_maze, &p0, &p1, _s0, _s1, _type);
@@ -236,12 +280,13 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         _type = (_type == MatchType::RACE) ? MatchType::SUMO : MatchType::RACE;
         drawMenu();
       } else if (R_AI.contains(tx, ty)) {
-        _hotseat = false; _phase = Phase::PICK1; drawPick(0);  // you pick your bot; house auto
+        _hotseat = false; _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);  // you pick your bot; house auto
       } else if (R_HOT.contains(tx, ty)) {
-        _hotseat = true; _phase = Phase::PICK1; drawPick(0);
+        _hotseat = true; _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
       }
       break;
     case Phase::PICK1:
+      if (pickScrollTap(tx, ty)) { drawPick(0); break; }
       for (int i = 0; i < (int)_cands.size(); i++) {
         if (pickRowRect(i).contains(tx, ty)) {
           _pick0 = i; hal::audio.blip();
@@ -260,9 +305,10 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       }
       break;
     case Phase::HANDOFF:
-      if (R_READY.contains(tx, ty)) { _phase = Phase::PICK2; drawPick(1); }
+      if (R_READY.contains(tx, ty)) { _pickScroll = 0; _phase = Phase::PICK2; drawPick(1); }
       break;
     case Phase::PICK2:
+      if (pickScrollTap(tx, ty)) { drawPick(1); break; }
       for (int i = 0; i < (int)_cands.size(); i++) {
         if (pickRowRect(i).contains(tx, ty)) { _pick1 = i; hal::audio.blip(); startMatch(); return app::Signal::NONE; }
       }
