@@ -62,9 +62,9 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 ## Multiplayer modes (the "mix")
 - [x] Race (reach goal first) and Sumo (PUSH into a pit) vs House AI or Hotseat.
 - [x] Radio battle + Pokemon-style trade (ESP-NOW) — hardware-pending.
-- [ ] **Puzzle Race (shared maze)**: both players get a timer to write code for the
-      SAME maze; whoever's bot gets furthest before bonking/falling (or closest to the
-      goal) wins. A code-authoring contest, not a live battle. One of several modes.
+- [x] **Puzzle Race (shared maze)**: both players get a 45s timer to write code for the
+      SAME maze; whoever's bot ends up closest to the goal (BFS distance, 0 = reached)
+      wins. A code-authoring contest, not a live battle. Hotseat lock-in handoff.
 - [ ] More mode types: relay, co-op (two bots must both reach goals), king-of-the-hill.
 
 ## Arena mode (SPEC §18 — post-campaign capstone)

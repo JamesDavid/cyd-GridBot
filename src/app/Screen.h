@@ -19,6 +19,7 @@ enum class Signal : uint8_t {
   DELETE_PROFILE,  // delete the current profile (after multiple confirmations)
   GOTO_BADGES,     // open the badges gallery
   GOTO_SHOP,       // open the shop
+  GOTO_PUZZLE,     // open Puzzle Race (shared-maze timed coding contest)
 };
 
 class IScreen {

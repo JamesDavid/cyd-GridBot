@@ -305,6 +305,14 @@ void App::tick(uint32_t now) {
       else if (s == Signal::GOTO_RADIO) {
         _radio.begin(&_profile); _radio.enter(); _state = State::RADIO;
       }
+      else if (s == Signal::GOTO_PUZZLE) {
+        _puzzle.begin(&_profile); _puzzle.enter(); _state = State::PUZZLE;
+      }
+      break;
+    }
+    case State::PUZZLE: {
+      Signal s = _puzzle.tick(now, tp);
+      if (s == Signal::BACK) { _arena.begin(&_profile); _arena.enter(); _state = State::ARENA; }
       break;
     }
     case State::RADIO: {
