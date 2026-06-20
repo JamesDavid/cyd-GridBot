@@ -345,9 +345,10 @@ void App::tick(uint32_t now) {
       if (s == Signal::BACK) gotoSelect();
       else if (s == Signal::PLAY) {
         switch (_lessonHub.pick()) {
-          case 0: _neuro.begin(); _neuro.enter(); _state = State::NEURO_LESSON; break;
-          case 1: _qLesson.begin(); _qLesson.enter(); _state = State::Q_LESSON; break;
-          case 2: _evoLesson.begin(); _evoLesson.enter(); _state = State::EVO_LESSON; break;
+          case 0: case 1: case 2:
+            _neuro.begin(_lessonHub.pick()); _neuro.enter(); _state = State::NEURO_LESSON; break;
+          case 3: _qLesson.begin(); _qLesson.enter(); _state = State::Q_LESSON; break;
+          case 4: _evoLesson.begin(); _evoLesson.enter(); _state = State::EVO_LESSON; break;
         }
       }
       break;
