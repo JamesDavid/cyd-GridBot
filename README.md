@@ -172,7 +172,7 @@ hook, and the whole difficulty curve is designed to lead there.
 
 | ![The NEURO block](docs/img/neuro-block.png) |
 |:--|
-| **A brain is a block in your program.** Drop a **`brain`** node into the normal editor next to your loops and ifs — *neurosymbolic* programming: explicit code for the easy parts, a trained brain for the tricky bit. |
+| **A brain is a block in your program.** Drop a **`brain`** into the normal editor next to your loops and ifs — *neurosymbolic* programming: explicit code for the easy parts, a trained brain for the tricky bit. It drops in **already wrapped in `repeat until at goal { brain }`** (a lone brain makes only *one* move), so it drives the whole maze the moment you've trained it. |
 
 | ![Train the brain](docs/img/neuro-train.png) |
 |:--|
