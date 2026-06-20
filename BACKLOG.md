@@ -81,11 +81,23 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
       bounce, fall-out, win check). Determinism proven by byte-identical log test.
 - [x] Symmetric arena generation (mirrored hazards, equidistant starts).
 - [x] Race demo screen: player's library bot (or wall-follower) vs a house AI bot.
-- [x] Sumo match type (`PUSH` verb) on the shared tick engine. (Zap / `FIRE` verb still open.)
+- [x] Sumo match type on the shared tick engine — the attack is **`zap` (`FIRE`)**;
+      the old `PUSH` verb was removed and the hunter bot fixed to zap. A trained brain's
+      zap shoves too (the interpreter exposes the effective `lastCmd()` so the arena can
+      resolve a brain's `N_NEURO` action).
 - [x] Fuller AI bot roster — **Rusty** (always-forward), **Bolt** (dasher), **Vex**
       (ENEMY_NEAR hunter), **Ace** (solves the board on the fly) — + an opponent picker UI.
 - [ ] Author the arena bot in the Code view (currently uses the latest library entry).
 - [x] Hotseat (2 kids, 1 device) lock-in / handoff screen (Arena + Puzzle Race).
+
+## Code architecture / refactor
+- [ ] **Migrate `GameScreen` onto the shared `ProgramEditor`.** The authoring UI
+      (control pad + nested program list + tap handling) was extracted into
+      `src/screens/ProgramEditor.{h,cpp}` and adopted by **Puzzle Race** and **CodeLab**,
+      but `GameScreen` still carries its own copy of that code — so the editor currently
+      lives in two places. Have `GameScreen` delegate to `ProgramEditor` to remove the
+      duplication; do it carefully with full on-device re-verification (all blocks,
+      nesting, save/load, neuro train, scrolling, fail-highlight).
 
 ## Hardware / platform
 - [ ] Resolve the §1.1 2-USB panel question on the real unit (ILI9341 vs ST7789,
