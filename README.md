@@ -10,7 +10,7 @@ unlock as they go.
 |:--|
 | **Write a program, watch it run.** Your robot reaches the green **battery** by following the commands you snap together. Brick walls block you, dark squares are pits you fall into, and the robot's little arrow shows which way "forward" is — everything is relative to *its* heading, which is the whole point: kids learn to think like the robot. (Levels change theme as you climb — this is the *Cavern*.) |
 
-> ### ⚡ [**Flash it from your browser →**](https://JamesDavid.github.io/cyd-GridBot/)
+> ### ⚡ [**Flash it from your browser →**](https://jamesdavid.github.io/cyd-GridBot/)
 > Got a CYD? Plug it in and install GridBot straight from Chrome/Edge — no clone, no
 > toolchain. (Powered by ESP Web Tools; see the [flasher page](docs/index.html).)
 
