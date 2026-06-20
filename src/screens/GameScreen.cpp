@@ -106,7 +106,7 @@ void GameScreen::drawChrome() {
     snprintf(buf, sizeof(buf), "%s  Lv %u  maze %d/%d", nm, (unsigned)_level,
              _boardIdx + 1, _boardCount);
   else
-    snprintf(buf, sizeof(buf), "%s   Lv %u", nm, (unsigned)_level);
+    snprintf(buf, sizeof(buf), "%s   Lv %u   par %d", nm, (unsigned)_level, _par);
   label(g, 6, 4, buf, C_INK);
   uint32_t stars = _profile ? _profile->stats.starsTotal : 0;
   snprintf(buf, sizeof(buf), "*%u", (unsigned)stars);

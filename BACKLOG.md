@@ -16,7 +16,8 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [ ] **Drag-to-reorder** program lines; an **Undo** button for edits.
 - [x] **Level biomes/themes**: floor/wall palette varies per level band (Meadow,
       Cavern, Glacier, Circuit, Nebula) so progress feels visual.
-- [ ] **In-game speed slider** + a one-line **hint** ("par is N") toggle.
+- [x] One-line **par hint** ("par N") shown in the game chrome so kids can aim for the
+      3-star efficiency target. (Future: an **in-game speed slider** for animation pace.)
 - [ ] **Daily/shared-seed challenge**: everyone plays the same maze from a seed code.
 - [x] **Coin collectibles + a shop** for sprite colours **and emojis** (ties to the
       pixel editor and the coin-economy motif). Coins sit on the path; **STAR gems**
