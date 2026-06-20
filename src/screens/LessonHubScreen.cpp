@@ -6,16 +6,17 @@ using namespace ui;
 namespace screens {
 
 struct LessonInfo { const char* title; const char* sub; uint16_t col; };
-static const int N_LESSONS = 5;
+static const int N_LESSONS = 6;
 static const LessonInfo LESSONS[N_LESSONS] = {
   {"1. One neuron", "backprop: learn from a teacher", C_MOVE},
   {"2. Many actions", "go / turn / jump (multi-class)", C_TURN},
   {"3. Hidden layer", "what one neuron can't (XOR)", C_LOOP},
   {"4. Q-learning", "reinforcement: learn from reward", C_SENSE},
   {"5. Evolution", "breed the best, no teacher", C_FUNC},
+  {"6. Transfer", "reuse skills on a new maze", ui::rgb(120, 230, 245)},
 };
 
-static Rect rowRect(int i) { return {10, (int16_t)(44 + i * 32), 300, 30}; }
+static Rect rowRect(int i) { return {10, (int16_t)(42 + i * 27), 300, 25}; }
 static const Rect R_BACK = {6, (int16_t)(BOTBAR_Y + 2), 120, 26};
 
 void LessonHubScreen::enter() { _pick = -1; draw(); }
