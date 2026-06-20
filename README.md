@@ -99,7 +99,7 @@ once you can *write* the rules, GridBot teaches you to *grow* them with a neural
 
 | ![Stats](docs/img/stats.png) |
 |:--|
-| **Stats.** Level reached, total stars, win rate, bonks/falls, streak, a **NeuroBot** progress line (brains trained / levels won with a brain / fighters saved, once you reach the ML tier), and a **command-usage bar chart** so you can see which powers a kid actually leans on — locked ones greyed with *when* they unlock. Up top: **Badges 7/16** (tap it to open the gallery). From here you can **Edit** name/colour, **Draw** a custom sprite, open the **Shop**, or (behind two confirmations) delete the player. |
+| **Stats.** Level reached, total stars, win rate, bonks/falls, streak, a **NeuroBot** progress line (brains trained / levels won with a brain / fighters saved, once you reach the ML tier), and a **command-usage bar chart** so you can see which powers a kid actually leans on — locked ones greyed with *when* they unlock. Up top: **Badges 8/16** (tap it to open the gallery). From here you can **Edit** name/colour, **Draw** a custom sprite, open the **Shop**, or (behind two confirmations) delete the player. |
 
 | ![Badges gallery](docs/img/badges.png) |
 |:--|
