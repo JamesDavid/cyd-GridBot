@@ -6,25 +6,53 @@
 #include "game/Arena.h"
 #include "game/Score.h"
 #include "game/Distill.h"
+#include "game/Bots.h"
 
 using namespace ui;
 using namespace gb;
 
 namespace screens {
 
+static const Rect R_OPP   = {6, (int16_t)(BAND_Y + 2), 200, 18};  // tap to change sparring partner
 static const Rect R_TEACH = {6,   (int16_t)(BOTBAR_Y + 2), 70, 26};
 static const Rect R_EVO   = {80,  (int16_t)(BOTBAR_Y + 2), 78, 26};
 static const Rect R_SAVE  = {162, (int16_t)(BOTBAR_Y + 2), 88, 26};
 static const Rect R_BACK  = {254, (int16_t)(BOTBAR_Y + 2), 60, 26};
+static constexpr int N_HOUSE_OPP = 3;  // Ace (navigator), Vex (zapper), Bolt (dasher)
+
+// The sparring roster = house bots + every bot in your library (incl. radio-traded
+// friends' bots and fighters you saved). Train against code OR neuro opponents.
+int ArenaTrainScreen::oppCount() const {
+  return N_HOUSE_OPP + (_profile ? (int)_profile->library.size() : 0);
+}
+
+void ArenaTrainScreen::buildOpponent(int idx) {
+  _ai.clear();
+  if (idx == 0) {  // "Ace": a navigator that solves from its own start (the classic foe)
+    _oppName = "Ace";
+    if (!solveMazeFrom(_maze, _s1, true, _ai)) {
+      _ai.clear();
+      Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::command(CMD_FWD)); _ai.main.push_back(loop);
+    }
+  } else if (idx == 1) {           // "Vex": hunts and zaps (a Sumo-style aggressor)
+    _oppName = "Vex"; _ai = hunterProgram();
+  } else if (idx == 2) {           // "Bolt": a blind dasher
+    _oppName = "Bolt"; _ai = alwaysForwardProgram();
+  } else {                         // your library: code OR neuro, incl. radio-traded bots
+    int li = idx - N_HOUSE_OPP;
+    if (_profile && li >= 0 && li < (int)_profile->library.size()) {
+      _oppName = _profile->library[li].name;
+      _ai = _profile->library[li].program;
+    } else { _oppName = "Ace"; }
+  }
+}
 
 void ArenaTrainScreen::begin(Profile* profile) {
   _profile = profile;
   MazeGen::generateArena(_maze, profile ? profile->seedBase + 31u : 31u, _s0, _s1);
   _maze.setStart(_s0);  // the brain is bot 0, starting at s0
-  // the AI opponent: a navigator that solves from its own start (a real challenge)
-  if (!solveMazeFrom(_maze, _s1, true, _ai)) { _ai.clear();
-    Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::command(CMD_FWD)); _ai.main.push_back(loop);
-  }
+  _oppIdx = 0;
+  buildOpponent(_oppIdx);
   _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
   _taught = false; _saved = false;
   evaluateAndTrace();
@@ -53,12 +81,13 @@ void ArenaTrainScreen::evaluateAndTrace() {
 }
 
 void ArenaTrainScreen::mazeGeom(int& tile, int& ox, int& oy) const {
+  const int reserve = 24;  // strip under the topbar for the opponent chip
   int cols = _maze.cols(), rows = _maze.rows();
   tile = (SCREEN_W - 20) / cols;
-  int th = (BAND_H - 8) / rows;
+  int th = (BAND_H - 8 - reserve) / rows;
   if (th < tile) tile = th;
   ox = (SCREEN_W - tile * cols) / 2;
-  oy = BAND_Y + 6 + (BAND_H - 8 - tile * rows) / 2;
+  oy = BAND_Y + reserve + (BAND_H - 8 - reserve - tile * rows) / 2;
 }
 
 void ArenaTrainScreen::draw() {
@@ -67,9 +96,13 @@ void ArenaTrainScreen::draw() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Train a fighter", C_FUNC, textdatum_t::top_left, 2);
   char hd[28];
-  snprintf(hd, sizeof(hd), "%s  %s", _taught ? "taught" : "gen", _beatsAI ? "beats AI!" : "vs AI");
-  if (!_taught) snprintf(hd, sizeof(hd), "gen %d  %s", _evo.gen, _beatsAI ? "beats AI!" : "vs AI");
+  if (_taught) snprintf(hd, sizeof(hd), "taught  %s", _beatsAI ? "wins!" : "vs");
+  else         snprintf(hd, sizeof(hd), "gen %d  %s", _evo.gen, _beatsAI ? "wins!" : "vs");
   label(g, SCREEN_W - 6, 6, hd, _beatsAI ? C_GO : C_DIM, textdatum_t::top_right);
+
+  // tappable sparring-partner chip: cycle through the roster (house bots + library)
+  char chip[40]; snprintf(chip, sizeof(chip), "spar vs: %s  >", _oppName.c_str());
+  button(g, R_OPP, chip, ui::rgb(120, 230, 245), C_PANEL);
 
   int tile, ox, oy; mazeGeom(tile, ox, oy);
   for (int r = 0; r < _maze.rows(); r++)
@@ -99,7 +132,11 @@ void ArenaTrainScreen::draw() {
 app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
-  if (R_TEACH.contains(tx, ty)) {
+  if (R_OPP.contains(tx, ty)) {
+    _oppIdx = (_oppIdx + 1) % oppCount();  // next sparring partner
+    buildOpponent(_oppIdx);
+    _saved = false; evaluateAndTrace(); hal::audio.blip(); draw();
+  } else if (R_TEACH.contains(tx, ty)) {
     distillSolver(_brain, _maze, true, 700);  // a strong racer beats most AIs
     _taught = true; _saved = false; evaluateAndTrace(); hal::audio.blip(); draw();
   } else if (R_EVO.contains(tx, ty)) {
