@@ -148,6 +148,20 @@ hook, and the whole difficulty curve is designed to lead there.
 |:--|
 | The result screen scores each player by how close their robot got to the battery. |
 
+### CodeLab — guided lessons for every block
+
+| ![Lessons menu](docs/img/lessons-menu.png) |
+|:--|
+| **Two tracks of bite-size lessons.** **CodeLab** teaches the programming blocks — *you write the rules* — and **NeuroLab** teaches machine learning — *you train the rules*. A clean on-ramp to each half of the game. |
+
+| ![CodeLab](docs/img/codelab.png) |
+|:--|
+| **CodeLab** has a lesson for each core block — **Move**, **Repeat**, **Sense** (`if`), **Functions**, and **Jump**. |
+
+| ![A CodeLab lesson](docs/img/codelab-lesson.png) |
+|:--|
+| **Each lesson is a tiny *runnable* demo.** A one-line explanation, a small maze, and a pre-built program that uses the block. Tap **Run** and watch the robot solve it — so you *see* exactly what `repeat 5`, a `call F1`, or a `jump` actually does, with a friendly **"solved it!"** at the end. |
+
 ### NeuroBot — stop *writing* the rules, start *training* them
 
 > A late-game **graduation** (unlocks with the sensing tier). GridBot teaches *you write the
@@ -260,7 +274,9 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
 ## What's next
 
 **Recently shipped:** ✅ **NeuroBot** — a whole ML-teaching mode (backprop / Q-learning /
-evolution lessons, a trainable **brain block** in the editor, brains that persist & battle) ·
+evolution lessons, a trainable **brain block** in the editor, brains that persist & battle,
+**Arena trainer** vs AI, NeuroBot badges) · ✅ **CodeLab** guided lessons for every
+programming block (Move / Repeat / Sense / Functions / Jump, each a runnable demo) ·
 ✅ **Puzzle Race** (shared-maze, beat-the-clock coding contest) ·
 ✅ **smarter arena bots** ("Ace" navigates the board) so Races are more often decisive ·
 ✅ **coin & gem collectibles + a sprite-colour & emoji shop** · ✅ a **chiptune menu theme** +
