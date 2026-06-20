@@ -40,6 +40,7 @@ static const Rect R_RESET = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
 void GameScreen::begin(Profile* profile, uint32_t level) {
   _profile = profile;
   _level = level;
+  _challenge = false;
   _boardCount = MazeGen::generateBoards(_boards, gb::MAX_BOARDS,
                                         profile ? profile->seedBase : 0, level);
   _boardIdx = 0;
@@ -56,6 +57,40 @@ void GameScreen::begin(Profile* profile, uint32_t level) {
   if (_par <= 0) _par = 1;
   _stepMs = profile ? animStepMs(profile->settings) : 400;
   // (audio on/off is the session-wide menu toggle, not overridden per-level)
+  _view = V_CODE;
+  _mode = M_EDIT;
+  _auto = false;
+  _selected = -1;
+  _scroll = 0;
+  _followTail = true;
+  _failNode = nullptr;
+  _drawnPose = _maze.startPose();
+  _tween = false;
+  for (auto& v : _visited) v = false;
+  for (auto& v : _coinTaken) v = false;
+  for (auto& v : _gemTaken) v = false;
+  _gemsThisRun = 0;
+  _coinsThisRun = 0;
+  _it.load(&_prog, &_maze, _maze.startPose());
+}
+
+void GameScreen::beginChallenge(Profile* profile, uint32_t seedCode) {
+  static constexpr int CHALLENGE_LEVEL = 12;  // fixed difficulty so a code => one board
+  _profile = profile;
+  _challenge = true;
+  _challengeCode = seedCode;
+  _level = CHALLENGE_LEVEL;
+  _boardCount = 1;
+  MazeGen::generate(_boards[0], seedCode, CHALLENGE_LEVEL);  // keyed purely by the code
+  _boardIdx = 0;
+  _maze = _boards[0];
+  recountGems();
+  _biome = ui::biomeFor(CHALLENGE_LEVEL);
+  _prog.clear();                       // never resume a campaign script into a challenge
+  _editList = &_prog.main;
+  _par = shortestSolutionLen(_maze, profile && profile->unlocks.jump);
+  if (_par <= 0) _par = 1;
+  _stepMs = profile ? animStepMs(profile->settings) : 400;
   _view = V_CODE;
   _mode = M_EDIT;
   _auto = false;
@@ -102,7 +137,10 @@ void GameScreen::drawChrome() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   char buf[40];
   const char* nm = _profile ? _profile->name.c_str() : "Player";
-  if (_boardCount > 1)
+  if (_challenge)
+    snprintf(buf, sizeof(buf), "%s   Seed %04u   par %d", nm,
+             (unsigned)(_challengeCode % 10000), _par);
+  else if (_boardCount > 1)
     snprintf(buf, sizeof(buf), "%s  Lv %u  maze %d/%d", nm, (unsigned)_level,
              _boardIdx + 1, _boardCount);
   else
@@ -630,8 +668,10 @@ void GameScreen::startRun() {
   if (_prog.main.empty()) { toast("add some commands!", C_ACCENT); return; }
   if (_profile) {
     _profile->stats.totalRuns++;
-    _profile->workLevel = _level;       // autosave resume slot in memory (SPEC §11.1)
-    _profile->work = _prog;
+    if (!_challenge) {  // a challenge never touches the campaign resume slot
+      _profile->workLevel = _level;     // autosave resume slot in memory (SPEC §11.1)
+      _profile->work = _prog;
+    }
   }
   for (auto& v : _visited) v = false;
   for (auto& v : _coinTaken) v = false;
@@ -777,7 +817,7 @@ void GameScreen::settleOutcome(Outcome o) {
     // gems pay out in coins; grabbing every gem on the board adds an all-clear bonus
     bool allGems = _gemTotal > 0 && _gemsThisRun == _gemTotal;
     int gemCoins = _gemsThisRun * 3 + (allGems ? 5 : 0);
-    if (_profile) {
+    if (_profile && !_challenge) {  // challenges award no coins/stats (not farmable)
       _profile->stats.totalWins++;
       _profile->stats.starsTotal += _stars;
       _profile->coins += _coinsThisRun + gemCoins;  // keep collected coins+gems on a win
@@ -806,7 +846,7 @@ void GameScreen::settleOutcome(Outcome o) {
       }
     }
     char st[28];
-    int totalCoins = _coinsThisRun + gemCoins, ly = yy + 60;
+    int totalCoins = _challenge ? 0 : (_coinsThisRun + gemCoins), ly = yy + 60;
     if (totalCoins > 0) {
       snprintf(st, sizeof(st), "+%d coins!", totalCoins);
       label(g, SCREEN_W / 2, ly, st, ui::rgb(255, 210, 60), textdatum_t::middle_center);

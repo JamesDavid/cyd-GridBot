@@ -235,6 +235,12 @@ void App::tick(uint32_t now) {
     }
     case State::GAME: {
       Signal s = _game.tick(now, tp);
+      // Seed Challenge: a one-off board — return to the picker, never touch the campaign.
+      if (_inChallenge && (s == Signal::BACK || s == Signal::WON)) {
+        _inChallenge = false;
+        _challenge.begin(&_profile); _challenge.enter(); _state = State::CHALLENGE;
+        break;
+      }
       if (s == Signal::BACK) { saveProfile(); gotoSelect(); break; }
       if (s == Signal::WON) {
         _profile.stats.levelsCompleted++;
@@ -310,11 +316,27 @@ void App::tick(uint32_t now) {
       else if (s == Signal::GOTO_PUZZLE) {
         _puzzle.begin(&_profile); _puzzle.enter(); _state = State::PUZZLE;
       }
+      else if (s == Signal::GOTO_CHALLENGE) {
+        _challenge.begin(&_profile); _challenge.enter(); _state = State::CHALLENGE;
+      }
       break;
     }
     case State::PUZZLE: {
       Signal s = _puzzle.tick(now, tp);
       if (s == Signal::BACK) { _arena.begin(&_profile); _arena.enter(); _state = State::ARENA; }
+      break;
+    }
+    case State::CHALLENGE: {
+      Signal s = _challenge.tick(now, tp);
+      if (s == Signal::PLAY) {
+        hal::audio.stopMusic();  // the game uses step-tick SFX
+        _inChallenge = true;
+        _game.beginChallenge(&_profile, _challenge.code());
+        _game.enter();
+        _state = State::GAME;
+      } else if (s == Signal::BACK) {
+        _arena.begin(&_profile); _arena.enter(); _state = State::ARENA;
+      }
       break;
     }
     case State::RADIO: {

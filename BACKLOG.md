@@ -18,7 +18,9 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
       Cavern, Glacier, Circuit, Nebula) so progress feels visual.
 - [x] One-line **par hint** ("par N") shown in the game chrome so kids can aim for the
       3-star efficiency target. (Future: an **in-game speed slider** for animation pace.)
-- [ ] **Daily/shared-seed challenge**: everyone plays the same maze from a seed code.
+- [x] **Shared-seed challenge**: a 4-digit code picks one fixed-difficulty board, so
+      friends entering the same code race the *identical* maze. Reached from the Arena
+      menu; wins award no campaign progress/coins (not farmable) — just the star rating.
 - [x] **Coin collectibles + a shop** for sprite colours **and emojis** (ties to the
       pixel editor and the coin-economy motif). Coins sit on the path; **STAR gems**
       are a rarer bonus on a detour off it (see Campaign polish).

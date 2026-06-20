@@ -17,6 +17,7 @@ static const Rect R_AI   = {6,  60, 150, 30};
 static const Rect R_HOT  = {164, 60, 150, 30};
 static const Rect R_RADIO= {6, 100, 308, 26};
 static const Rect R_PUZ  = {6, 132, 308, 26};
+static const Rect R_CHAL = {6, 164, 308, 26};
 static const Rect R_READY= {84, 150, 150, 34};
 
 static Program dashProgram() {
@@ -75,6 +76,7 @@ void ArenaScreen::drawMenu() {
   button(g, R_HOT, "Hotseat 2P", C_FUNC, C_PANEL);
   button(g, R_RADIO, "Radio: battle / trade a friend", C_MOVE, C_PANEL);
   button(g, R_PUZ, "Puzzle Race: same maze, beat the clock", C_LOOP, C_PANEL);
+  button(g, R_CHAL, "Seed Challenge: race a friend on one board", C_SENSE, C_PANEL);
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
   button(g, R_TYPE, _type == MatchType::RACE ? "Race" : "Sumo", C_ACCENT, C_PANEL);
@@ -225,6 +227,7 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       if (R_BACK.contains(tx, ty)) return app::Signal::BACK;
       if (R_RADIO.contains(tx, ty)) return app::Signal::GOTO_RADIO;
       if (R_PUZ.contains(tx, ty)) return app::Signal::GOTO_PUZZLE;
+      if (R_CHAL.contains(tx, ty)) return app::Signal::GOTO_CHALLENGE;
       if (R_TYPE.contains(tx, ty)) {
         _type = (_type == MatchType::RACE) ? MatchType::SUMO : MatchType::RACE;
         drawMenu();

@@ -14,6 +14,7 @@
 #include "screens/BadgesScreen.h"
 #include "screens/ShopScreen.h"
 #include "screens/PuzzleRaceScreen.h"
+#include "screens/ChallengeScreen.h"
 
 namespace app {
 
@@ -29,7 +30,7 @@ class App {
   void debugStep();                       // advance the current run/match one tick ('N')
 
  private:
-  enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE };
+  enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE };
 
   void gotoSelect();
   void gotoIntro(uint32_t level);
@@ -53,6 +54,8 @@ class App {
   screens::BadgesScreen _badges;
   screens::ShopScreen _shop;
   screens::PuzzleRaceScreen _puzzle;
+  screens::ChallengeScreen _challenge;
+  bool _inChallenge = false;  // the GAME screen is running a seed challenge, not campaign
   TapDetector _introTap;
   ui::Rect _arenaBtn{90, 196, 140, 28};  // shown on the level intro post-sensing
 };

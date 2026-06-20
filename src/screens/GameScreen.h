@@ -16,6 +16,11 @@ namespace screens {
 class GameScreen : public app::IScreen {
  public:
   void begin(gb::Profile* profile, uint32_t level);
+  // Shared-seed Challenge: a one-off board keyed purely by `seedCode` (so friends with
+  // the same code get the identical maze), at a fixed difficulty. Wins award no campaign
+  // progress/coins/stats (not farmable) — just the star rating on the overlay.
+  void beginChallenge(gb::Profile* profile, uint32_t seedCode);
+  bool isChallenge() const { return _challenge; }
   void enter() override;
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
 
@@ -74,6 +79,8 @@ class GameScreen : public app::IScreen {
 
   gb::Profile* _profile = nullptr;
   uint32_t _level = 1;
+  bool _challenge = false;    // shared-seed Challenge run (no campaign progress on win)
+  uint32_t _challengeCode = 0;  // the seed code (shown in the chrome instead of "Lv N")
   gb::Maze _boards[gb::MAX_BOARDS];
   int _boardCount = 1;
   int _boardIdx = 0;

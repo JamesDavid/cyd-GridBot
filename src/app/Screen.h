@@ -20,6 +20,7 @@ enum class Signal : uint8_t {
   GOTO_BADGES,     // open the badges gallery
   GOTO_SHOP,       // open the shop
   GOTO_PUZZLE,     // open Puzzle Race (shared-maze timed coding contest)
+  GOTO_CHALLENGE,  // open the shared-seed Challenge picker
 };
 
 class IScreen {
