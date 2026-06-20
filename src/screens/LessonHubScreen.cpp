@@ -6,17 +6,18 @@ using namespace ui;
 namespace screens {
 
 struct LessonInfo { const char* title; const char* sub; uint16_t col; };
-static const int N_LESSONS = 6;
+static const int N_LESSONS = 7;
 static const LessonInfo LESSONS[N_LESSONS] = {
-  {"1. One neuron", "backprop: learn from a teacher", C_MOVE},
-  {"2. Many actions", "go / turn / jump (multi-class)", C_TURN},
-  {"3. Hidden layer", "what one neuron can't (XOR)", C_LOOP},
-  {"4. Q-learning", "reinforcement: learn from reward", C_SENSE},
-  {"5. Evolution", "breed the best, no teacher", C_FUNC},
-  {"6. Transfer", "reuse skills on a new maze", ui::rgb(120, 230, 245)},
+  {"1. One neuron", "learn from a teacher", C_MOVE},
+  {"2. Many actions", "go / turn / jump", C_TURN},
+  {"3. Hidden layer", "what 1 neuron can't", C_LOOP},
+  {"4. Q-learning", "learn from reward", C_SENSE},
+  {"5. Evolution", "breed the best", C_FUNC},
+  {"6. Transfer", "reuse skills, new maze", ui::rgb(120, 230, 245)},
+  {"7. Brain Cam", "watch a brain think", ui::rgb(120, 230, 245)},
 };
 
-static Rect rowRect(int i) { return {10, (int16_t)(42 + i * 27), 300, 25}; }
+static Rect rowRect(int i) { return {10, (int16_t)(40 + i * 24), 300, 22}; }
 static const Rect R_BACK = {6, (int16_t)(BOTBAR_Y + 2), 120, 26};
 
 void LessonHubScreen::enter() { _pick = -1; draw(); }
@@ -31,8 +32,8 @@ void LessonHubScreen::draw() {
     Rect r = rowRect(i);
     g.fillRoundRect(r.x, r.y, r.w, r.h, 5, C_PANEL);
     g.drawRoundRect(r.x, r.y, r.w, r.h, 5, LESSONS[i].col);
-    label(g, r.x + 10, r.y + 3, LESSONS[i].title, LESSONS[i].col);
-    label(g, r.x + 10, r.y + 16, LESSONS[i].sub, C_DIM);  // full-width 2nd line (no overflow)
+    label(g, r.x + 10, r.y + 2, LESSONS[i].title, LESSONS[i].col);
+    label(g, r.x + 150, r.y + 7, LESSONS[i].sub, C_DIM);  // sub to the right (tight rows)
   }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
