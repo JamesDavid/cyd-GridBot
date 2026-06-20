@@ -82,8 +82,8 @@ void NeuroLessonScreen::draw() {
   label(g, 6, 3, TITLES[_mode], C_ACCENT, textdatum_t::top_left, 2);
   char hd[20]; snprintf(hd, sizeof(hd), "epoch %d", _epochs);
   label(g, SCREEN_W - 6, 6, hd, C_DIM, textdatum_t::top_right);
-  label(g, 6, TOPBAR_H + 2, RULES[_mode], C_INK);
-  label(g, 150, TOPBAR_H + 2, "it sees 4 situations:", C_DIM);
+  label(g, 6, TOPBAR_H + 2, RULES[_mode], C_INK);  // rule spans the top line (the column
+  // headers below — "what it sees / it does" — already label the situations table)
 
   // ---- diagram (left) ----
   if (_mode == 0) {

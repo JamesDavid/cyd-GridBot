@@ -246,10 +246,11 @@ void ArenaScreen::drawBoard() {
 void ArenaScreen::finishOverlay() {
   auto& g = hal::display.gfx();
   const char* msg = "Draw!"; uint16_t col = C_ACCENT;
+  // vs-Computer: bot 0 is the player, bot 1 is the AI -> "You / Computer"; Hotseat: P1/P2.
   switch (_arena.outcome()) {
-    case ArenaOutcome::BOT0: msg = "Player 1 wins!"; col = C_GO; hal::led.green(); hal::audio.win();
+    case ArenaOutcome::BOT0: msg = _hotseat ? "Player 1 wins!" : "You win!"; col = C_GO; hal::led.green(); hal::audio.win();
       if (_profile) _profile->stats.arenaWins++; break;
-    case ArenaOutcome::BOT1: msg = "Player 2 wins!"; col = C_FUNC; hal::led.red(); hal::audio.fail(); break;
+    case ArenaOutcome::BOT1: msg = _hotseat ? "Player 2 wins!" : "Computer wins!"; col = C_FUNC; hal::led.red(); hal::audio.fail(); break;
     default: break;
   }
   int w = 220, h = 60, x = (SCREEN_W - w) / 2, y = (SCREEN_H - h) / 2;

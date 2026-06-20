@@ -22,6 +22,7 @@ class GameScreen : public app::IScreen {
   void beginChallenge(gb::Profile* profile, uint32_t seedCode);
   bool isChallenge() const { return _challenge; }
   void enter() override;
+  void resumeCode();   // re-show the Code view WITHOUT the level preview (e.g. back from train-brain)
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
 
   int lastStars() const { return _stars; }

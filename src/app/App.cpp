@@ -407,7 +407,7 @@ void App::tick(uint32_t now) {
         if (_neuroTrain.usedBrain()) _profile.stats.brainsTrained++;
         _profile.achievements |= gb::evaluateAchievements(_profile);
         saveProfile();
-        _game.enter(); _state = State::GAME;
+        _game.resumeCode(); _state = State::GAME;  // back to the editor, not the level preview
       }
       break;
     }

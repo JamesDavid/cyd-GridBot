@@ -123,6 +123,15 @@ void GameScreen::enter() {
         textdatum_t::top_center);
 }
 
+// Return straight to the editor (no "Study the maze" preview) — used when coming back
+// from the brain trainer, where the kid was already editing and wants to RUN their brain.
+void GameScreen::resumeCode() {
+  _previewing = false;
+  _mode = M_EDIT;
+  _view = V_CODE;
+  drawCodeView();
+}
+
 bool GameScreen::cornerUnlocked(int slot) const {
   if (!_profile) return false;
   switch (slot) {
