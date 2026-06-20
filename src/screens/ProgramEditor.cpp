@@ -148,12 +148,32 @@ void ProgramEditor::flatten(NodeList& list, int depth, std::vector<Row>& out, ui
     if (block) {
       uint16_t br = bracketColorFor(nd);
       if (!nd.body.empty()) flatten(nd.body, depth + 1, out, br);
-      out.push_back({&nd, &nd.body, -1, depth + 1, br, true});
-    } else if (nd.type == N_NEURO) {
+      if (!_cfg.readOnly) out.push_back({&nd, &nd.body, -1, depth + 1, br, true});  // "+ add inside"
+    } else if (nd.type == N_NEURO && !_cfg.readOnly) {
       out.push_back({&nd, &list, -1, depth, bracket, false, true});
     }
   }
-  if (depth == 0) out.push_back({nullptr, &list, -1, 0, 0, true});
+  if (depth == 0 && !_cfg.readOnly) out.push_back({nullptr, &list, -1, 0, 0, true});  // "+ add here"
+}
+
+// Static, host-agnostic: render a program body in the editor's row style (read-only).
+int ProgramEditor::drawReadOnlyList(LGFX& g, const NodeList& list, int x, int y,
+                                    int depth, uint16_t bracket, int rowH) {
+  for (const Node& n : list) {
+    int gx = x + 18 + depth * 12;
+    if (depth > 0) {
+      int bx = x + 4 + (depth - 1) * 12;
+      g.drawFastVLine(bx, y + 1, rowH - 2, bracket);
+      g.drawFastHLine(bx, y + rowH / 2, 4, bracket);
+    }
+    char lab[20]; Glyph gl = Glyph::PLAY; uint16_t col = C_INK;
+    nodeLabel(n, lab, sizeof(lab), gl, col);
+    drawGlyph(g, gl, x + 6 + depth * 12, y + rowH / 2 - 1, 11, col);
+    label(g, gx, y + 2, lab, col);
+    y += rowH;
+    if (!n.body.empty()) y = drawReadOnlyList(g, n.body, x, y, depth + 1, bracketColorFor(n), rowH);
+  }
+  return y;
 }
 
 NodeList* ProgramEditor::appendTarget() {

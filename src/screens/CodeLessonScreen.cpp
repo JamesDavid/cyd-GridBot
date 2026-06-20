@@ -2,6 +2,7 @@
 #include "hal/Audio.h"
 #include "assets/Assets.h"
 #include "game/MazeGen.h"
+#include "screens/ProgramEditor.h"
 
 using namespace ui;
 using namespace gb;
@@ -85,31 +86,6 @@ void CodeLessonScreen::drawRobot() {
   assets::drawCharacter(g, ox + p.col * tile + tile / 2, oy + p.row * tile + tile / 2, tile, 0, p.facing);
 }
 
-// draw the program as indented text lines (forward / repeat N / if cond ...)
-static void progLines(LGFX& g, const NodeList& list, int depth, int& y) {
-  for (const Node& n : list) {
-    char buf[18];
-    switch (n.type) {
-      case N_CMD:
-        snprintf(buf, sizeof(buf), "%s",
-                 n.cmd == CMD_FWD ? "forward" : n.cmd == CMD_BACK ? "back" :
-                 n.cmd == CMD_TURN_L ? "turn L" : n.cmd == CMD_TURN_R ? "turn R" :
-                 n.cmd == CMD_JUMP ? "jump" : "?");
-        break;
-      case N_REPEAT:       snprintf(buf, sizeof(buf), "repeat %d", n.count); break;
-      case N_REPEAT_UNTIL: snprintf(buf, sizeof(buf), "until goal"); break;
-      case N_IF:           snprintf(buf, sizeof(buf), "if wall"); break;
-      case N_CALL:         snprintf(buf, sizeof(buf), "call F%d", n.func); break;
-      default:             buf[0] = 0; break;
-    }
-    uint16_t c = (n.type == N_CMD) ? C_MOVE : (n.type == N_CALL) ? C_FUNC :
-                 (n.type == N_REPEAT) ? C_LOOP : C_SENSE;
-    label(g, PROG_X + 6 + depth * 10, y, buf, c);
-    y += 14;
-    if (!n.body.empty()) progLines(g, n.body, depth + 1, y);
-  }
-}
-
 void CodeLessonScreen::draw() {
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
@@ -121,12 +97,17 @@ void CodeLessonScreen::draw() {
 
   drawRobot();
 
-  // the program (starts below the full-width concept line so they don't overlap)
+  // the program, rendered in the SAME row style as the real editor (glyph + colour +
+  // indented bracket) so the lessons match the game's UI (not a separate "code look")
   g.drawFastVLine(PROG_X - 4, BAND_Y + 18, BAND_H - 20, C_PANEL_HI);
   label(g, PROG_X + 6, BAND_Y + 20, "program:", C_DIM);
   int py = BAND_Y + 36;
-  if (!_prog.f1.empty()) { label(g, PROG_X + 6, py, "F1:", C_FUNC); py += 14; progLines(g, _prog.f1, 1, py); py += 4; }
-  progLines(g, _prog.main, 0, py);
+  if (!_prog.f1.empty()) {
+    label(g, PROG_X + 6, py, "F1:", C_FUNC); py += 16;
+    py = ProgramEditor::drawReadOnlyList(g, _prog.f1, PROG_X + 8, py);
+    py += 4;
+  }
+  ProgramEditor::drawReadOnlyList(g, _prog.main, PROG_X + 2, py);
 
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_RUN, _running ? "..." : "Run >", C_GO, C_PANEL);

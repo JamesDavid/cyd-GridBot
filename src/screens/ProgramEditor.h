@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include "app/Screen.h"
+#include "hal/Display.h"
 #include "ui/UI.h"
 #include "game/Program.h"
 #include "game/Profile.h"
@@ -39,6 +40,12 @@ class ProgramEditor {
   void drawControlPad();
   void drawProgramList();
   Action handleTap(int x, int y);
+
+  // Read-only render of a program body in the editor's exact row style (glyph + colour +
+  // indented bracket + label). Lets lessons show code that LOOKS like the real editor
+  // without embedding the whole pad. Returns the y just past the last row.
+  static int drawReadOnlyList(LGFX& g, const gb::NodeList& list, int x, int y,
+                              int depth = 0, uint16_t bracket = 0, int rowH = 16);
 
   int neuroIdx() const { return _neuroIdx; }      // valid after Action::NEURO_TRAIN
   int writtenCount() const { return _writtenCount; }
