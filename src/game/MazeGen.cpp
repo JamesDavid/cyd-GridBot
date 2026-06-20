@@ -171,9 +171,8 @@ void generateSpiral(Maze& out, int rows, int cols) {
 
 void generateArena(Maze& out, uint32_t seed, Pose& s0, Pose& s1) {
   Rng rng(seed);
-  int rows = 7;                            // bigger board -> longer, watchable races
-  int cols = 13;                           // odd so there's a true centre column
-  out.reset(rows, cols);
+  out.reset(7, 9);                         // within MAZE_MAX (8x10); odd cols -> true centre
+  int rows = out.rows(), cols = out.cols();  // use the ACTUAL (clamped) dimensions
   out.fill(FLOOR);
   int rmid = rows / 2, cmid = cols / 2;
 

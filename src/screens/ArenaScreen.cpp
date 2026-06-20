@@ -182,11 +182,24 @@ void ArenaScreen::finishOverlay() {
 }
 
 // ---- input ----------------------------------------------------------------
+void ArenaScreen::debugStep() {
+  if (_phase != Phase::BOARD) return;
+  _running = false;  // pause auto so frames can be captured one tick at a time
+  Pose b0 = _arena.pose(0), b1 = _arena.pose(1);
+  ArenaOutcome o = _arena.tick();
+  drawCell(b0.row, b0.col); drawCell(b1.row, b1.col);
+  if (_arena.alive(0)) drawBot(0, _arena.pose(0), _cands[_pick0].avatar);
+  if (_arena.alive(1)) drawBot(1, _arena.pose(1), _cands[_pick1].avatar);
+  if (o != ArenaOutcome::RUNNING) { _phase = Phase::DONE; finishOverlay(); }
+}
+
 app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int tx, ty;
   bool tap = _tap.tapped(tp, now, tx, ty);
 
-  if (_phase == Phase::BOARD && _running && now - _last >= 250) {
+  if (_phase == Phase::BOARD && _running && _last == 0) {
+    _last = now;  // arm the timer; the first tick is one interval later (lets capture start at tick 0)
+  } else if (_phase == Phase::BOARD && _running && now - _last >= 250) {
     _last = now;
     Pose b0 = _arena.pose(0), b1 = _arena.pose(1);
     ArenaOutcome o = _arena.tick();

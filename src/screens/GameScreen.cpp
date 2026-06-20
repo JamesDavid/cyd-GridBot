@@ -614,6 +614,26 @@ void GameScreen::resetRun() {
   drawMazeView(false);
 }
 
+void GameScreen::beginAutoRun() {
+  _prog.clear();
+  gb::solveMaze(_maze, _profile && _profile->unlocks.jump, _prog);
+  _editList = &_prog.main;
+  _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
+  _mode = M_RUN;
+  _auto = false;        // paused — advance with debugStep()
+  _view = V_MAZE;
+  _tween = false;
+  _failNode = nullptr;
+  _previewing = false;
+  _drawnPose = _maze.startPose();
+  drawMazeView(false);
+  _lastStep = 0;
+}
+
+void GameScreen::debugStep() {
+  if (_mode == M_RUN && !_tween && !_it.finished()) stepOnce(millis());
+}
+
 void GameScreen::advanceBoard() {
   _boardIdx++;
   _maze = _boards[_boardIdx];

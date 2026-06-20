@@ -66,6 +66,12 @@ static void handleSerialLine(const String& line) {
   } else if (c == 'H') {
     gApp.debugHome();
     Serial.println("HOME");
+  } else if (c == 'A') {
+    gApp.debugAutoRun();
+    Serial.println("AUTORUN");
+  } else if (c == 'N') {
+    gApp.debugStep();
+    Serial.println("STEP");
   }
 }
 #endif

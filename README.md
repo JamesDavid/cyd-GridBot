@@ -6,9 +6,13 @@ hit **RUN**, and watch their little robot try to reach the battery. It bonks a w
 fix one line and try again. It never ends, it gets harder, and new programming powers
 unlock as they go.
 
-| ![Maze view](docs/img/maze-view.png) |
+| ![Gameplay](docs/img/gameplay.gif) |
 |:--|
-| **The maze.** Your robot (top-left) has to reach the green **battery** (bottom-right). Brick walls block you, dark squares are pits you fall into. The robot's little arrow shows which way "forward" is — everything is relative to *its* heading, which is the whole point: kids learn to think like the robot. |
+| **Write a program, watch it run.** Your robot reaches the green **battery** by following the commands you snap together. Brick walls block you, dark squares are pits you fall into, and the robot's little arrow shows which way "forward" is — everything is relative to *its* heading, which is the whole point: kids learn to think like the robot. (Levels change theme as you climb — this is the *Cavern*.) |
+
+> ### ⚡ [**Flash it from your browser →**](https://JamesDavid.github.io/cyd-GridBot/)
+> Got a CYD? Plug it in and install GridBot straight from Chrome/Edge — no clone, no
+> toolchain. (Powered by ESP Web Tools; see the [flasher page](docs/index.html).)
 
 ---
 
@@ -59,6 +63,10 @@ hook, and the whole difficulty curve is designed to lead there.
 |:--|
 | **The Code view.** Your robot sits in the middle of its own d-pad: tap **↑ forward**, **↺/↻ turn**, **↓ backward**. The four corners are *growth slots* that fill in as you unlock powers — here all four are lit: **Jump**, **Repeat**, **Call F1**, and **Sense**. Tap to add commands to the program list on the right (it scrolls — no limit). **CLR / DEL / RUN** sit under the pad. The centre robot faces the maze's real start direction so you can reason about "forward" before you run. |
 
+| ![A built program](docs/img/code-program.png) |
+|:--|
+| **A real program.** Snap blocks together and they stack up in the list — here: *forward, forward, turn R, jump, repeat 2, forward*. Each block is colour-coded; tap a `REPEAT` to change its count, an `IF`/`UNTIL` to cycle its condition. The list scrolls, so there's no length limit. Tap **RUN** and the robot runs your code. |
+
 | ![Maze preview](docs/img/maze-preview.png) |
 |:--|
 | **Study the maze.** Every level opens by showing you the board for a couple of seconds — *learn the layout* — before flipping to the Code view. You can flip back any time with the **VIEW** toggle (or press-and-hold to peek without losing your place). |
@@ -87,10 +95,15 @@ hook, and the whole difficulty curve is designed to lead there.
 |:--|
 | **Stats.** Level reached, total stars, win rate, streak, and a **command-usage bar chart** — locked commands are greyed with *when* they unlock ("unlock Lv 22"). Up top: **Badges 5/13**. From here you can **Edit name**, **Draw sprite**, or (behind two confirmations) delete the player. |
 
-There are **13 badges** to collect — First Steps, Bright Spark (3 stars), Hopper (your
-first Jump), Looper, Architect (a Function), Sixth Sense, Champion (an arena win), On Fire
-(5-streak), Unstoppable (10-streak), Explorer (Lv 10), Veteran (Lv 20), Artist (draw a
-sprite), and Star Collector (50 stars).
+| ![Badges gallery](docs/img/badges.png) |
+|:--|
+| **13 badges to collect.** First Steps, Bright Spark (3 stars), Hopper (your first Jump), Looper, Architect (a Function), Sixth Sense, Champion (an arena win), On Fire (5-streak), Unstoppable (10-streak), Explorer (Lv 10), Veteran (Lv 20), Artist (draw a sprite), and Star Collector. Gold medal = earned; grey = a hint for how to get it. |
+
+### Themed worlds
+
+| ![Meadow biome](docs/img/biome-meadow.png) | ![Nebula biome](docs/img/maze-preview.png) |
+|:--|:--|
+| **Meadow** (early levels) — green floors and hedges. | **Nebula** (sensing tier) — purple space-brick. Five biomes (Meadow → Cavern → Glacier → Circuit → Nebula) shift the palette as you climb, so progress *feels* like a journey. |
 
 ### Draw your own robot
 
@@ -108,9 +121,9 @@ sprite), and Star Collector (50 stars).
 |:--|
 | **Battle-bots with personalities.** Face off against **Rusty** ("charges blindly"), **Bolt** ("fast & straight"), **Tank** ("hugs the walls"), or **Vex** ("hunts & shoves") — each a robot with its own style. Any program you save to your **library** in the campaign joins this roster as your own fighter. |
 
-| ![Match result](docs/img/arena-match.png) |
+| ![Arena match](docs/img/arena.gif) |
 |:--|
-| **Watch it play out.** Two robots run their programs simultaneously on a shared board, tick by tick — collisions bounce, pits eliminate, and on a Race the first to the battery wins. *Race: Tank vs Bolt → Player 1 wins!* The whole match is **deterministic** (no randomness during play), so a rematch is identical and replays are free. |
+| **Watch it play out.** Two robots run their programs simultaneously on a shared board, tick by tick — they jostle for the path, collisions bounce them back, and pits knock them out. Here *Rusty* and *Bolt* dash to a dead-even **photo finish** (equal bots on a mirrored, fair board correctly tie — a smarter or faster bot wins). The whole match is **deterministic** — no randomness during play — so a rematch is identical and replays are free. |
 
 | ![Radio](docs/img/radio.png) |
 |:--|

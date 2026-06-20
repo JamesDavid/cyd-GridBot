@@ -22,6 +22,8 @@ class App {
   void debugGoToLevel(uint32_t level);    // playtest aid (serial 'G <n>')
   void debugFastPlay(uint32_t target);    // auto-solve+win levels up to target ('P <n>')
   void debugHome();                       // force the profile-select screen ('H')
+  void debugAutoRun();                    // GAME: solve + run paused ('A')
+  void debugStep();                       // advance the current run/match one tick ('N')
 
  private:
   enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES };

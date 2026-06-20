@@ -44,7 +44,7 @@ void test_arena_match_plays_out() {
   ar.setup(&m, &a, &b, s0, s1, MatchType::RACE);
   ArenaOutcome o = ar.run();
   TEST_ASSERT_NOT_EQUAL((int)ArenaOutcome::RUNNING, (int)o);
-  TEST_ASSERT_TRUE(ar.ticks() >= 5);  // bots travel the lane before it resolves
+  TEST_ASSERT_TRUE(ar.ticks() >= 3);  // bots travel the lane before it resolves
 }
 
 void test_arena_faster_bot_wins() {
@@ -103,8 +103,29 @@ void test_sumo_deterministic() {
   TEST_ASSERT_EQUAL_UINT32(a1.logHash(), a2.logHash());
 }
 
+// Regression: the arena board must fit MAZE_MAX, and both starts + the goal must be
+// in bounds (a clamped cols once put bot 1 off-board, making it single-player).
+void test_arena_board_in_bounds() {
+  for (uint32_t s = 1; s <= 30; s++) {
+    Maze m; Pose s0, s1;
+    MazeGen::generateArena(m, s, s0, s1);
+    TEST_ASSERT_TRUE(m.cols() <= MAZE_MAX_COLS && m.rows() <= MAZE_MAX_ROWS);
+    TEST_ASSERT_TRUE(m.inBounds(s0.row, s0.col));
+    TEST_ASSERT_TRUE(m.inBounds(s1.row, s1.col));
+    TEST_ASSERT_TRUE(m.inBounds(m.goalRow(), m.goalCol()));
+    TEST_ASSERT_TRUE(m.isWalkable(s0.row, s0.col));
+    TEST_ASSERT_TRUE(m.isWalkable(s1.row, s1.col));
+    // both bots can take a first step toward the centre (not walled/pitted in)
+    int d0r, d0c; facingDelta(s0.facing, d0r, d0c);
+    int d1r, d1c; facingDelta(s1.facing, d1r, d1c);
+    TEST_ASSERT_TRUE(m.isWalkable(s0.row + d0r, s0.col + d0c));
+    TEST_ASSERT_TRUE(m.isWalkable(s1.row + d1r, s1.col + d1c));
+  }
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
+  RUN_TEST(test_arena_board_in_bounds);
   RUN_TEST(test_arena_deterministic_log);
   RUN_TEST(test_arena_match_plays_out);
   RUN_TEST(test_arena_faster_bot_wins);

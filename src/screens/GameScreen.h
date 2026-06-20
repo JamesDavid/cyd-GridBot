@@ -22,6 +22,10 @@ class GameScreen : public app::IScreen {
   int lastStars() const { return _stars; }
   int lastWrittenCount() const { return _writtenCount; }
 
+  // capture aids: solve the level and run it paused; advance one primitive
+  void beginAutoRun();
+  void debugStep();
+
  private:
   enum View : uint8_t { V_MAZE, V_CODE };
   enum Mode : uint8_t { M_EDIT, M_RUN, M_WIN, M_FAIL };

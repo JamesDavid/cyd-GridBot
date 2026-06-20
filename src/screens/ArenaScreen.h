@@ -18,6 +18,7 @@ class ArenaScreen : public app::IScreen {
   void begin(gb::Profile* profile);
   void enter() override;
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
+  void debugStep();   // capture aid: advance the match one tick, paused
 
  private:
   enum class Phase : uint8_t { MENU, PICK1, HANDOFF, PICK2, BOARD, DONE };
