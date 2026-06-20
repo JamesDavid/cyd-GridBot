@@ -53,6 +53,7 @@ class GameScreen : public app::IScreen {
   void drawControlPad();
   void drawProgramList();
   void drawBottomBar();
+  void drawStepBadge();   // live step counter in the top chrome during a run
   void drawCell(int r, int c);
   void drawCharacterAt(const gb::Pose& p);
   void drawCharacterPx(int cx, int cy, gb::Facing facing, int emote);  // emote: 0 none,1 happy,2 dizzy

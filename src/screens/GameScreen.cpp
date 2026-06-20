@@ -156,6 +156,15 @@ void GameScreen::drawChrome() {
   button(g, R_PAUSE, "< HOME", C_INK, C_PANEL_HI);
 }
 
+// Live step counter, drawn over the stars during a run so you can watch the count
+// climb — a brain that never reaches the goal visibly marches toward the step cap.
+void GameScreen::drawStepBadge() {
+  auto& g = hal::display.gfx();
+  g.fillRect(176, 2, 58, 18, C_PANEL);
+  char sb[16]; snprintf(sb, sizeof(sb), "step %d", _it.primCount());
+  label(g, 232, 4, sb, C_GO, textdatum_t::top_right);
+}
+
 // ---- maze view ------------------------------------------------------------
 void GameScreen::mazeGeometry(int& tile, int& ox, int& oy) {
   int cols = _maze.cols(), rows = _maze.rows();
@@ -759,6 +768,7 @@ void GameScreen::startRun() {
   _view = V_MAZE;
   _failNode = nullptr;
   drawMazeView(false);
+  drawStepBadge();
   _lastStep = 0;
 }
 
@@ -865,6 +875,7 @@ void GameScreen::stepOnce(uint32_t now) {
   } else if (here == STAR && !_gemTaken[ci]) {
     _gemTaken[ci] = true; _gemsThisRun++; hal::audio.badge();  // sparkly chime
   }
+  drawStepBadge();  // refresh the top-chrome step count
   bool moved = (old.row != _it.pose().row || old.col != _it.pose().col);
   if (moved && (o == OUT_OK || o == OUT_WIN)) {
     // glide between tiles; settleOutcome() runs when the tween lands
@@ -968,6 +979,14 @@ app::Signal GameScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int tx = 0, ty = 0;
   bool tap = _tap.tapped(tp, now, tx, ty);
 
+  // HOME/back always exits to the profile menu, from ANY mode (run/win/fail too) — it
+  // used to be checked after the mode handlers, so tapping it on the win/fail screen was
+  // swallowed and dropped you back in the editor instead. Autosave the resume slot first.
+  if (tap && R_PAUSE.contains(tx, ty)) {
+    if (_profile) { _profile->workLevel = _level; _profile->work = _prog; }
+    return app::Signal::BACK;
+  }
+
   // level-start maze preview: hold ~2.5s (or until tapped), then go to code view
   if (_previewing) {
     if (_previewStart == 0) _previewStart = now;
@@ -1008,6 +1027,16 @@ app::Signal GameScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       } else {
         float t = el / (float)dur;
         int cx = fx + (int)((gx - fx) * t), cy = fy + (int)((gy - fy) * t);
+        // A JUMP spans 2 tiles -> hop in a little arc: rise UP when travelling sideways
+        // across the screen, swing to the SIDE when travelling up/down (SPEC §8.1 jump).
+        int dRow = _tweenTo.row - _tweenFrom.row, dCol = _tweenTo.col - _tweenFrom.col;
+        int span = (dRow < 0 ? -dRow : dRow) + (dCol < 0 ? -dCol : dCol);
+        if (span >= 2) {
+          float h = 4.0f * t * (1.0f - t);        // parabola: 0 -> 1 (mid) -> 0
+          int peak = tile / 2;                    // within redrawCellsBetween's 1-cell margin
+          if (dCol != 0) cy -= (int)(h * peak);   // horizontal travel -> arc upward
+          else           cx += (int)(h * peak);   // vertical travel -> arc to the side
+        }
         redrawCellsBetween(_tweenFrom, _tweenTo);
         drawCharacterPx(cx, cy, _tweenTo.facing, 0);
       }
@@ -1015,17 +1044,13 @@ app::Signal GameScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       stepOnce(now);
       _lastStep = now;
     }
-    if (tap && _mode == M_RUN && !_tween) {
-      if (R_STEP.contains(tx, ty)) { _auto = false; stepOnce(now); _lastStep = now; }
-      else if (R_RESET.contains(tx, ty)) { resetRun(); }
+    // RESET must work even mid-glide so a runaway run (e.g. a brain that never reaches
+    // the goal and loops to the step cap) can always be stopped. STEP only between glides.
+    if (tap && _mode == M_RUN) {
+      if (R_RESET.contains(tx, ty)) { resetRun(); }
+      else if (!_tween && R_STEP.contains(tx, ty)) { _auto = false; stepOnce(now); _lastStep = now; }
     }
     return app::Signal::NONE;
-  }
-
-  // back/pause -> profile menu (autosave the resume slot first, SPEC §11.1)
-  if (tap && R_PAUSE.contains(tx, ty)) {
-    if (_profile) { _profile->workLevel = _level; _profile->work = _prog; }
-    return app::Signal::BACK;
   }
 
   // deferred view toggle + hold-to-peek
