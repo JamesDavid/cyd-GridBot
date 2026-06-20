@@ -19,6 +19,8 @@ static bool sameNode(const Node& a, const Node& b) {
     case N_REPEAT_UNTIL:
     case N_IF: if (a.cond != b.cond) return false; break;
     case N_CALL: if (a.func != b.func) return false; break;
+    case N_NEURO: if (a.brainIdx != b.brainIdx) return false; break;
+    default: break;
   }
   return sameList(a.body, b.body);
 }
@@ -71,9 +73,32 @@ void test_empty_program_roundtrip() {
   TEST_ASSERT_TRUE(q.empty());
 }
 
+// A NeuroBot program with a trained brain must round-trip — the brain travels with it
+// (so it survives save/load and trades over the radio).
+void test_neuro_program_roundtrip() {
+  Program p;
+  uint8_t idx = p.addBrain(1);
+  p.brains[idx].w1[0][0] = 1.25f; p.brains[idx].b2[3] = -0.5f;  // distinctive weights
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(Node::neuro(idx));
+  p.main.push_back(loop);
+
+  JsonDocument doc; programToJson(p, doc.to<JsonObject>());
+  std::string s; serializeJson(doc, s);
+  JsonDocument doc2; deserializeJson(doc2, s);
+  Program q; programFromJson(doc2.as<JsonObjectConst>(), q);
+
+  TEST_ASSERT_TRUE(sameList(p.main, q.main));         // the NEURO node + brainIdx
+  TEST_ASSERT_EQUAL(1, (int)q.brains.size());
+  TEST_ASSERT_EQUAL_FLOAT(1.25f, q.brains[0].w1[0][0]);  // the trained weights survived
+  TEST_ASSERT_EQUAL_FLOAT(-0.5f, q.brains[0].b2[3]);
+  TEST_ASSERT_EQUAL(5, q.brains[0].nOut);
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_program_roundtrip);
   RUN_TEST(test_empty_program_roundtrip);
+  RUN_TEST(test_neuro_program_roundtrip);
   return UNITY_END();
 }
