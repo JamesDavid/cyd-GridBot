@@ -651,10 +651,13 @@ void GameScreen::handlePadTap(int x, int y) {
 }
 
 void GameScreen::handleListTap(int x, int y) {
-  // NeuroBot: add a fresh trainable brain block
+  // NeuroBot: add a fresh trainable brain, already wrapped in "repeat until at goal { }"
+  // so it actually drives the whole maze (a lone brain makes only ONE move).
   if (_profile && _profile->unlocks.neuro && R_BRAIN.contains(x, y)) {
     uint8_t idx = _prog.addBrain(_profile->seedBase + (uint32_t)_prog.brains.size() * 101u + 1u);
-    appendNodeToTarget(gb::Node::neuro(idx));
+    gb::Node loop = gb::Node::repeatUntil(gb::AT_GOAL);
+    loop.body.push_back(gb::Node::neuro(idx));
+    appendNodeToTarget(loop);
     return;
   }
   // function-body tabs + library Save/Load
