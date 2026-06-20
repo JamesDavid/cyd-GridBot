@@ -6,18 +6,19 @@ using namespace ui;
 namespace screens {
 
 struct LessonInfo { const char* title; const char* sub; uint16_t col; };
-static const int N_LESSONS = 7;
+static const int N_LESSONS = 8;
 static const LessonInfo LESSONS[N_LESSONS] = {
   {"1. One neuron", "learn from a teacher", C_MOVE},
   {"2. Many actions", "go / turn / jump", C_TURN},
   {"3. Hidden layer", "what 1 neuron can't", C_LOOP},
-  {"4. Q-learning", "learn from reward", C_SENSE},
-  {"5. Evolution", "breed the best", C_FUNC},
-  {"6. Transfer", "reuse skills, new maze", ui::rgb(120, 230, 245)},
-  {"7. Brain Cam", "watch a brain think", ui::rgb(120, 230, 245)},
+  {"4. Robot brain", "meet its senses", ui::rgb(120, 230, 245)},
+  {"5. Q-learning", "learn from reward", C_SENSE},
+  {"6. Evolution", "breed the best", C_FUNC},
+  {"7. Transfer", "reuse skills, new maze", ui::rgb(120, 230, 245)},
+  {"8. Brain Cam", "watch a brain think", ui::rgb(120, 230, 245)},
 };
 
-static Rect rowRect(int i) { return {10, (int16_t)(40 + i * 24), 300, 22}; }
+static Rect rowRect(int i) { return {10, (int16_t)(39 + i * 21), 300, 19}; }
 static const Rect R_BACK = {6, (int16_t)(BOTBAR_Y + 2), 120, 26};
 
 void LessonHubScreen::enter() { _pick = -1; draw(); }

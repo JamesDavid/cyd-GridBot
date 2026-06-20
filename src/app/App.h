@@ -26,6 +26,7 @@
 #include "screens/CodeLessonScreen.h"
 #include "screens/TransferLessonScreen.h"
 #include "screens/BrainViewScreen.h"
+#include "screens/BrainMapScreen.h"
 
 namespace app {
 
@@ -44,7 +45,7 @@ class App {
  private:
   enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE,
                                NEURO_HUB, NEURO_LESSON, Q_LESSON, EVO_LESSON, NEURO_TRAIN, ARENA_TRAIN,
-                               LESSONS_MENU, CODE_LAB, CODE_LESSON, TRANSFER_LESSON, BRAIN_VIEW };
+                               LESSONS_MENU, CODE_LAB, CODE_LESSON, TRANSFER_LESSON, BRAIN_VIEW, BRAIN_MAP };
 
   void gotoSelect();
   void gotoIntro(uint32_t level);
@@ -81,6 +82,7 @@ class App {
   screens::CodeLessonScreen _codeLesson;
   screens::TransferLessonScreen _transferLesson;
   screens::BrainViewScreen _brainView;
+  screens::BrainMapScreen _brainMap;
   TapDetector _introTap;
   ui::Rect _arenaBtn{90, 196, 140, 28};  // shown on the level intro post-sensing
 };

@@ -369,10 +369,11 @@ void App::tick(uint32_t now) {
         switch (_lessonHub.pick()) {
           case 0: case 1: case 2:
             _neuro.begin(_lessonHub.pick()); _neuro.enter(); _state = State::NEURO_LESSON; break;
-          case 3: _qLesson.begin(); _qLesson.enter(); _state = State::Q_LESSON; break;
-          case 4: _evoLesson.begin(); _evoLesson.enter(); _state = State::EVO_LESSON; break;
-          case 5: _transferLesson.begin(); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;
-          case 6: _brainView.begin(); _brainView.enter(); _state = State::BRAIN_VIEW; break;
+          case 3: _brainMap.enter(); _state = State::BRAIN_MAP; break;
+          case 4: _qLesson.begin(); _qLesson.enter(); _state = State::Q_LESSON; break;
+          case 5: _evoLesson.begin(); _evoLesson.enter(); _state = State::EVO_LESSON; break;
+          case 6: _transferLesson.begin(); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;
+          case 7: _brainView.begin(); _brainView.enter(); _state = State::BRAIN_VIEW; break;
         }
       }
       break;
@@ -395,6 +396,10 @@ void App::tick(uint32_t now) {
     }
     case State::BRAIN_VIEW: {
       if (_brainView.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      break;
+    }
+    case State::BRAIN_MAP: {
+      if (_brainMap.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
       break;
     }
     case State::NEURO_TRAIN: {  // came from the editor's brain block; return to the game
