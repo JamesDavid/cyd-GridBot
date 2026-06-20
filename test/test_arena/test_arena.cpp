@@ -144,8 +144,32 @@ void test_arena_smart_beats_dasher() {
   TEST_ASSERT_TRUE(decisive >= 12);  // the navigator wins most of the time
 }
 
+// A NeuroBot brain battles in the arena via the normal program path (the brain travels
+// with the program; the arena already feeds each bot an EnemyView for combat sensing).
+// It must run and be deterministic, like any other bot.
+static Program neuroProgram(uint32_t seed) {
+  Program p;
+  uint8_t idx = p.addBrain(seed);
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(Node::neuro(idx));
+  p.main.push_back(loop);
+  return p;
+}
+
+void test_arena_neuro_brains_battle() {
+  Maze m; Pose s0, s1;
+  MazeGen::generateArena(m, 7, s0, s1);
+  Program a = neuroProgram(1), b = neuroProgram(2);
+  Arena a1, a2;
+  a1.setup(&m, &a, &b, s0, s1, MatchType::RACE); a1.run();
+  a2.setup(&m, &a, &b, s0, s1, MatchType::RACE); a2.run();
+  TEST_ASSERT_EQUAL_UINT32(a1.logHash(), a2.logHash());                 // deterministic
+  TEST_ASSERT_NOT_EQUAL((int)ArenaOutcome::RUNNING, (int)a1.outcome()); // it resolves
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
+  RUN_TEST(test_arena_neuro_brains_battle);
   RUN_TEST(test_arena_board_in_bounds);
   RUN_TEST(test_arena_smart_beats_dasher);
   RUN_TEST(test_arena_deterministic_log);
