@@ -44,17 +44,26 @@ This is **neurosymbolic programming for kids** — symbolic scaffolding + a lear
 policy — and teaches *where ML helps vs. where explicit logic is better*.
 
 ### Architecture & engine fit
-- **Brain:** tiny fixed MLP, ~**7 inputs → 6 hidden (tanh) → 4 outputs ≈ 70 weights**.
-- **Inputs (sensors):** wall ahead/left/right, pit ahead, goal direction `sign(Δrow)`,
-  `sign(Δcol)`, normalized distance. Combat adds enemy-ahead / enemy-near / enemy-dir —
-  **`ENEMY_AHEAD`/`ENEMY_NEAR` + `EnemyView` already exist in the interpreter.**
-- **Outputs / action set:**
-  - **Navigation brain = 4:** forward / turn-L / turn-R / jump. (argmax → one move)
-  - **Combat brain = 5:** + **zap**. Same architecture, two configs.
-  - **Backward is omitted from the brain** (redundant — a policy can always turn around;
-    an extra output just muddies learning). Backward *stays in the campaign* (harmless,
-    teaches "movement independent of facing"); it's the most expendable pad primitive if
-    UI space is ever needed.
+**ONE unified brain** (not separate nav/combat brains) — it's cleaner as a product: a single
+brain the kid grows that both navigates and fights. In the campaign there are no enemies, so
+the enemy sensors sit neutral and zap never fires — the same brain just *behaves* like a
+navigator there. One brain to train, trade, and battle.
+- **Brain:** tiny fixed MLP, ~**10 inputs → 8 hidden (tanh) → 5 outputs ≈ 120 weights**.
+- **Inputs — EGOCENTRIC** (relative to the robot's heading, matching GridBot's core lesson;
+  this is also what lets a brain *generalize* to new mazes):
+  1. wall ahead (0/1)
+  2. wall left (0/1)
+  3. wall right (0/1)
+  4. pit ahead (0/1)
+  5. goal ahead-ness (−1…1: in front of vs behind me)
+  6. goal right-ness (−1…1: to my right vs left)
+  7. goal distance (0…1, normalized)
+  8–10. enemy ahead-ness, enemy right-ness, enemy distance (neutral in the campaign).
+  `ENEMY_AHEAD`/`ENEMY_NEAR` + `EnemyView` already exist in the interpreter.
+- **Outputs / action set = 5:** forward / turn-L / turn-R / jump / **zap** (argmax → one move;
+  zap is a no-op outside the Arena). **Backward is omitted** (redundant — a policy can always
+  turn around; an extra output just muddies learning). Backward *stays in the campaign*
+  (harmless, teaches "movement independent of facing").
 - **Execution:** on hitting `N_NEURO`, the interpreter reads sensors at the robot's pose,
   forward-passes, argmax → executes one primitive. **Steppable & deterministic** — fits the
   explicit-stack interpreter and animates like any command.
@@ -129,14 +138,22 @@ This falls out of the architecture with **zero new battle infrastructure**:
 - Caveat: keep the brain architecture **fixed (or versioned)** so a received neurobit always
   has a shape the receiver can run; reject/upgrade on version mismatch.
 
-## The single-neuron atom (first thing to build)
-Don't open on the 70-weight brain. The make-or-break test of whether backprop *clicks*:
-- **1–2 inputs → 1 output**, a binary **go-vs-turn** decision from a wall/pit sensor.
-- Start with 1 input (wall-ahead): "turn if wall, else go"; backprop slides the single
-  threshold into place while the kid watches. Add pit-ahead as a 2nd input → the decision
-  *line* tilts.
-- Fully visualizable: the neuron diagram, weights as edges, a falling error bar, the
-  decision boundary moving. If this screen lands, the maze brain is mechanically more of it.
+## The neuron lessons (build small → big)
+Don't open on the full brain. Each lesson is small enough to *fully* visualize:
+- **Lesson 1 — one neuron, binary (BUILT).** 2 inputs (wall, pit) → **1 output**, a
+  go-vs-turn decision; backprop drives the error to ~0 and all 4 *situations* flip to ✓.
+  *Note (a common misread):* the 4 rows on screen are the **4 situations** the neuron could
+  see (the truth table of 2 yes/no sensors) — **not** 4 outputs. There is ONE output; 3 of
+  the 4 situations are TURN simply because the rule is "wall OR pit." No hidden layer is
+  needed because OR is *linearly separable* (the test proves it learns it).
+- **Lesson 2 — a row of neurons, multi-class.** turn / jump / go = **3 output neurons,
+  argmax** (e.g. "jump if pit, turn if wall, go otherwise" — pick one answer per situation so
+  there's a clean target). Still no hidden layer if separable. Teaches "one neuron per action."
+- **Lesson 3 — a hidden layer.** A decision a single line can't make (XOR-flavored); the
+  hidden units carve up the space. (`test_nn` already asserts one neuron *fails* XOR.)
+- **Lesson 4 — the full maze brain** (the 10→8→5 unified brain above).
+- Always fully visualizable: neuron diagram, weights as edges, falling error bar, decisions
+  flipping to ✓. If lesson 1 lands, the rest is mechanically more of the same.
 
 ## Teaching the math, age-gated
 - **Everyone:** the *story* + the *visualization*. Backprop = "the brain guesses, sees how

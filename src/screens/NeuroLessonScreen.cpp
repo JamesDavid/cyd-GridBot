@@ -64,7 +64,8 @@ void NeuroLessonScreen::draw() {
   char hd[28]; snprintf(hd, sizeof(hd), "epoch %d", _epochs);
   label(g, SCREEN_W - 6, 6, hd, C_DIM, textdatum_t::top_right);
 
-  label(g, 6, TOPBAR_H + 2, "Goal: TURN if wall or pit, else GO", C_INK);
+  label(g, 6, TOPBAR_H + 2, "turn if WALL or PIT", C_INK);
+  label(g, 150, TOPBAR_H + 2, "it sees 4 situations:", C_DIM);
 
   // ---- the neuron diagram (left) ----
   edge(g, WALL_X, WALL_Y, OUT_X, OUT_Y, _p.w[0]);
@@ -74,11 +75,12 @@ void NeuroLessonScreen::draw() {
   label(g, WALL_X, WALL_Y, "wall", C_BG, textdatum_t::middle_center);
   g.fillCircle(PIT_X, PIT_Y, 15, C_PANEL_HI); g.drawCircle(PIT_X, PIT_Y, 15, C_INK);
   label(g, PIT_X, PIT_Y, "pit", C_INK, textdatum_t::middle_center);
-  // output node
+  // output node (the single decision)
   g.fillCircle(OUT_X, OUT_Y, 17, C_LOOP); g.drawCircle(OUT_X, OUT_Y, 17, C_INK);
-  label(g, OUT_X, OUT_Y - 4, "act", C_BG, textdatum_t::middle_center);
+  label(g, OUT_X, OUT_Y - 4, "out", C_BG, textdatum_t::middle_center);
   char bb[10]; snprintf(bb, sizeof(bb), "b%+.1f", _p.b);
   label(g, OUT_X, OUT_Y + 7, bb, C_BG, textdatum_t::middle_center);
+  label(g, 8, 150, "1 neuron -> 1 output", C_DIM);
   // weight readouts
   char w0[10], w1[10];
   snprintf(w0, sizeof(w0), "%+.2f", _p.w[0]); label(g, 70, 54, w0, C_DIM);
