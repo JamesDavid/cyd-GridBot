@@ -140,6 +140,24 @@ hook, and the whole difficulty curve is designed to lead there.
 |:--|:--|
 | **Puzzle Race — same maze, beat the clock.** A code-authoring contest instead of a live battle: both players see the *same* maze and get **45 seconds** to write a program for it (hotseat — Player 1 locks in, then passes the device). When the dust settles, each robot runs and is scored by how close it gets to the goal — **whoever ends up nearest wins** (reach it outright for the cleanest win). | A tense little "can you out-code your friend?" mode that rewards thinking under pressure. |
 
+### NeuroBot — stop *writing* the rules, start *training* them
+
+> A late-game **graduation** (unlocks with the sensing tier). GridBot teaches *you write the
+> rules*; **NeuroBot teaches you grow them** — the contrast between symbolic and learned AI is
+> itself the lesson. It reuses the whole engine: the same maze, editor, Arena, and radio trade.
+
+| ![NeuroLab](docs/img/neurolab-hub.png) |
+|:--|
+| **NeuroLab** — a lesson for each way machines actually learn, each small enough to *watch*. |
+
+| ![Watch a neuron learn](docs/img/neuro-neuron.gif) | ![Q-learning value spreads](docs/img/neuro-qlearning.gif) | ![Evolution](docs/img/neuro-evolution.gif) |
+|:--|:--|:--|
+| **Backprop** — a neuron guesses, sees how wrong it is, and nudges its weights. Tap *Train* and watch the error fall and every example flip ✗→ok. (Then: multi-class go/turn/jump, and a hidden layer to crack **XOR** — what one neuron provably can't.) | **Reinforcement (Q-learning)** — no code, no teacher: the robot tries the maze over and over and **value spreads back from the battery**, with arrows showing the policy it discovered. | **Evolution** — a herd of random brains; the ones that get furthest **breed**. Watch the best one's path improve and the fitness curve climb, generation by generation. |
+
+| ![The NEURO block](docs/img/neuro-block.png) | ![Train the brain](docs/img/neuro-train.png) |
+|:--|:--|
+| **A brain is a block in your program.** Drop a **`brain`** node into the normal editor next to your loops and ifs — *neurosymbolic* programming: explicit code for the easy parts, a trained brain for the tricky bit. | **The neuro interface.** **Teach** it (distil the optimal solver into the brain by backprop — reliable) or **Evolve** it (no teacher, just a score), watch its path solve the maze, then **Use it**. The trained brain saves *with* your program — so it persists and **trades & battles over the radio** like any other bot. |
+
 ---
 
 ## Under the hood (cross-cutting)
@@ -217,7 +235,9 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
 
 ## What's next
 
-**Recently shipped:** ✅ **Puzzle Race** (shared-maze, beat-the-clock coding contest) ·
+**Recently shipped:** ✅ **NeuroBot** — a whole ML-teaching mode (backprop / Q-learning /
+evolution lessons, a trainable **brain block** in the editor, brains that persist & battle) ·
+✅ **Puzzle Race** (shared-maze, beat-the-clock coding contest) ·
 ✅ **smarter arena bots** ("Ace" navigates the board) so Races are more often decisive ·
 ✅ **coin & gem collectibles + a sprite-colour & emoji shop** · ✅ a **chiptune menu theme** +
 win fanfare + badge chime · ✅ smooth movement tween + a **win celebration** (confetti
