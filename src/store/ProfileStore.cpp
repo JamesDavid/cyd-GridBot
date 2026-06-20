@@ -75,6 +75,8 @@ static void profileToJson(const gb::Profile& p, JsonObject o) {
   st["starsTotal"] = p.stats.starsTotal;
   st["totalPlaySeconds"] = p.stats.totalPlaySeconds;
   st["currentStreak"] = p.stats.currentStreak;
+  st["arenaWins"] = p.stats.arenaWins;
+  st["threeStarWins"] = p.stats.threeStarWins;
   JsonArray ch = st["cmd"].to<JsonArray>();
   for (int i = 0; i < gb::CS_COUNT; i++) ch.add(p.stats.commandsUsed[i]);
   if (p.workLevel) {
@@ -92,6 +94,7 @@ static void profileToJson(const gb::Profile& p, JsonObject o) {
   }
   if (!p.customChar.empty()) o["cchar"] = toHex(p.customChar);
   if (!p.customGoal.empty()) o["cgoal"] = toHex(p.customGoal);
+  o["ach"] = p.achievements;
 }
 
 static void profileFromJson(JsonObjectConst o, gb::Profile& p) {
@@ -121,6 +124,8 @@ static void profileFromJson(JsonObjectConst o, gb::Profile& p) {
   p.stats.starsTotal = st["starsTotal"] | 0;
   p.stats.totalPlaySeconds = st["totalPlaySeconds"] | 0;
   p.stats.currentStreak = st["currentStreak"] | 0;
+  p.stats.arenaWins = st["arenaWins"] | 0;
+  p.stats.threeStarWins = st["threeStarWins"] | 0;
   JsonArrayConst ch = st["cmd"];
   int i = 0;
   for (JsonVariantConst v : ch) { if (i < gb::CS_COUNT) p.stats.commandsUsed[i++] = v | 0; }
@@ -141,6 +146,7 @@ static void profileFromJson(JsonObjectConst o, gb::Profile& p) {
   }
   if (o["cchar"].is<const char*>()) fromHex(o["cchar"], p.customChar);
   if (o["cgoal"].is<const char*>()) fromHex(o["cgoal"], p.customGoal);
+  p.achievements = o["ach"] | 0;
 }
 
 // ---- store ops ------------------------------------------------------------

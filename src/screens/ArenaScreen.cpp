@@ -169,7 +169,8 @@ void ArenaScreen::finishOverlay() {
   auto& g = hal::display.gfx();
   const char* msg = "Draw!"; uint16_t col = C_ACCENT;
   switch (_arena.outcome()) {
-    case ArenaOutcome::BOT0: msg = "Player 1 wins!"; col = C_GO; hal::led.green(); hal::audio.win(); break;
+    case ArenaOutcome::BOT0: msg = "Player 1 wins!"; col = C_GO; hal::led.green(); hal::audio.win();
+      if (_profile) _profile->stats.arenaWins++; break;
     case ArenaOutcome::BOT1: msg = "Player 2 wins!"; col = C_FUNC; hal::led.red(); hal::audio.fail(); break;
     default: break;
   }

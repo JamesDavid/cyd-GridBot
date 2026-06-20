@@ -452,9 +452,9 @@ void GameScreen::handlePadTap(int x, int y) {
   for (int s = 0; s < 4; s++) {
     if (padCell(ci[s], cj[s]).contains(x, y) && cornerUnlocked(s)) {
       if (s == 0) appendCommand(CMD_JUMP);
-      else if (s == 1) appendNodeToTarget(Node::repeat(2));
-      else if (s == 2) appendNodeToTarget(Node::call(1));
-      else if (s == 3) appendNodeToTarget(Node::repeatUntil(WALL_AHEAD));
+      else if (s == 1) { if (_profile) _profile->stats.commandsUsed[CS_REPEAT]++; appendNodeToTarget(Node::repeat(2)); }
+      else if (s == 2) { if (_profile) _profile->stats.commandsUsed[CS_CALL]++;   appendNodeToTarget(Node::call(1)); }
+      else if (s == 3) { if (_profile) _profile->stats.commandsUsed[CS_SENSE]++;  appendNodeToTarget(Node::repeatUntil(WALL_AHEAD)); }
       return;
     }
   }

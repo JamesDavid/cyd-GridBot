@@ -1,5 +1,6 @@
 #include "screens/StatsScreen.h"
 #include "assets/Assets.h"
+#include "game/Achievements.h"
 
 using namespace ui;
 using namespace gb;
@@ -45,6 +46,8 @@ void StatsScreen::draw() {
   char buf[48];
   snprintf(buf, sizeof(buf), "%s - Stats", _p->name.c_str());
   label(g, 6, 3, buf, C_ACCENT, textdatum_t::top_left, 2);
+  snprintf(buf, sizeof(buf), "Badges %d/%d", gb::achievementCount(_p->achievements), gb::ACH_COUNT);
+  label(g, 168, 6, buf, C_FUNC, textdatum_t::top_left);
 
   int y = BAND_Y + 2;
   auto line = [&](const char* k, const char* v, uint16_t col) {

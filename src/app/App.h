@@ -35,6 +35,7 @@ class App {
   State _state = State::SELECT;
   gb::Profile _profile;
   uint32_t _introLevel = 1;
+  const char* _newBadge = nullptr;  // achievement to celebrate on the next intro
 
   screens::ProfileSelectScreen _select;
   screens::ProfileCreateScreen _create;

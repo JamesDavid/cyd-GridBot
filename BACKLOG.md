@@ -4,9 +4,11 @@ The living list of planned/possible work. The README shows only the juiciest
 highlights and links here. Items are grouped; checked = done, unchecked = future.
 
 ## Playtest ideas — make it more fun (from on-device playtesting)
-- [ ] **Achievements / badges**: first win, first 3-star, "used a loop", "wrote a
-      function", first sensing clear, first arena win, traded a bot, drew a sprite,
-      win-streak milestones. Show on the stats screen; celebrate on unlock.
+- [x] **Achievements / badges** (13): First Steps, Bright Spark, Hopper, Looper,
+      Architect, Sixth Sense, Champion, On Fire, Unstoppable, Explorer, Veteran,
+      Artist, Star Collector. Sticky bitmask in the profile, count on the stats
+      header, celebrated on the level-intro when earned. (Future: a badges gallery
+      screen with icons.)
 - [ ] **Juice**: smooth tween between tiles, a little dust/trail, particle burst +
       star fly-in on win, gentle screen-shake on bonk (character shake already added).
 - [ ] **Character emotes**: happy bounce on win, dizzy/✖-eyes on bonk, splash on a pit.

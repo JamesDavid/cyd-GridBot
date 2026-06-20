@@ -35,6 +35,8 @@ struct Stats {
   uint32_t starsTotal = 0;
   uint32_t totalPlaySeconds = 0;
   uint32_t currentStreak = 0;        // consecutive first-try wins
+  uint32_t arenaWins = 0;
+  uint32_t threeStarWins = 0;
   uint16_t commandsUsed[CS_COUNT] = {0};
 };
 
@@ -65,6 +67,8 @@ struct Profile {
   // 0 = empty). Empty vector = use the roster art for this avatar. Shareable.
   std::vector<uint8_t> customChar;
   std::vector<uint8_t> customGoal;
+
+  uint32_t achievements = 0;  // bitmask of earned badges (see Achievements.h)
 };
 
 constexpr int PIX_DIM = 16;

@@ -9,6 +9,7 @@
 #include "game/Score.h"
 #include "game/Bots.h"
 #include "game/Interpreter.h"
+#include "game/Achievements.h"
 
 using namespace ui;
 
@@ -80,9 +81,13 @@ void App::drawIntro() {
   else if (now.repeat && !prev.repeat) newText = "New: Repeat loops!";
   else if (now.func && !prev.func) newText = "New: Functions!";
   else if (now.sense && !prev.sense) newText = "New: Sensing!";
-  if (newText) label(g, SCREEN_W / 2, y + 52, newText, C_GO, textdatum_t::middle_center);
+  if (newText) label(g, SCREEN_W / 2, y + 50, newText, C_GO, textdatum_t::middle_center);
+  if (_newBadge) {
+    char b[40]; snprintf(b, sizeof(b), "Badge: %s!", _newBadge);
+    label(g, SCREEN_W / 2, y + 68, b, C_FUNC, textdatum_t::middle_center);
+  }
 
-  label(g, SCREEN_W / 2, y + h - 22, "tap to start", C_DIM, textdatum_t::middle_center);
+  label(g, SCREEN_W / 2, y + h - 18, "tap to start", C_DIM, textdatum_t::middle_center);
 
   // Arena unlocks after the sensing tier (SPEC §18).
   if (_profile.unlocks.sense) {
@@ -155,6 +160,7 @@ void App::debugFastPlay(uint32_t target) {
     _profile.level = lvl + 1;
     _profile.unlocks = gb::computeUnlocks(_profile.level);
   }
+  _profile.achievements |= gb::evaluateAchievements(_profile);
   saveProfile();
   gotoIntro(_profile.level);
 }
@@ -203,10 +209,20 @@ void App::tick(uint32_t now) {
       if (s == Signal::BACK) { saveProfile(); gotoSelect(); break; }
       if (s == Signal::WON) {
         _profile.stats.levelsCompleted++;
+        if (_game.lastStars() == 3) _profile.stats.threeStarWins++;
         _profile.workLevel = 0;
         _profile.work.clear();
         _profile.level = _introLevel + 1;
         _profile.unlocks = gb::computeUnlocks(_profile.level);
+        // unlock + celebrate any newly-earned achievements
+        uint32_t want = gb::evaluateAchievements(_profile);
+        uint32_t isNew = want & ~_profile.achievements;
+        _profile.achievements = want;
+        _newBadge = nullptr;
+        if (isNew) {
+          for (int i = 0; i < gb::ACH_COUNT; i++)
+            if (isNew & (1u << i)) { _newBadge = gb::achievementName(i); break; }
+        }
         saveProfile();  // autosave on WIN (SPEC §11)
         gotoIntro(_profile.level);
       }
@@ -245,7 +261,12 @@ void App::tick(uint32_t now) {
     }
     case State::ARENA: {
       Signal s = _arena.tick(now, tp);
-      if (s == Signal::BACK) gotoIntro(_profile.level);
+      if (s == Signal::BACK) {
+        // an arena win may have earned the Champion badge
+        _profile.achievements |= gb::evaluateAchievements(_profile);
+        saveProfile();
+        gotoIntro(_profile.level);
+      }
       else if (s == Signal::GOTO_RADIO) {
         _radio.begin(&_profile); _radio.enter(); _state = State::RADIO;
       }
