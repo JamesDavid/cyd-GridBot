@@ -15,6 +15,10 @@ int shortestSolutionLen(const Maze& m, bool allowJump);
 // solution exists. Used to play levels (and by tests).
 bool solveMaze(const Maze& m, bool allowJump, Program& out);
 
+// Walking distance (in tiles) from (r,c) to the goal over walkable cells, ignoring
+// facing; -1 if unreachable. Used to score Puzzle Race (closest-to-goal wins).
+int distanceToGoal(const Maze& m, int r, int c);
+
 // Star rating (SPEC §9): <=par ***, <=1.5*par **, win at all *.
 inline int starsFor(int writtenCount, int par) {
   if (par <= 0) return 1;

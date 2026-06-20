@@ -12,6 +12,7 @@
 #include "screens/RadioScreen.h"
 #include "screens/PixelEditorScreen.h"
 #include "screens/BadgesScreen.h"
+#include "screens/ShopScreen.h"
 
 namespace app {
 
@@ -22,11 +23,12 @@ class App {
   void debugGoToLevel(uint32_t level);    // playtest aid (serial 'G <n>')
   void debugFastPlay(uint32_t target);    // auto-solve+win levels up to target ('P <n>')
   void debugHome();                       // force the profile-select screen ('H')
+  void debugGrantCoins(uint32_t n);       // grant coins for testing ('C <n>')
   void debugAutoRun();                    // GAME: solve + run paused ('A')
   void debugStep();                       // advance the current run/match one tick ('N')
 
  private:
-  enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES };
+  enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP };
 
   void gotoSelect();
   void gotoIntro(uint32_t level);
@@ -48,6 +50,7 @@ class App {
   screens::RadioScreen _radio;
   screens::PixelEditorScreen _pixed;
   screens::BadgesScreen _badges;
+  screens::ShopScreen _shop;
   TapDetector _introTap;
   ui::Rect _arenaBtn{90, 196, 140, 28};  // shown on the level intro post-sensing
 };

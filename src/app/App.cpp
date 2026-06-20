@@ -123,6 +123,16 @@ void App::debugGoToLevel(uint32_t level) {
 
 void App::debugHome() { gotoSelect(); }
 
+void App::debugGrantCoins(uint32_t n) {
+  if (_profile.id.empty()) {
+    std::vector<store::ProfileMeta> metas;
+    store::profiles.listProfiles(metas);
+    if (!metas.empty()) loadProfileInto(metas[0].id);
+  }
+  _profile.coins += n;
+  saveProfile();
+}
+
 void App::debugAutoRun() {
   if (_state == State::GAME) _game.beginAutoRun();
 }
@@ -258,6 +268,9 @@ void App::tick(uint32_t now) {
       else if (s == Signal::GOTO_BADGES) {
         _badges.begin(&_profile); _badges.enter(); _state = State::BADGES;
       }
+      else if (s == Signal::GOTO_SHOP) {
+        _shop.begin(&_profile); _shop.enter(); _state = State::SHOP;
+      }
       else if (s == Signal::GOTO_DRAW) {
         _pixed.begin(&_profile); _pixed.enter(); _state = State::DRAW;
       }
@@ -302,6 +315,11 @@ void App::tick(uint32_t now) {
     case State::BADGES: {
       Signal s = _badges.tick(now, tp);
       if (s == Signal::BACK) { _stats.begin(&_profile); _stats.enter(); _state = State::STATS; }
+      break;
+    }
+    case State::SHOP: {
+      Signal s = _shop.tick(now, tp);
+      if (s == Signal::BACK) { saveProfile(); _stats.begin(&_profile); _stats.enter(); _state = State::STATS; }
       break;
     }
   }

@@ -33,4 +33,17 @@ extern const uint16_t PIXEL_PALETTE[PALETTE_N];
 // Draw a custom 16x16 sprite (palette indices) centred in the tile, scaled to fit.
 void drawCustomSprite(LGFX& g, int cx, int cy, int tile, const uint8_t* pix);
 
+// Draw the robot with an explicit body colour (for the shop's colour unlocks).
+void drawCharacterTinted(LGFX& g, int cx, int cy, int tile, uint16_t bodyColor, gb::Facing facing);
+
+// ---- shop catalogue --------------------------------------------------------
+struct ShopColor { uint16_t color; int price; const char* name; };
+struct ShopEmoji { uint8_t id; int price; const char* name; };
+constexpr int SHOP_COLOR_N = 6;
+constexpr int SHOP_EMOJI_N = 6;
+extern const ShopColor SHOP_COLORS[SHOP_COLOR_N];
+extern const ShopEmoji SHOP_EMOJIS[SHOP_EMOJI_N];
+// Draw a little equippable emoji/accessory (id 1..6) centred at (cx,cy).
+void drawEmoji(LGFX& g, uint8_t id, int cx, int cy, int size);
+
 }  // namespace assets

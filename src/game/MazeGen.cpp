@@ -134,6 +134,18 @@ static bool tryGenerate(Maze& out, const Difficulty& d, uint32_t seed) {
     }
   }
 
+  // Sprinkle a few COIN pickups on the path (bonus currency; collecting is optional,
+  // so solvability/win logic is unaffected — COIN tiles are walkable).
+  int wantCoins = 1 + (int)rng.below(3), gotCoins = 0;
+  for (int r = 0; r < R && gotCoins < wantCoins; r++) {
+    for (int c = 0; c < C && gotCoins < wantCoins; c++) {
+      if (!path[r * C + c] || out.at(r, c) != FLOOR) continue;
+      if (absv(r - sr) + absv(c - sc) <= 1) continue;  // not on/next to start
+      if (r == gr && c == gc) continue;
+      if (rng.chance(30)) { out.set(r, c, COIN); gotCoins++; }
+    }
+  }
+
   // Verify (cheap safety net, §6.3). The carved path is always walkable, so this
   // essentially never fails, but the assert protects against edge cases.
   return shortestSolutionLen(out, d.allowPitGaps) > 0;

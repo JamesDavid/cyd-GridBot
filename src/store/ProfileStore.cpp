@@ -95,6 +95,11 @@ static void profileToJson(const gb::Profile& p, JsonObject o) {
   if (!p.customChar.empty()) o["cchar"] = toHex(p.customChar);
   if (!p.customGoal.empty()) o["cgoal"] = toHex(p.customGoal);
   o["ach"] = p.achievements;
+  o["coins"] = p.coins;
+  o["shopColor"] = p.shopColor;
+  o["shopEmoji"] = p.shopEmoji;
+  o["ownedColors"] = p.ownedColors;
+  o["ownedEmojis"] = p.ownedEmojis;
 }
 
 static void profileFromJson(JsonObjectConst o, gb::Profile& p) {
@@ -147,6 +152,11 @@ static void profileFromJson(JsonObjectConst o, gb::Profile& p) {
   if (o["cchar"].is<const char*>()) fromHex(o["cchar"], p.customChar);
   if (o["cgoal"].is<const char*>()) fromHex(o["cgoal"], p.customGoal);
   p.achievements = o["ach"] | 0;
+  p.coins = o["coins"] | 0;
+  p.shopColor = o["shopColor"] | 0;
+  p.shopEmoji = o["shopEmoji"] | 0;
+  p.ownedColors = o["ownedColors"] | 0;
+  p.ownedEmojis = o["ownedEmojis"] | 0;
 }
 
 // ---- store ops ------------------------------------------------------------

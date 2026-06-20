@@ -69,6 +69,14 @@ struct Profile {
   std::vector<uint8_t> customGoal;
 
   uint32_t achievements = 0;  // bitmask of earned badges (see Achievements.h)
+  uint32_t coins = 0;         // spendable currency (collected in levels)
+
+  // Shop: a custom robot tint (0 = use roster colour) + an equipped emoji (0 = none),
+  // and bitmasks of what's been purchased.
+  uint8_t shopColor = 0;      // index into ShopColors (1-based; 0 = none)
+  uint8_t shopEmoji = 0;      // index into ShopEmojis (1-based; 0 = none)
+  uint32_t ownedColors = 0;   // bitmask of purchased colours
+  uint32_t ownedEmojis = 0;   // bitmask of purchased emojis
 };
 
 constexpr int PIX_DIM = 16;

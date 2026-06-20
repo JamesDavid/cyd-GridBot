@@ -98,6 +98,8 @@ class GameScreen : public app::IScreen {
 
   gb::Pose _drawnPose;          // last drawn character pose (for dirty-rect)
   bool _visited[gb::MAZE_MAX_CELLS] = {false};  // breadcrumb trail
+  bool _coinTaken[gb::MAZE_MAX_CELLS] = {false};
+  int _coinsThisRun = 0;
   const gb::Node* _failNode = nullptr;
 
   // smooth movement tween between tiles

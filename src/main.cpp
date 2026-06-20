@@ -66,6 +66,10 @@ static void handleSerialLine(const String& line) {
   } else if (c == 'H') {
     gApp.debugHome();
     Serial.println("HOME");
+  } else if (c == 'C') {
+    int n = 100; sscanf(line.c_str() + 1, "%d", &n);
+    gApp.debugGrantCoins((uint32_t)n);
+    Serial.printf("COINS +%d\n", n);
   } else if (c == 'A') {
     gApp.debugAutoRun();
     Serial.println("AUTORUN");

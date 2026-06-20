@@ -64,6 +64,9 @@ void GameScreen::begin(Profile* profile, uint32_t level) {
   _failNode = nullptr;
   _drawnPose = _maze.startPose();
   _tween = false;
+  for (auto& v : _visited) v = false;
+  for (auto& v : _coinTaken) v = false;
+  _coinsThisRun = 0;
   _it.load(&_prog, &_maze, _maze.startPose());
 }
 
@@ -143,6 +146,13 @@ void GameScreen::drawCell(int r, int c) {
     // breadcrumb: outline tiles the robot has already stepped on (per-biome colour)
     if (_visited[r * _maze.cols() + c])
       g.drawRoundRect(x + 2, y + 2, tile - 5, tile - 5, 3, _biome.crumb);
+    // a coin pickup (bonus currency)
+    if (t == COIN && !_coinTaken[r * _maze.cols() + c]) {
+      int cx = x + tile / 2, cy = y + tile / 2, rad = tile / 5 + 1;
+      g.fillCircle(cx, cy, rad, C_ACCENT);
+      g.drawCircle(cx, cy, rad, ui::rgb(180, 130, 0));
+      g.fillCircle(cx - rad / 3, cy - rad / 3, 1, C_INK);  // shine
+    }
   }
   if (_maze.isGoal(r, c)) {
     if (_profile && spriteHasPixels(_profile->customGoal))
@@ -167,8 +177,14 @@ void GameScreen::drawCharacterPx(int cx, int cy, Facing facing, int emote) {
     int dr, dc; facingDelta(facing, dr, dc);
     g.fillCircle(cx + dc * (tile / 2 - 2), cy + dr * (tile / 2 - 2), 2, C_ACCENT);
   } else {
-    assets::drawCharacter(g, cx, cy, tile, _profile ? _profile->avatar : 0, facing);
+    uint16_t tint = (_profile && _profile->shopColor > 0 && _profile->shopColor <= assets::SHOP_COLOR_N)
+                        ? assets::SHOP_COLORS[_profile->shopColor - 1].color : 0;
+    if (tint) assets::drawCharacterTinted(g, cx, cy, tile, tint, facing);
+    else assets::drawCharacter(g, cx, cy, tile, _profile ? _profile->avatar : 0, facing);
   }
+  // equipped emoji accessory (shop)
+  if (_profile && _profile->shopEmoji > 0)
+    assets::drawEmoji(g, _profile->shopEmoji, cx + tile / 3, cy - tile / 2, tile / 4);
   // emotes: happy = sparkles above; dizzy = red X eyes
   int eo = tile * 0.11f;
   if (emote == 1) {
@@ -598,7 +614,9 @@ void GameScreen::startRun() {
     _profile->workLevel = _level;       // autosave resume slot in memory (SPEC §11.1)
     _profile->work = _prog;
   }
-  for (auto& v : _visited) v = false;   // fresh breadcrumb trail
+  for (auto& v : _visited) v = false;
+  for (auto& v : _coinTaken) v = false;
+  _coinsThisRun = 0;   // fresh breadcrumb trail
   _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
   _mode = M_RUN;
   _auto = true;
@@ -612,6 +630,8 @@ void GameScreen::resetRun() {
   _boardIdx = 0;
   _maze = _boards[0];
   for (auto& v : _visited) v = false;
+  for (auto& v : _coinTaken) v = false;
+  _coinsThisRun = 0;
   _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
   _auto = false;
   _drawnPose = _maze.startPose();
@@ -624,6 +644,8 @@ void GameScreen::beginAutoRun() {
   gb::solveMaze(_maze, _profile && _profile->unlocks.jump, _prog);
   _editList = &_prog.main;
   for (auto& v : _visited) v = false;
+  for (auto& v : _coinTaken) v = false;
+  _coinsThisRun = 0;
   _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
   _mode = M_RUN;
   _auto = false;        // paused — advance with debugStep()
@@ -644,6 +666,8 @@ void GameScreen::advanceBoard() {
   _boardIdx++;
   _maze = _boards[_boardIdx];
   for (auto& v : _visited) v = false;
+  for (auto& v : _coinTaken) v = false;
+  _coinsThisRun = 0;
   _it.load(&_prog, &_maze, _maze.startPose(), DEFAULT_STEP_CAP);
   _drawnPose = _maze.startPose();
   _tween = false;
@@ -682,6 +706,11 @@ void GameScreen::stepOnce(uint32_t now) {
   Pose old = _it.pose();
   _visited[old.row * _maze.cols() + old.col] = true;  // drop a breadcrumb
   Outcome o = _it.step();
+  // collect a coin if we landed on one
+  int ci = _it.pose().row * _maze.cols() + _it.pose().col;
+  if (_maze.at(_it.pose().row, _it.pose().col) == COIN && !_coinTaken[ci]) {
+    _coinTaken[ci] = true; _coinsThisRun++; hal::audio.blip();
+  }
   bool moved = (old.row != _it.pose().row || old.col != _it.pose().col);
   if (moved && (o == OUT_OK || o == OUT_WIN)) {
     // glide between tiles; settleOutcome() runs when the tween lands
@@ -709,16 +738,22 @@ void GameScreen::settleOutcome(Outcome o) {
     if (_profile) {
       _profile->stats.totalWins++;
       _profile->stats.starsTotal += _stars;
+      _profile->coins += _coinsThisRun;  // keep collected coins on a win
     }
     winCelebration();
     auto& g = hal::display.gfx();
-    int w = 200, h = 80, x = (SCREEN_W - w) / 2, yy = (SCREEN_H - h) / 2;
+    int w = 210, h = 90, x = (SCREEN_W - w) / 2, yy = (SCREEN_H - h) / 2;
     g.fillRoundRect(x, yy, w, h, 10, C_PANEL);
     g.drawRoundRect(x, yy, w, h, 10, C_GO);
-    label(g, SCREEN_W / 2, yy + 22, "YOU WIN!", C_GO, textdatum_t::middle_center, 2);
-    char st[16]; snprintf(st, sizeof(st), "%d star%s", _stars, _stars == 1 ? "" : "s");
-    label(g, SCREEN_W / 2, yy + 50, st, C_ACCENT, textdatum_t::middle_center);
-    label(g, SCREEN_W / 2, yy + 68, "tap to continue", C_DIM, textdatum_t::middle_center);
+    label(g, SCREEN_W / 2, yy + 20, "YOU WIN!", C_GO, textdatum_t::middle_center, 2);
+    char st[24];
+    snprintf(st, sizeof(st), "%d star%s", _stars, _stars == 1 ? "" : "s");
+    label(g, SCREEN_W / 2, yy + 44, st, C_ACCENT, textdatum_t::middle_center);
+    if (_coinsThisRun > 0) {
+      snprintf(st, sizeof(st), "+%d coins!", _coinsThisRun);
+      label(g, SCREEN_W / 2, yy + 60, st, ui::rgb(255, 210, 60), textdatum_t::middle_center);
+    }
+    label(g, SCREEN_W / 2, yy + 78, "tap to continue", C_DIM, textdatum_t::middle_center);
     return;
   }
   // failure (BONK / FELL / DONE_NO_WIN)

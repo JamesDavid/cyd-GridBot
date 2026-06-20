@@ -26,6 +26,59 @@ const RosterEntry& roster(int avatar) {
   return kRoster[avatar];
 }
 
+// ---- shop catalogue --------------------------------------------------------
+const ShopColor SHOP_COLORS[SHOP_COLOR_N] = {
+  {rgb(255, 210, 60),  20, "Gold"},
+  {rgb(255, 120, 180), 15, "Pink"},
+  {rgb(80, 220, 200),  15, "Teal"},
+  {rgb(180, 120, 245), 25, "Purple"},
+  {rgb(120, 230, 120), 20, "Lime"},
+  {rgb(255, 90, 90),   30, "Crimson"},
+};
+const ShopEmoji SHOP_EMOJIS[SHOP_EMOJI_N] = {
+  {1, 15, "Heart"}, {2, 15, "Star"}, {3, 40, "Crown"},
+  {4, 25, "Bolt"},  {5, 20, "Smile"}, {6, 30, "Cool"},
+};
+
+void drawEmoji(LGFX& g, uint8_t id, int cx, int cy, int s) {
+  int h = s / 2; if (h < 3) h = 3;
+  switch (id) {
+    case 1:  // heart
+      g.fillCircle(cx - h / 2, cy - h / 4, h / 2, rgb(232, 72, 96));
+      g.fillCircle(cx + h / 2, cy - h / 4, h / 2, rgb(232, 72, 96));
+      g.fillTriangle(cx - h, cy - h / 6, cx + h, cy - h / 6, cx, cy + h, rgb(232, 72, 96));
+      break;
+    case 2:  // star
+      for (int a = 0; a < 360; a += 72) {
+        float r1 = a * 3.14159f / 180.f, r2 = (a + 36) * 3.14159f / 180.f;
+        g.fillTriangle(cx, cy, cx + h * cosf(r1), cy + h * sinf(r1),
+                       cx + (h / 2) * cosf(r2), cy + (h / 2) * sinf(r2), rgb(255, 210, 60));
+      }
+      break;
+    case 3:  // crown
+      g.fillTriangle(cx - h, cy + h, cx - h, cy - h, cx - h / 2, cy, rgb(255, 210, 60));
+      g.fillTriangle(cx + h, cy + h, cx + h, cy - h, cx + h / 2, cy, rgb(255, 210, 60));
+      g.fillTriangle(cx, cy - h, cx - h / 2, cy + h, cx + h / 2, cy + h, rgb(255, 210, 60));
+      g.fillRect(cx - h, cy + h - 1, 2 * h, 2, rgb(255, 210, 60));
+      break;
+    case 4:  // bolt
+      g.fillTriangle(cx + 1, cy - h, cx - h / 2, cy + 1, cx + 1, cy + 1, rgb(255, 230, 80));
+      g.fillTriangle(cx - 1, cy + h, cx + h / 2, cy - 1, cx - 1, cy - 1, rgb(255, 230, 80));
+      break;
+    case 5:  // smile
+      g.fillCircle(cx, cy, h, rgb(255, 210, 60));
+      g.fillCircle(cx - h / 3, cy - h / 4, h / 6 + 1, ui::C_BG);
+      g.fillCircle(cx + h / 3, cy - h / 4, h / 6 + 1, ui::C_BG);
+      g.drawFastHLine(cx - h / 3, cy + h / 3, 2 * h / 3, ui::C_BG);
+      break;
+    case 6:  // cool (sunglasses)
+      g.fillCircle(cx, cy, h, rgb(255, 210, 60));
+      g.fillRect(cx - h, cy - h / 4, 2 * h, h / 3, ui::C_BG);
+      g.drawFastHLine(cx - h / 3, cy + h / 3, 2 * h / 3, ui::C_BG);
+      break;
+  }
+}
+
 const uint16_t PIXEL_PALETTE[PALETTE_N] = {
   0,                       // 0 = empty (sentinel, never drawn)
   rgb(232, 72, 72),        // red
@@ -51,18 +104,17 @@ void drawCustomSprite(LGFX& g, int cx, int cy, int tile, const uint8_t* pix) {
   }
 }
 
-void drawCharacter(LGFX& g, int cx, int cy, int tile, int avatar, gb::Facing facing) {
-  const RosterEntry& e = roster(avatar);
+static void drawRobot(LGFX& g, int cx, int cy, int tile, uint16_t bodyColor, gb::Facing facing) {
   int s = tile * 0.66f; if (s < 10) s = 10;
   int half = s / 2;
   int ax = cx - half, ay = cy - half;
   int rad = s / 6; if (rad < 2) rad = 2;
   // antenna
   int antH = s / 4;
-  g.drawFastVLine(cx, ay - antH, antH, e.bodyColor);
+  g.drawFastVLine(cx, ay - antH, antH, bodyColor);
   g.fillCircle(cx, ay - antH, (s / 12) > 1 ? s / 12 : 2, ui::C_ACCENT);
   // robot head (rounded square)
-  g.fillRoundRect(ax, ay, s, s, rad, e.bodyColor);
+  g.fillRoundRect(ax, ay, s, s, rad, bodyColor);
   g.drawRoundRect(ax, ay, s, s, rad, ui::C_BG);
   // a darker "visor" band with two glowing eyes
   int vy = cy - s / 8, vh = s / 3;
@@ -79,6 +131,14 @@ void drawCharacter(LGFX& g, int cx, int cy, int tile, int avatar, gb::Facing fac
   uint16_t nose = ui::C_ACCENT;
   if (dc != 0) g.fillTriangle(nx, ny - 4, nx, ny + 4, nx + dc * 5, ny, nose);
   else         g.fillTriangle(nx - 4, ny, nx + 4, ny, nx, ny + dr * 5, nose);
+}
+
+void drawCharacter(LGFX& g, int cx, int cy, int tile, int avatar, gb::Facing facing) {
+  drawRobot(g, cx, cy, tile, roster(avatar).bodyColor, facing);
+}
+
+void drawCharacterTinted(LGFX& g, int cx, int cy, int tile, uint16_t bodyColor, gb::Facing facing) {
+  drawRobot(g, cx, cy, tile, bodyColor, facing);
 }
 
 void drawGoalToken(LGFX& g, int cx, int cy, int tile, int avatar) {

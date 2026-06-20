@@ -7,9 +7,10 @@ using namespace gb;
 
 namespace screens {
 
-static const Rect R_BACK = {6, (int16_t)(BOTBAR_Y + 2), 92, 26};
-static const Rect R_EDIT = {102, (int16_t)(BOTBAR_Y + 2), 104, 26};
-static const Rect R_DRAW = {210, (int16_t)(BOTBAR_Y + 2), 104, 26};
+static const Rect R_BACK = {6,   (int16_t)(BOTBAR_Y + 2), 64, 26};
+static const Rect R_EDIT = {74,  (int16_t)(BOTBAR_Y + 2), 72, 26};
+static const Rect R_DRAW = {150, (int16_t)(BOTBAR_Y + 2), 72, 26};
+static const Rect R_SHOP = {226, (int16_t)(BOTBAR_Y + 2), 88, 26};
 static const Rect R_DEL  = {262, 2, 54, 18};                 // small, top-right
 static const Rect R_CANCEL = {30, 150, 120, 34};
 static const Rect R_CONF   = {170, 150, 120, 34};
@@ -90,9 +91,10 @@ void StatsScreen::draw() {
     }
   }
 
-  button(g, R_BACK, "< Back", C_INK, C_PANEL);
-  button(g, R_EDIT, "Edit name", C_ACCENT, C_PANEL);
-  button(g, R_DRAW, "Draw sprite", C_FUNC, C_PANEL);
+  button(g, R_BACK, "Back", C_INK, C_PANEL);
+  button(g, R_EDIT, "Edit", C_ACCENT, C_PANEL);
+  button(g, R_DRAW, "Draw", C_FUNC, C_PANEL);
+  button(g, R_SHOP, "Shop", ui::rgb(255, 210, 60), C_PANEL);
   button(g, R_DEL, "delete", C_BAD, C_PANEL);  // small; guarded by 2 confirmations
   if (_confirm > 0) drawConfirm();
 }
@@ -113,6 +115,7 @@ app::Signal StatsScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   if (R_BACK.contains(tx, ty)) return app::Signal::BACK;
   if (R_EDIT.contains(tx, ty)) return app::Signal::EDIT_PROFILE;
   if (R_DRAW.contains(tx, ty)) return app::Signal::GOTO_DRAW;
+  if (R_SHOP.contains(tx, ty)) return app::Signal::GOTO_SHOP;
   if (R_DEL.contains(tx, ty)) { _confirm = 1; drawConfirm(); }
   // tapping the "Badges N/13 >" header opens the gallery
   if (tx >= 158 && tx < 256 && ty < 22) return app::Signal::GOTO_BADGES;

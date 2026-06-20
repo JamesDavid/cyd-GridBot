@@ -105,5 +105,28 @@ bool solveMaze(const Maze& m, bool allowJump, Program& out) {
   return true;
 }
 
+int distanceToGoal(const Maze& m, int r0, int c0) {
+  const int R = m.rows(), C = m.cols();
+  if (R <= 0 || C <= 0 || !m.inBounds(r0, c0)) return -1;
+  static int16_t dist[MAZE_MAX_CELLS];
+  static int16_t queue[MAZE_MAX_CELLS];
+  for (int i = 0; i < R * C; i++) dist[i] = -1;
+  int head = 0, tail = 0;
+  dist[r0 * C + c0] = 0;
+  queue[tail++] = r0 * C + c0;
+  const int dR[4] = {-1, 1, 0, 0}, dC[4] = {0, 0, -1, 1};
+  while (head < tail) {
+    int cur = queue[head++], r = cur / C, c = cur % C;
+    if (m.isGoal(r, c)) return dist[cur];
+    for (int k = 0; k < 4; k++) {
+      int nr = r + dR[k], nc = c + dC[k];
+      if (!m.inBounds(nr, nc) || !m.isWalkable(nr, nc)) continue;
+      int ni = nr * C + nc;
+      if (dist[ni] < 0) { dist[ni] = dist[cur] + 1; queue[tail++] = ni; }
+    }
+  }
+  return -1;  // goal unreachable from here (e.g. cut off)
+}
+
 }  // namespace gb
 
