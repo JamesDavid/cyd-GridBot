@@ -1,9 +1,17 @@
 # NeuroBot — teaching ML inside GridBot (design spec)
 
-> Status: **design, build starting on the `neurobot` branch.** GridBot teaches imperative
+> Status: **IMPLEMENTED on the `neurobot` branch** (2026-06-19). GridBot teaches imperative
 > programming; NeuroBot is a late-game **graduation unlock** that teaches machine learning
-> on the same CYD hardware, reusing the maze, editor, Arena, ESP-NOW trade, and
-> determinism. Captured/maintained 2026-06-19.
+> on the same CYD hardware, reusing the maze, editor, Arena, ESP-NOW trade, and determinism.
+>
+> **Shipped:** egocentric sensors (`game/Sensors`), the `N_NEURO` AST node + interpreter
+> execution, four ML engines — `game/Perceptron`, `game/Net` (MLP+backprop), `game/QLearn`
+> (tabular Q), `game/Evolve` (neuroevolution) — the **NeuroLab** hub with 5 lessons (one
+> neuron / multi-class / hidden-layer-XOR / Q-learning / evolution), the **NEURO block** in
+> the editor + its **training interface** (evolve a brain, "Use it"), brain **serialization**
+> (persists + trades with the program), and **Arena battle** integration. 63 host tests pass.
+> Remaining/optional: demonstration & distillation trainers, policy gradients (an advanced
+> peek), the data/sorting prerequisite layer, and on-two-boards radio verification.
 
 ## One-line framing
 **GridBot = *you write the rules*. NeuroBot = *you grow / train the rules*.**
