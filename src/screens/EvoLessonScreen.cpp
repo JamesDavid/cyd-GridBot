@@ -1,5 +1,6 @@
 #include "screens/EvoLessonScreen.h"
 #include "hal/Audio.h"
+#include "assets/Assets.h"
 #include "game/MazeGen.h"
 #include "game/Program.h"
 #include "game/Interpreter.h"
@@ -66,7 +67,7 @@ void EvoLessonScreen::draw() {
       uint16_t col = ((r + c) & 1) ? C_FLOOR : C_FLOOR2;
       if (t == WALL) col = C_WALL; else if (t == PIT) col = C_BG;
       g.fillRect(x, y, tile - 1, tile - 1, col);
-      if (_maze.isGoal(r, c)) g.fillCircle(x + tile / 2, y + tile / 2, tile / 3, C_ACCENT);
+      if (_maze.isGoal(r, c)) assets::drawGoalToken(g, x + tile / 2, y + tile / 2, tile, 0);
     }
   // the best brain's path
   for (int i = 0; i < _pathLen; i++) {

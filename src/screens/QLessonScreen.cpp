@@ -1,5 +1,6 @@
 #include "screens/QLessonScreen.h"
 #include "hal/Audio.h"
+#include "assets/Assets.h"
 #include "game/MazeGen.h"
 
 using namespace ui;
@@ -54,7 +55,7 @@ void QLessonScreen::draw() {
       else col = valColor(_q.maxQ(r, c));         // value heatmap
       g.fillRect(x, y, tile - 1, tile - 1, col);
       if (_maze.isGoal(r, c)) {
-        g.fillCircle(x + tile / 2, y + tile / 2, tile / 3, C_ACCENT);
+        assets::drawGoalToken(g, x + tile / 2, y + tile / 2, tile, 0);
       } else if (t != WALL && t != PIT && _q.maxQ(r, c) > 0.01f) {
         // policy arrow: best move learned for this cell (0=N,1=E,2=S,3=W)
         int a = _q.bestAction(r, c), cx = x + tile / 2, cy = y + tile / 2, s = tile / 4;

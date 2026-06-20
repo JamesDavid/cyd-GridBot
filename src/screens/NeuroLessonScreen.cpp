@@ -95,8 +95,13 @@ void NeuroLessonScreen::draw() {
     }
     g.fillCircle(WX, WY, 15, C_MOVE); label(g, WX, WY, "wall", C_BG, textdatum_t::middle_center);
     g.fillCircle(PX, PY, 15, C_PANEL_HI); label(g, PX, PY, "pit", C_INK, textdatum_t::middle_center);
-    g.fillCircle(OX, OY, 17, C_LOOP); label(g, OX, OY, "out", C_BG, textdatum_t::middle_center);
-    label(g, 8, 150, "1 neuron -> 1 output", C_DIM);
+    g.fillCircle(OX, OY, 17, C_LOOP); label(g, OX, OY - 4, "out", C_BG, textdatum_t::middle_center);
+    // the actual weights + bias as numbers, so you watch them change each Train
+    char w0[8], w1[8], bb[10];
+    snprintf(w0, sizeof(w0), "%+.2f", _p.w[0]); label(g, 62, 56, w0, _p.w[0] >= 0 ? C_GO : C_BAD);
+    snprintf(w1, sizeof(w1), "%+.2f", _p.w[1]); label(g, 62, 116, w1, _p.w[1] >= 0 ? C_GO : C_BAD);
+    snprintf(bb, sizeof(bb), "b%+.2f", _p.b); label(g, OX, OY + 7, bb, C_BG, textdatum_t::middle_center);
+    label(g, 8, 150, "weights & bias update as it learns", C_DIM);
   } else {
     // 2 inputs -> hidden row -> outputs (a layered blob — "more neurons")
     g.fillCircle(30, 70, 12, C_MOVE); label(g, 30, 70, "wall", C_BG, textdatum_t::middle_center);
