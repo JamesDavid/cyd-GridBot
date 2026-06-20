@@ -111,6 +111,7 @@ void ArenaScreen::drawHandoff() {
 
 // ---- match ----------------------------------------------------------------
 void ArenaScreen::startMatch() {
+  hal::audio.stopMusic();  // the board uses step-tick SFX; silence the battle theme
   MazeGen::generateArena(_maze, _profile ? _profile->seedBase + 7u : 7u, _s0, _s1);
   // Smart bots build their program from the actual board (navigate the maze).
   if (_cands[_pick0].smart) solveMazeFrom(_maze, _s0, true, _cands[_pick0].prog);

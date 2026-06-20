@@ -41,5 +41,7 @@ extern Audio audio;
 // Shared melodies (defined in Audio.cpp).
 extern const Note kTitleMusic[];
 extern const int kTitleMusicLen;
+extern const Note kArenaMusic[];
+extern const int kArenaMusicLen;
 
 }  // namespace hal

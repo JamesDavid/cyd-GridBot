@@ -224,8 +224,9 @@ void App::tick(uint32_t now) {
       int x, y;
       if (_introTap.tapped(tp, now, x, y)) {
         if (_profile.unlocks.sense && _arenaBtn.contains(x, y)) {
-          hal::audio.stopMusic();
           _arena.begin(&_profile); _arena.enter(); _state = State::ARENA;
+          if (hal::audio.enabled())  // battle theme on the arena menus
+            hal::audio.startMusic(hal::kArenaMusic, hal::kArenaMusicLen, true);
         } else {
           gotoGame();
         }
@@ -300,6 +301,7 @@ void App::tick(uint32_t now) {
         // an arena win may have earned the Champion badge
         _profile.achievements |= gb::evaluateAchievements(_profile);
         saveProfile();
+        hal::audio.stopMusic();  // drop the battle theme so the intro restarts its own
         gotoIntro(_profile.level);
       }
       else if (s == Signal::GOTO_RADIO) {

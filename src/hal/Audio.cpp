@@ -15,6 +15,15 @@ const Note kTitleMusic[] = {
 };
 const int kTitleMusicLen = sizeof(kTitleMusic) / sizeof(kTitleMusic[0]);
 
+// A driving minor-key battle riff that loops on the Arena / Puzzle Race menus.
+const Note kArenaMusic[] = {
+  {440, 130}, {523, 130}, {440, 130}, {659, 200}, {0, 70},
+  {440, 130}, {523, 130}, {587, 130}, {523, 240}, {0, 90},
+  {392, 130}, {494, 130}, {392, 130}, {587, 200}, {0, 70},
+  {440, 130}, {523, 130}, {659, 160}, {880, 280}, {0, 160},
+};
+const int kArenaMusicLen = sizeof(kArenaMusic) / sizeof(kArenaMusic[0]);
+
 void Audio::begin() {
   ledcSetup(SPK_CH, 2000, 8);
   ledcAttachPin(SPK_PIN, SPK_CH);

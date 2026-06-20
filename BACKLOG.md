@@ -24,7 +24,8 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
       are a rarer bonus on a detour off it (see Campaign polish).
 - [x] **Music**: non-blocking chiptune menu theme (loops on select/intro) + a win
       fanfare + a badge chime; SFX briefly override and the melody resumes, **plus an
-      in-game mute toggle** on the home screen. (Future: per-screen tracks.)
+      in-game mute toggle** on the home screen **and a distinct minor-key battle theme on
+      the Arena / Puzzle Race menus** (stops cleanly before a match's step-tick SFX).
 
 ## Campaign polish (deferred niceties)
 - [x] Brick-red walls + void (background-colour) pits so hazards read clearly.
