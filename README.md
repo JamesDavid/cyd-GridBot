@@ -13,6 +13,7 @@ unlock as they go.
 > ### ⚡ [**Flash it from your browser →**](https://jamesdavid.github.io/cyd-GridBot/)
 > Got a CYD? Plug it in and install GridBot straight from Chrome/Edge — no clone, no
 > toolchain. (Powered by ESP Web Tools; see the [flasher page](docs/index.html).)
+> **Need the board?** [Grab a CYD (ESP32-2432S028R) on Amazon](https://a.co/d/05H98aWQ) (~$10–15).
 
 ---
 
@@ -160,7 +161,7 @@ hook, and the whole difficulty curve is designed to lead there.
 ## Get one running
 
 GridBot runs on the **CYD (Cheap Yellow Display, ESP32-2432S028R)** — a ~$10–15
-touchscreen. Short version:
+touchscreen ([grab one on Amazon](https://a.co/d/05H98aWQ)). Short version:
 
 ```bash
 git clone <this repo> && cd cyd-GridBot

@@ -20,6 +20,7 @@ with build-flag toggles in `platformio.ini` (`CYD_PANEL_RGB_ORDER`, `DISPLAY_DEF
 ## Bill of materials
 
 - **1 × ESP32-2432S028R "Cheap Yellow Display"** (~$10–15; search "CYD ESP32 2.8 inch").
+  One that works: [CYD on Amazon](https://a.co/d/05H98aWQ).
 - **1 × USB cable** (micro-USB or USB-C depending on your board revision) for flashing.
 - That's it. Optional: a second CYD for radio battle/trade.
 
