@@ -17,8 +17,9 @@ enum Cmd : uint8_t { CMD_FWD, CMD_BACK, CMD_TURN_L, CMD_TURN_R, CMD_JUMP,
 // Conditions for IF / REPEAT_UNTIL (SPEC §8.1). ENEMY_* are arena-only (§18.3).
 enum Cond : uint8_t { WALL_AHEAD, PIT_AHEAD, AT_GOAL, ENEMY_AHEAD, ENEMY_NEAR };
 
-// AST node kinds (SPEC §5.4).
-enum NodeType : uint8_t { N_CMD, N_REPEAT, N_REPEAT_UNTIL, N_IF, N_CALL };
+// AST node kinds (SPEC §5.4). N_NEURO (NeuroBot) runs a trained brain: it senses, picks
+// an action via argmax, and executes it — a learned reactive policy embedded in code.
+enum NodeType : uint8_t { N_CMD, N_REPEAT, N_REPEAT_UNTIL, N_IF, N_CALL, N_NEURO };
 
 // step() outcome (SPEC §8.3).
 enum Outcome : uint8_t { OUT_OK, OUT_WIN, OUT_BONK, OUT_FELL, OUT_DONE_NO_WIN };

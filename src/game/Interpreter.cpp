@@ -1,7 +1,12 @@
 #include "game/Interpreter.h"
 #include "core/Util.h"
+#include "game/Sensors.h"
+#include "game/Net.h"
 
 namespace gb {
+
+// Brain output index -> primitive command (the 5-action set; zap is arena-only).
+static const Cmd kBrainAction[5] = {CMD_FWD, CMD_TURN_L, CMD_TURN_R, CMD_JUMP, CMD_FIRE};
 
 void Interpreter::load(const Program* prog, const Maze* maze, const Pose& start,
                        int stepCap) {
@@ -149,6 +154,19 @@ Outcome Interpreter::step() {
         const NodeList* body = (f == 1) ? &_prog->f1 : &_prog->f2;
         if (!body->empty()) push(F_SEQ, body);
         continue;
+      }
+      case N_NEURO: {
+        // a learned reactive policy: sense -> brain -> argmax -> one action
+        fr.ip++;
+        if (++_prim > _stepCap) { finish(OUT_DONE_NO_WIN); return OUT_DONE_NO_WIN; }
+        _current = &n;
+        if (!_prog || n.brainIdx >= _prog->brains.size()) return OUT_OK;  // untrained: no-op
+        float s[SENSOR_COUNT];
+        senseEgo(*_maze, _pose, _enemy, s);
+        int act = _prog->brains[n.brainIdx].argmax(s);
+        Outcome o = execCmd(kBrainAction[act]);
+        if (o != OUT_OK) { finish(o); return o; }
+        return OUT_OK;  // exactly one primitive executed
       }
     }
   }

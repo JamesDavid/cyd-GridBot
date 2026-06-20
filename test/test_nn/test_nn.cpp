@@ -6,6 +6,9 @@
 #include <unity.h>
 #include "game/Perceptron.h"
 #include "game/Net.h"
+#include "game/Maze.h"
+#include "game/Program.h"
+#include "game/Interpreter.h"
 
 using namespace gb;
 
@@ -96,6 +99,38 @@ void test_net_reset_deterministic() {
     for (int i = 0; i < 3; i++) TEST_ASSERT_EQUAL_FLOAT(a.w1[j][i], b.w1[j][i]);
 }
 
+// A NEURO node runs its brain inside a real program: "REPEAT_UNTIL at_goal { NEURO }".
+// Force the brain to always pick action 0 (forward) and it should walk a corridor home.
+void test_neuro_node_drives_robot() {
+  Program prog;
+  uint8_t idx = prog.addBrain(1);
+  Net& b = prog.brains[idx];
+  for (int k = 0; k < 5; k++) {                    // force argmax -> forward
+    for (int j = 0; j < b.nHid; j++) b.w2[k][j] = 0.0f;
+    b.b2[k] = (k == 0) ? 6.0f : -6.0f;
+  }
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(Node::neuro(idx));
+  prog.main.push_back(loop);
+
+  Maze m; m.reset(5, 5); m.fill(FLOOR);
+  Pose s; s.row = 2; s.col = 0; s.facing = EAST;
+  m.setStart(s); m.set(2, 0, START); m.setGoal(2, 4);
+
+  Interpreter it; it.load(&prog, &m, m.startPose());
+  TEST_ASSERT_EQUAL((int)OUT_WIN, (int)it.runToEnd());  // brain drove it to the battery
+  TEST_ASSERT_TRUE(it.pose().col == 4 && it.pose().row == 2);
+}
+
+// The brain travels with the program when copied (value semantics, no shared state).
+void test_brain_copies_with_program() {
+  Program a; uint8_t idx = a.addBrain(5);
+  a.brains[idx].b2[0] = 3.14f;
+  Program b = a;                       // copy
+  a.brains[idx].b2[0] = -1.0f;         // mutate the original
+  TEST_ASSERT_EQUAL_FLOAT(3.14f, b.brains[idx].b2[0]);  // copy is independent
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_learns_turn_if_wall);
@@ -105,5 +140,7 @@ int main(int, char**) {
   RUN_TEST(test_net_learns_xor);
   RUN_TEST(test_net_multiclass_go_turn_jump);
   RUN_TEST(test_net_reset_deterministic);
+  RUN_TEST(test_neuro_node_drives_robot);
+  RUN_TEST(test_brain_copies_with_program);
   return UNITY_END();
 }
