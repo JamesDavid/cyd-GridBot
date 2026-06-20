@@ -82,8 +82,7 @@ void App::drawIntro() {
   gb::Unlocks now = gb::computeUnlocks(_introLevel);
   gb::Unlocks prev = gb::computeUnlocks(_introLevel ? _introLevel - 1 : 0);
   const char* newText = nullptr;
-  if (now.backward && !prev.backward) newText = "New: Backward!";
-  else if (now.jump && !prev.jump) newText = "New: Jump!";
+  if (now.jump && !prev.jump) newText = "New: Jump!";
   else if (now.repeat && !prev.repeat) newText = "New: Repeat loops!";
   else if (now.func && !prev.func) newText = "New: Functions!";
   else if (now.sense && !prev.sense) newText = "New: Sensing!";

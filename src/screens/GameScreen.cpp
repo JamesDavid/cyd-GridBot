@@ -35,7 +35,6 @@ static inline Rect repCycleRect(int y) { return {(int16_t)(LIST_X + LIST_W - 92)
 static inline Rect condRect(int y)     { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 80, (int16_t)(ROW_H - 2)}; }
 static const Rect R_PAUSE = {238, 0, 82, 22};   // big back button in the status bar
 static const Rect R_TOGGLE = {6, (int16_t)(BOTBAR_Y + 2), 156, 26};  // right edge aligns with the RUN/pad above
-static const Rect R_BRAIN  = {(int16_t)(LIST_X + LIST_W - 58), (int16_t)(BAND_Y + 1), 54, 17};  // +brain (neuro)
 static const Rect R_RUNBAR = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
 static const Rect R_STEP = {6, (int16_t)(BOTBAR_Y + 2), 150, 26};
 static const Rect R_RESET = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
@@ -333,11 +332,15 @@ void GameScreen::drawControlPad() {
     drawGlyph(g, locked ? Glyph::LOCK : gl, r.cx(), r.cy(), 22,
               locked ? C_DIM : col);
   };
-  bool bw = _profile && _profile->unlocks.backward;
   cell(0, 1, Glyph::ARROW_UP, C_MOVE, false);          // FORWARD
   cell(1, 0, Glyph::TURN_L, C_TURN, false);            // TURN LEFT
   cell(1, 2, Glyph::TURN_R, C_TURN, false);            // TURN RIGHT
-  cell(2, 1, Glyph::ARROW_DOWN, C_MOVE, !bw);          // BACKWARD (locked < Tier1.5)
+  // The old BACKWARD slot (bottom-centre) is now the NeuroBot brain slot once unlocked;
+  // backward is gone (write a cleaner program instead). Empty until NeuroBot unlocks.
+  if (_profile && _profile->unlocks.neuro)
+    button(g, padCell(2, 1), "+brain", ui::rgb(120, 230, 245), C_PANEL);
+  else
+    panel(g, padCell(2, 1), C_PANEL);
   // centre avatar — faces the maze's START orientation so the kid can reason about
   // "forward" before running.
   Rect ctr = padCell(1, 1);
@@ -386,8 +389,9 @@ void GameScreen::flatten(NodeList& list, int depth, std::vector<Row>& out, uint1
       // global "+ add here" cover everything outside, so no separate "+ add outside").
       out.push_back({&nd, &nd.body, -1, depth + 1, br, true});
     } else if (nd.type == N_NEURO) {
-      // a "train this brain" line directly under the brain node
-      out.push_back({&nd, &list, -1, depth + 1, ui::rgb(120, 230, 245), false, true});
+      // a "train this brain" line directly under the brain node, at the SAME indent
+      // (part of the brain block, not nested deeper)
+      out.push_back({&nd, &list, -1, depth, bracket, false, true});
     }
   }
   // a general "+ add here" at the end of the top level (node = null marks it)
@@ -476,8 +480,6 @@ void GameScreen::drawProgramList() {
   _writtenCount = programWrittenCount(_prog);
   snprintf(hdr, sizeof(hdr), "%s  %d/%d", body, _writtenCount, _par);
   label(g, LIST_X + 6, BAND_Y + 5, hdr, C_INK);
-  if (_profile && _profile->unlocks.neuro)  // NeuroBot: add a trainable brain block
-    button(g, R_BRAIN, "+brain", ui::rgb(120, 230, 245), C_PANEL);
 
   std::vector<Row> rows;
   flatten(*_editList, 0, rows);
@@ -633,8 +635,13 @@ void GameScreen::handlePadTap(int x, int y) {
   if (padCell(0, 1).contains(x, y)) { appendCommand(CMD_FWD); return; }
   if (padCell(1, 0).contains(x, y)) { appendCommand(CMD_TURN_L); return; }
   if (padCell(1, 2).contains(x, y)) { appendCommand(CMD_TURN_R); return; }
-  if (padCell(2, 1).contains(x, y)) {
-    if (_profile && _profile->unlocks.backward) appendCommand(CMD_BACK);
+  if (padCell(2, 1).contains(x, y)) {  // the brain slot (was backward)
+    if (_profile && _profile->unlocks.neuro) {
+      uint8_t idx = _prog.addBrain(_profile->seedBase + (uint32_t)_prog.brains.size() * 101u + 1u);
+      gb::Node loop = gb::Node::repeatUntil(gb::AT_GOAL);
+      loop.body.push_back(gb::Node::neuro(idx));
+      appendNodeToTarget(loop);
+    }
     return;
   }
   // corner growth slots
@@ -651,15 +658,6 @@ void GameScreen::handlePadTap(int x, int y) {
 }
 
 void GameScreen::handleListTap(int x, int y) {
-  // NeuroBot: add a fresh trainable brain, already wrapped in "repeat until at goal { }"
-  // so it actually drives the whole maze (a lone brain makes only ONE move).
-  if (_profile && _profile->unlocks.neuro && R_BRAIN.contains(x, y)) {
-    uint8_t idx = _prog.addBrain(_profile->seedBase + (uint32_t)_prog.brains.size() * 101u + 1u);
-    gb::Node loop = gb::Node::repeatUntil(gb::AT_GOAL);
-    loop.body.push_back(gb::Node::neuro(idx));
-    appendNodeToTarget(loop);
-    return;
-  }
   // function-body tabs + library Save/Load
   if (_profile && _profile->unlocks.func) {
     NodeList* lists[3] = {&_prog.main, &_prog.f1, &_prog.f2};
