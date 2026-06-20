@@ -26,12 +26,15 @@ static const Rect R_CLEAR  = {6, 179, 48, 30};
 static const Rect R_DELPAD = {58, 179, 46, 30};    // delete selected line
 static const Rect R_RUNPAD = {108, 179, 54, 30};   // RUN sits with CLEAR/DEL
 static constexpr int LIST_X = 166, LIST_W = 320 - 166;
-static const Rect R_RMINUS = {246, 24, 18, 16};   // repeat count -
-static const Rect R_RPLUS  = {268, 24, 18, 16};   // repeat count +
-static const Rect R_COND   = {244, 24, 46, 16};   // sense condition cycle
 static constexpr int ROW_Y0 = BAND_Y + 22, ROW_H = 24;
+// Block controls live INLINE on the selected row (kept left of the scrollbar zone and
+// well away from the top-right HOME button, which they used to sit under).
+// One BIG button per block control (the old +/- were too small to tap): the repeat
+// button cycles the count 2->3->4->5->2; the cond button cycles the sense condition.
+static inline Rect repCycleRect(int y) { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 80, (int16_t)(ROW_H - 2)}; }
+static inline Rect condRect(int y)     { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 80, (int16_t)(ROW_H - 2)}; }
 static const Rect R_PAUSE = {238, 0, 82, 22};   // big back button in the status bar
-static const Rect R_TOGGLE = {6, (int16_t)(BOTBAR_Y + 2), 150, 26};
+static const Rect R_TOGGLE = {6, (int16_t)(BOTBAR_Y + 2), 156, 26};  // right edge aligns with the RUN/pad above
 static const Rect R_RUNBAR = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
 static const Rect R_STEP = {6, (int16_t)(BOTBAR_Y + 2), 150, 26};
 static const Rect R_RESET = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
@@ -351,7 +354,11 @@ void GameScreen::drawControlPad() {
     cell(ci[s], cj[s], cg[s], cc[s], !cornerUnlocked(s));
   // CLEAR / DEL / RUN under the pad
   button(g, R_CLEAR, "CLR", C_BAD, C_PANEL);
-  bool canDel = (_selected >= 0);
+  bool canDel = false;
+  if (_selected >= 0) {
+    std::vector<Row> rows; flatten(*_editList, 0, rows);
+    canDel = (_selected < (int)rows.size() && !rows[_selected].addSlot);
+  }
   button(g, R_DELPAD, "DEL", canDel ? C_BAD : C_DIM, C_PANEL);
   button(g, R_RUNPAD, "RUN", C_GO, C_PANEL);
 }
@@ -368,10 +375,19 @@ static uint16_t bracketColorFor(const Node& n) {
 
 void GameScreen::flatten(NodeList& list, int depth, std::vector<Row>& out, uint16_t bracket) {
   for (size_t i = 0; i < list.size(); i++) {
-    out.push_back({&list[i], &list, (int)i, depth, bracket});
-    if (!list[i].body.empty())
-      flatten(list[i].body, depth + 1, out, bracketColorFor(list[i]));
+    Node& nd = list[i];
+    out.push_back({&nd, &list, (int)i, depth, bracket, false});
+    bool block = (nd.type == N_REPEAT || nd.type == N_IF || nd.type == N_REPEAT_UNTIL);
+    if (block) {
+      uint16_t br = bracketColorFor(nd);
+      if (!nd.body.empty()) flatten(nd.body, depth + 1, out, br);
+      // a slot to add INSIDE the block (the parent block's own "+ add inside" + the
+      // global "+ add here" cover everything outside, so no separate "+ add outside").
+      out.push_back({&nd, &nd.body, -1, depth + 1, br, true});
+    }
   }
+  // a general "+ add here" at the end of the top level (node = null marks it)
+  if (depth == 0) out.push_back({nullptr, &list, -1, 0, 0, true});
 }
 
 int GameScreen::listTop() const {
@@ -393,7 +409,12 @@ NodeList* GameScreen::appendTarget() {
     std::vector<Row> rows;
     flatten(*_editList, 0, rows);
     if (_selected < (int)rows.size()) {
-      Node* n = rows[_selected].node;
+      Row& r = rows[_selected];
+      if (r.addSlot) {  // an add-slot: inside -> block body; outside/here -> target list
+        if (r.node && r.list == &r.node->body) return &r.node->body;
+        return r.list;
+      }
+      Node* n = r.node;
       if (n->type == N_REPEAT || n->type == N_IF || n->type == N_REPEAT_UNTIL)
         return &n->body;
     }
@@ -456,16 +477,23 @@ void GameScreen::drawProgramList() {
   int n = (int)rows.size();
   if (_selected >= n) _selected = -1;
 
-  // header controls for the selected row
-  if (_selected >= 0) {
-    Node* sn = rows[_selected].node;
-    if (sn->type == N_REPEAT) {
-      button(g, R_RMINUS, "-", C_LOOP, C_PANEL_HI);
-      button(g, R_RPLUS, "+", C_LOOP, C_PANEL_HI);
-    } else if (sn->type == N_IF || sn->type == N_REPEAT_UNTIL) {
-      button(g, R_COND, condName(sn->cond), C_SENSE, C_PANEL_HI);  // tap to cycle
+  // Hierarchical line numbers: top level 1,2,3; items nested in a block are 1a,1b,1c
+  // (so it's obvious which steps live inside which loop).
+  std::vector<std::string> rownum(n);
+  {
+    int ctr[8] = {0};
+    std::string seg[8];
+    for (int i = 0; i < n; i++) {
+      if (rows[i].addSlot) continue;  // the "+ add inside" slot has no number
+      int d = rows[i].depth; if (d > 7) d = 7;
+      ctr[d]++;
+      for (int k = d + 1; k < 8; k++) ctr[k] = 0;
+      if (d == 0) seg[0] = std::to_string(ctr[0]);
+      else        seg[d] = std::string(1, (char)('a' + (ctr[d] - 1) % 26));
+      std::string lbl;
+      for (int k = 0; k <= d; k++) lbl += seg[k];
+      rownum[i] = lbl;
     }
-    // (delete is the big DEL button under the pad)
   }
 
   // MAIN | F1 | F2 | Save | Load once functions/library unlock (SPEC §10, §11.1)
@@ -511,8 +539,6 @@ void GameScreen::drawProgramList() {
     } else if (sel) {
       g.fillRoundRect(LIST_X + 2, y, LIST_W - 4, ROW_H - 2, 4, C_PANEL_HI);
     }
-    char num[6]; snprintf(num, sizeof(num), "%d", ri + 1);
-    label(g, LIST_X + 4, y + 6, num, C_DIM);
     // E-bracket for nested rows (SPEC §10)
     if (row.depth > 0) {
       int bx = LIST_X + 22 + (row.depth - 1) * 12;
@@ -520,10 +546,32 @@ void GameScreen::drawProgramList() {
       g.drawFastHLine(bx, y + ROW_H / 2, 4, row.bracket);
     }
     int gx = LIST_X + 24 + row.depth * 12;
+
+    if (row.addSlot) {
+      // clear "where will my next step go?" affordances
+      const char* txt = !row.node ? (sel ? "+ adding here"   : "+ add here")
+                                  : (sel ? "+ adding inside" : "+ add inside");
+      label(g, gx + 4, y + 6, txt, sel ? C_GO : C_DIM);
+      continue;
+    }
+
+    label(g, LIST_X + 2, y + 6, rownum[ri].c_str(), C_DIM);
     char lab[20]; Glyph gl = Glyph::PLAY; uint16_t col = C_INK;
     nodeLabel(*row.node, lab, sizeof(lab), gl, col);
     drawGlyph(g, gl, gx + 7, y + ROW_H / 2 - 1, 12, col);
-    label(g, gx + 18, y + 6, lab, C_INK);
+
+    // A selected block shows its editor INLINE (big, mid-pane, away from HOME):
+    //   repeat -> [-] N [+] ;  if/until -> the condition cycle button.
+    Node* nd = row.node;
+    if (sel && nd->type == N_REPEAT) {
+      char rl[14]; snprintf(rl, sizeof(rl), "repeat %d", nd->count);
+      button(g, repCycleRect(y), rl, C_LOOP, C_PANEL_HI);  // one big tap: cycles 2-5
+    } else if (sel && (nd->type == N_IF || nd->type == N_REPEAT_UNTIL)) {
+      label(g, gx + 18, y + 6, nd->type == N_IF ? "if" : "until", C_SENSE);
+      button(g, condRect(y), condName(nd->cond), C_SENSE, C_PANEL_HI);
+    } else {
+      label(g, gx + 18, y + 6, lab, C_INK);
+    }
   }
   if (n == 0)
     label(g, LIST_X + 8, top + 8, "tap pad to add", C_DIM);
@@ -536,8 +584,9 @@ void GameScreen::drawBottomBar() {
     button(g, R_STEP, "STEP", C_INK, C_PANEL);
     button(g, R_RESET, "RESET", C_INK, C_PANEL);
   } else if (_view == V_CODE) {
-    // only the VIEW toggle on the left; the program pane owns the right side
-    g.fillRect(0, BOTBAR_Y, LIST_X - 2, BOTBAR_H, C_BG);
+    // only the VIEW toggle on the left; the program pane owns the right side. Clear
+    // right up to the pane edge so no stale button pixel (e.g. the old RUN) pokes out.
+    g.fillRect(0, BOTBAR_Y, LIST_X, BOTBAR_H, C_BG);
     button(g, R_TOGGLE, "VIEW: Maze", C_ACCENT, C_PANEL);
   } else {
     g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
@@ -589,25 +638,6 @@ void GameScreen::handlePadTap(int x, int y) {
 }
 
 void GameScreen::handleListTap(int x, int y) {
-  // selected-row header controls
-  if (_selected >= 0) {
-    std::vector<Row> rows;
-    flatten(*_editList, 0, rows);
-    if (_selected < (int)rows.size()) {
-      Node* sn = rows[_selected].node;
-      if (sn->type == N_REPEAT) {
-        if (R_RMINUS.contains(x, y)) { if (sn->count > 2) sn->count--; hal::audio.blip(); drawProgramList(); return; }
-        if (R_RPLUS.contains(x, y))  { if (sn->count < 5) sn->count++; hal::audio.blip(); drawProgramList(); return; }
-      } else if (sn->type == N_IF || sn->type == N_REPEAT_UNTIL) {
-        if (R_COND.contains(x, y)) {
-          // cycle WALL_AHEAD -> PIT_AHEAD -> AT_GOAL
-          sn->cond = (sn->cond == WALL_AHEAD) ? PIT_AHEAD
-                   : (sn->cond == PIT_AHEAD) ? AT_GOAL : WALL_AHEAD;
-          hal::audio.blip(); drawProgramList(); return;
-        }
-      }
-    }
-  }
   // function-body tabs + library Save/Load
   if (_profile && _profile->unlocks.func) {
     NodeList* lists[3] = {&_prog.main, &_prog.f1, &_prog.f2};
@@ -641,7 +671,24 @@ void GameScreen::handleListTap(int x, int y) {
     int yy = top + vi * ROW_H;
     if (y >= yy && y < yy + ROW_H) {
       int ri = _scroll + vi;
-      if (ri < n) { _selected = (ri == _selected) ? -1 : ri; _followTail = false; hal::audio.blip(); }
+      if (ri >= n) { drawProgramList(); return; }
+      // inline controls on the currently-selected block row (big, mid-pane)
+      if (ri == _selected && !rows[ri].addSlot) {
+        Node* sn = rows[ri].node;
+        if (sn->type == N_REPEAT) {
+          if (repCycleRect(yy).contains(x, y)) {  // one big button cycles 2->3->4->5->2
+            sn->count = (sn->count >= 5) ? 2 : sn->count + 1;
+            hal::audio.blip(); drawProgramList(); return;
+          }
+        } else if (sn->type == N_IF || sn->type == N_REPEAT_UNTIL) {
+          if (condRect(yy).contains(x, y)) {
+            sn->cond = (sn->cond == WALL_AHEAD) ? PIT_AHEAD
+                     : (sn->cond == PIT_AHEAD) ? AT_GOAL : WALL_AHEAD;
+            hal::audio.blip(); drawProgramList(); return;
+          }
+        }
+      }
+      _selected = (ri == _selected) ? -1 : ri; _followTail = false; hal::audio.blip();
       drawProgramList();
       drawControlPad();  // refresh DEL enabled state
       return;
@@ -654,6 +701,7 @@ void GameScreen::deleteSelected() {
   flatten(*_editList, 0, rows);
   if (_selected < 0 || _selected >= (int)rows.size()) return;
   Row& r = rows[_selected];
+  if (r.addSlot) return;  // the "+ add inside" slot isn't a real node
   r.list->erase(r.list->begin() + r.index);
   _selected = -1;
   _failNode = nullptr;  // the node pointer is now invalid; clear the fail highlight
