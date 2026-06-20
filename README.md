@@ -64,7 +64,7 @@ hook, and the whole difficulty curve is designed to lead there.
 
 | ![Code view](docs/img/code-view.png) |
 |:--|
-| **The Code view.** Your robot sits in the middle of its own d-pad: tap **↑ forward**, **↺/↻ turn**, **↓ backward**. The four corners are *growth slots* that fill in as you unlock powers — here all four are lit: **Jump**, **Repeat**, **Call F1**, and **Sense**. Tap to add commands to the program list on the right (it scrolls — no limit). **CLR / DEL / RUN** sit under the pad. The centre robot faces the maze's real start direction so you can reason about "forward" before you run. |
+| **The Code view.** Your robot sits in the middle of its own d-pad: tap **↑ forward** and **↺/↻ turn**. The four corners are *growth slots* that fill in as you unlock powers — here all four are lit: **Jump**, **Repeat**, **Call F1**, and **Sense** — and the bottom-centre slot becomes a **`+brain`** button once NeuroBot unlocks. Tap to add commands to the program list on the right (it scrolls — no limit). **CLR / DEL / RUN** sit under the pad. The centre robot faces the maze's real start direction so you can reason about "forward" before you run. |
 
 | ![A built program](docs/img/code-program.png) |
 |:--|
@@ -128,11 +128,11 @@ hook, and the whole difficulty curve is designed to lead there.
 
 | ![Arena menu](docs/img/arena-menu.png) |
 |:--|
-| **Arena** (unlocks after the sensing tier). Pick a match type — **Race** (first to the goal) or **Sumo** (shove your opponent into a pit) — and an opponent: the built-in AI, **Hotseat** for two kids on one device, or **Radio** for two CYDs. |
+| **Arena** (unlocks after the sensing tier). **Opponent first, then game.** Pick who you're playing — **vs Computer**, **Hotseat** (two kids, one device), or **Radio** (two CYDs) — then the game: Computer offers **Race** / **Sumo** / **Train a fighter**; Hotseat adds **Puzzle Race** and **Seed Challenge**. In **Sumo** you win by lining up on your rival and **`zap`**-ping them into a pit or off the board. |
 
 | ![Pick an opponent](docs/img/arena-pick.png) |
 |:--|
-| **Battle-bots with personalities.** Face off against **Rusty** ("charges blindly"), **Bolt** ("fast & straight"), **Vex** ("hunts & shoves"), or **Ace** ("solves the maze" — a real navigator that plots a path through the board on the fly). Any program you save to your **library** in the campaign joins this roster as your own fighter. |
+| **Battle-bots with personalities.** Face off against **Rusty** ("charges blindly"), **Bolt** ("fast & straight"), **Vex** ("hunts & zaps"), **Ace** ("solves the maze" — a real navigator), or the pre-trained NeuroBots **Neura** ("a trained brain") and **Cortex** ("an evolved brain"). The roster **scrolls**, and any program you save to your **library** — including bots **traded over the radio** — joins it as a fighter you can battle *or* train against. |
 
 | ![Arena match](docs/img/arena.gif) |
 |:--|
@@ -144,7 +144,7 @@ hook, and the whole difficulty curve is designed to lead there.
 
 | ![Puzzle Race](docs/img/puzzle-race.png) |
 |:--|
-| **Puzzle Race — same maze, beat the clock.** A code-authoring contest instead of a live battle: both players see the *same* maze and get **45 seconds** to write a program for it (hotseat — Player 1 locks in, then passes the device). When the dust settles, each robot runs and is scored by how close it gets to the goal — **whoever ends up nearest wins** (reach it outright for the cleanest win). A tense little "can you out-code your friend?" mode that rewards thinking under pressure. |
+| **Puzzle Race — same maze, beat the clock.** You're not driving, you're **programming**: it uses the **exact same block editor** as the campaign (control pad, loops, `if`s, functions, nested blocks) plus a **"see the maze"** peek. Both players get the *same* board and **90 seconds** to write a program (hotseat — Player 1 locks in, then passes the device). Each robot then runs and is scored by how close it gets to the goal — **nearest wins** (reach it outright for the cleanest win). "Can you out-*code* your friend?" |
 
 | ![Puzzle Race result](docs/img/puzzle-race-result.png) |
 |:--|
@@ -162,7 +162,7 @@ hook, and the whole difficulty curve is designed to lead there.
 
 | ![A CodeLab lesson](docs/img/codelab-lesson.png) |
 |:--|
-| **Each lesson is a tiny *runnable* demo.** A one-line explanation, a small maze, and a pre-built program that uses the block. Tap **Run** and watch the robot solve it — so you *see* exactly what `repeat 5`, a `call F1`, or a `jump` actually does, with a friendly **"solved it!"** at the end. |
+| **Each lesson is a tiny *runnable* demo.** A one-line explanation, a small maze, and a pre-built program — rendered in the **same block style as the real editor** (matching glyphs, colours, and nested brackets, so there's no "different look" to relearn). Tap **Run** and watch the robot solve it — so you *see* exactly what `repeat 5`, a `call F1`, or a nested `if wall` actually does, with a friendly **"solved it!"** at the end. |
 
 ### NeuroBot — stop *writing* the rules, start *training* them
 
@@ -172,11 +172,19 @@ hook, and the whole difficulty curve is designed to lead there.
 
 | ![NeuroLab](docs/img/neurolab-hub.png) |
 |:--|
-| **NeuroLab** — a lesson for each way machines actually learn, each small enough to *watch*. |
+| **NeuroLab** — eight lessons, each small enough to *watch*: one neuron, many actions, a hidden layer, **your robot's brain** (a tour of its real senses), Q-learning, evolution, **transfer learning**, and **Brain Cam**. |
 
 | ![Watch a neuron learn](docs/img/neuro-neuron.gif) |
 |:--|
-| **Backprop** — a neuron guesses, sees how wrong it is, and nudges its weights. Tap *Train* and watch the error fall and every example flip ✗→ok. (Then: multi-class go/turn/jump, and a hidden layer to crack **XOR** — what one neuron provably can't.) |
+| **Backprop** — a neuron guesses, sees how wrong it is, and nudges its weights. Each of the **4 situations** is spelled out in words (`WALL pit → TURN`), so you can see *why* it trains toward go/turn/turn/turn: any wall **or** pit → turn. Tap *Train* and watch the error fall and every example flip ✗→ok. |
+
+| ![Learning XOR with a hidden layer](docs/img/neuro-xor.png) |
+|:--|
+| **Why a hidden layer?** The same screen has an **XOR** mode — the classic problem a single neuron *provably* cannot learn (the two classes aren't linearly separable). Add a hidden layer and watch the error finally collapse to zero: a hands-on proof of *why* deeper networks exist. |
+
+| ![Meet your robot's brain](docs/img/robot-brain.png) |
+|:--|
+| **Meet your robot's brain.** A three-page tour of the *actual* NeuroBot brain — **10 senses** (walls, pit, and the *direction & distance* to the goal and to an enemy), **8 hidden neurons**, **5 actions** (forward / turn L / turn R / jump / **zap**). The punchline: it's **one brain for every job** — the same `10 → 8 → 5` network solves mazes *and* fights in the Arena (`zap` simply does nothing outside a battle), which is exactly why a maze brain can be **transfer-learned** into a fighter. |
 
 | ![Q-learning value spreads](docs/img/neuro-qlearning.gif) |
 |:--|
@@ -192,11 +200,21 @@ hook, and the whole difficulty curve is designed to lead there.
 
 | ![Train the brain](docs/img/neuro-train.png) |
 |:--|
-| **The neuro interface.** Open it from the **`train brain >`** line under a brain block. **Teach** it (distil the optimal solver into the brain by backprop — reliable) or **Evolve** it (no teacher, just a score), watch its path solve the maze, then **Use it**. The trained brain saves *with* your program — so it persists and **trades & battles over the radio** like any other bot. |
+| **The neuro interface — with transfer learning.** Open it from the **`train brain >`** line under a brain block. **Teach** it (distil the optimal solver by backprop — reliable) or **Evolve** it, watch its path solve the maze, then **Use it**. Pick a **base** to fine-tune from — start fresh or **load a saved brain** and build on what it already knows — and **save a copy as an incremented version** (`Brain v1 → v2 → …`), so you can grow a *lineage*. The trained brain saves *with* your program, so it persists and **trades & battles over the radio**. |
 
-| ![Train a fighter vs AI](docs/img/neuro-arena.gif) |
+| ![Transfer learning](docs/img/neuro-transfer.png) |
 |:--|
-| **Train a fighter for the Arena.** A **"Train a fighter vs AI"** mode off the Arena menu: **Evolve** (or **Teach**) a brain to **beat an AI opponent on a real arena board** — fitness comes from *winning actual matches*, not just reaching the goal. Watch its path form against the red AI's start, generation by generation. **Save** it to your library and it shows up as a pickable Arena fighter, ready to battle a friend's bot over the radio. So kids can *prep their bots for battle*. |
+| **Transfer learning, as its own lesson.** A NeuroLab lesson shows the idea directly: train a brain on maze A, then **carry it over to a new maze B** — it starts far ahead of a random brain and only needs a little fine-tuning. The same trick the editor's **base** picker uses, and why a maze brain can graduate into an Arena fighter. |
+
+| ![Brain Cam](docs/img/brain-cam.png) |
+|:--|
+| **Brain Cam — watch a trained brain *think*.** Step a distilled brain through a maze and see it live: which of the **10 inputs** light up (**SEES**), the **hidden layer** firing (**THINKS**), and the **5 outputs** with the winner ringed (**DOES**) — plus a *"decides: turnR"* verdict. The clearest answer to "what is the network actually doing?" |
+
+| ![Train a fighter for the Arena](docs/img/neuro-arena-train.png) |
+|:--|
+| **Train a fighter for the Arena.** A **"Train a fighter"** mode off the Computer branch of the Arena menu: **Evolve** or **Teach** a brain to **win real arena matches** (fitness = *winning*, not just reaching the goal). A **"spar vs"** chip cycles your sparring partner through the whole roster — house bots **and** your library, including bots **traded over the radio** — so you can train against code *or* neuro opponents. **Save** it and it joins your Arena roster, ready to battle a friend. |
+
+**The ML ideas a kid actually meets here** — not as jargon, but as things you *do* and *watch*: a single neuron and **gradient-descent backprop**; **multi-class** outputs (argmax picks the action); why a **hidden layer** is needed (it cracks **XOR**, which one neuron provably can't); **reinforcement learning** (tabular Q, reward shaping, explore-vs-exploit); **neuroevolution** (fitness, selection, breeding); **imitation learning / distillation** (copy an expert solver); **transfer learning & fine-tuning** (reuse a brain on a new task); a **shared feature representation** (one `10 → 8 → 5` network for two jobs); and **generalization** (a brain trained on one maze that flails on another is *over-fit* — the step counter makes it visible as the run marches to the cap). Natural next topics the same engine could host: regularization, batching, and a tiny recurrent/memory cell.
 
 ---
 
