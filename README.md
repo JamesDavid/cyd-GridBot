@@ -88,7 +88,7 @@ once you can *write* the rules, GridBot teaches you to *grow* them with a neural
 
 | ![Level intro](docs/img/level-intro.png) |
 |:--|
-| **A title card per level.** Each level opens with a quick card — its number, its **biome** name, and a banner for anything **newly unlocked** ("New: Sensing!") or any **badge** you just earned. Past the sensing tier, an **ARENA** button appears here too. |
+| **A title card per level.** Each level opens with a quick card — its number, its **biome** name, and a banner for anything **newly unlocked** (here, *"New: Sensing + NeuroBot!"* — the level-22 graduation that opens both the sensing tier *and* the whole machine-learning mode) or any **badge** you just earned. Past the sensing tier, an **ARENA** button appears here too. |
 
 | ![The full toolset](docs/img/tiers.png) |
 |:--|

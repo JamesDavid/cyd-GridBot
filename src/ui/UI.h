@@ -37,7 +37,7 @@ inline void label(LGFX& g, int x, int y, const char* s, uint16_t fg,
 // A glyph (small vector icon) centred in a rect — used on the control pad so the
 // art set stays tiny and scalable.
 enum class Glyph : uint8_t { ARROW_UP, ARROW_DOWN, TURN_L, TURN_R, JUMP, LOCK,
-                             PLAY, REPEAT, CALL, SENSE, PUSH, FIRE };
+                             PLAY, REPEAT, CALL, SENSE };
 
 void drawGlyph(LGFX& g, Glyph gl, int cx, int cy, int size, uint16_t color);
 

@@ -130,7 +130,7 @@ inline void runAll() {
     check(a1.logHash() == a2.logHash(), "arena_deterministic");
   }
 
-  // Sumo determinism (PUSH verb) under ESP32 types.
+  // Sumo determinism (zap / FIRE verb) under ESP32 types.
   {
     gb::Program a = gb::hunterProgram(), b = gb::hunterProgram();
     gb::Maze m; gb::Pose s0, s1;

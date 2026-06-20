@@ -1,7 +1,7 @@
 // GridBot — Arena match engine (SPEC §18). N=2 interpreter contexts over one shared
 // Maze, advanced one primitive per tick, then a resolution pass. Fully deterministic
-// (NO RNG during play, SPEC §18.1) so matches replay byte-identically. Race first;
-// Sumo/Zap (PUSH/FIRE verbs) layer on later via a match-type module.
+// (NO RNG during play, SPEC §18.1) so matches replay byte-identically. Two match
+// types: Race (first to the goal) and Sumo (zap a rival into a pit / off the board).
 #pragma once
 #include "game/Maze.h"
 #include "game/Program.h"

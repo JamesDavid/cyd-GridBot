@@ -39,7 +39,7 @@ class Interpreter {
   // The node whose command was last executed — for highlighting a failing step.
   const Node* currentNode() const { return _current; }
   // The actual primitive run by the last step() — incl. the action a NEURO brain
-  // chose. The arena reads this to resolve PUSH/FIRE (a brain's node is N_NEURO, so
+  // chose. The arena reads this to resolve a FIRE/"zap" shove (a brain's node is N_NEURO, so
   // inspecting currentNode() can't see the move it picked). CMD_FWD when none ran.
   Cmd lastCmd() const { return _lastCmd; }
 

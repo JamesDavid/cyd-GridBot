@@ -61,14 +61,6 @@ void drawGlyph(LGFX& g, Glyph gl, int cx, int cy, int s, uint16_t color) {
       g.drawCircle(cx, cy, h - 1, color);
       g.fillCircle(cx, cy, 2, color);
       break;
-    case Glyph::PUSH:
-      g.fillRect(cx - h, cy - 3, s, 6, color);
-      g.fillTriangle(cx + h, cy - 7, cx + h, cy + 7, cx + h + 6, cy, color);
-      break;
-    case Glyph::FIRE:
-      g.fillCircle(cx, cy, 3, color);
-      g.fillRect(cx, cy - 1, s, 3, color);
-      break;
   }
 }
 
