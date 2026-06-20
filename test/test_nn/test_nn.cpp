@@ -7,8 +7,11 @@
 #include "game/Perceptron.h"
 #include "game/Net.h"
 #include "game/Maze.h"
+#include "game/MazeGen.h"
 #include "game/Program.h"
 #include "game/Interpreter.h"
+#include "game/Distill.h"
+#include "game/Score.h"
 
 using namespace gb;
 
@@ -131,8 +134,26 @@ void test_brain_copies_with_program() {
   TEST_ASSERT_EQUAL_FLOAT(3.14f, b.brains[idx].b2[0]);  // copy is independent
 }
 
+// Distillation (the primary trainer): the brain learns to imitate the BFS solver by
+// backprop, then navigates the maze itself.
+void test_distill_brain_navigates() {
+  Maze m; MazeGen::generate(m, 5, 5);
+  Net brain; brain.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
+  TEST_ASSERT_TRUE(distillSolver(brain, m, false, 500));
+
+  Program prog; prog.brains.push_back(brain);
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(Node::neuro(0));
+  prog.main.push_back(loop);
+  Interpreter it; it.load(&prog, &m, m.startPose(), 500);
+  Outcome o = it.runToEnd();
+  int endDist = distanceToGoal(m, it.pose().row, it.pose().col);
+  TEST_ASSERT_TRUE(o == OUT_WIN || endDist <= 1);  // imitates the solver -> reaches (near) goal
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
+  RUN_TEST(test_distill_brain_navigates);
   RUN_TEST(test_learns_turn_if_wall);
   RUN_TEST(test_learns_or);
   RUN_TEST(test_xor_is_unlearnable_by_one_neuron);

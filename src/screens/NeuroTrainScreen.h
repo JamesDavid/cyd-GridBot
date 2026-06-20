@@ -25,6 +25,8 @@ class NeuroTrainScreen : public app::IScreen {
   int _idx = 0;
   gb::Maze* _maze = nullptr;
   gb::Evolve _evo;
+  gb::Net _brain;         // the working brain (set by Teach=distill or Evolve)
+  bool _taught = false;
   uint8_t _path[64];
   int _pathLen = 0;
   bool _won = false, _saved = false;

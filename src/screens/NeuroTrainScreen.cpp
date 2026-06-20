@@ -1,15 +1,17 @@
 #include "screens/NeuroTrainScreen.h"
 #include "hal/Audio.h"
 #include "game/Interpreter.h"
+#include "game/Distill.h"
 
 using namespace ui;
 using namespace gb;
 
 namespace screens {
 
-static const Rect R_TRAIN = {6,   (int16_t)(BOTBAR_Y + 2), 120, 26};
-static const Rect R_USE   = {132, (int16_t)(BOTBAR_Y + 2), 110, 26};
-static const Rect R_BACK  = {248, (int16_t)(BOTBAR_Y + 2), 66, 26};
+static const Rect R_TEACH = {6,   (int16_t)(BOTBAR_Y + 2), 72, 26};
+static const Rect R_TRAIN = {82,  (int16_t)(BOTBAR_Y + 2), 80, 26};
+static const Rect R_USE   = {166, (int16_t)(BOTBAR_Y + 2), 80, 26};
+static const Rect R_BACK  = {250, (int16_t)(BOTBAR_Y + 2), 64, 26};
 
 void NeuroTrainScreen::begin(Program* prog, int brainIdx, Maze* maze) {
   _prog = prog; _idx = brainIdx; _maze = maze;
@@ -17,14 +19,15 @@ void NeuroTrainScreen::begin(Program* prog, int brainIdx, Maze* maze) {
   // seed the population with the block's current brain so re-training improves it
   if (prog && brainIdx < (int)prog->brains.size()) _evo.pop[0] = prog->brains[brainIdx];
   _evo.evaluate(*_maze, nullptr, 110);
-  _saved = false;
+  _brain = _evo.best();
+  _taught = false; _saved = false;
   tracePath();
 }
 
 void NeuroTrainScreen::enter() { draw(); }
 
 void NeuroTrainScreen::tracePath() {
-  Program prog; prog.brains.push_back(_evo.best());
+  Program prog; prog.brains.push_back(_brain);
   Node loop = Node::repeatUntil(AT_GOAL);
   loop.body.push_back(Node::neuro(0));
   prog.main.push_back(loop);
@@ -52,7 +55,9 @@ void NeuroTrainScreen::draw() {
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Train the brain", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
-  char hd[28]; snprintf(hd, sizeof(hd), "gen %d  %s", _evo.gen, _won ? "solves!" : "...");
+  char hd[28];
+  if (_taught) snprintf(hd, sizeof(hd), "taught  %s", _won ? "solves!" : "...");
+  else snprintf(hd, sizeof(hd), "gen %d  %s", _evo.gen, _won ? "solves!" : "...");
   label(g, SCREEN_W - 6, 6, hd, _won ? C_GO : C_DIM, textdatum_t::top_right);
 
   int tile, ox, oy; mazeGeom(tile, ox, oy);
@@ -72,7 +77,8 @@ void NeuroTrainScreen::draw() {
   }
 
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
-  button(g, R_TRAIN, "Train x5", C_GO, C_PANEL);
+  button(g, R_TEACH, "Teach", C_GO, C_PANEL);       // distill the solver (reliable)
+  button(g, R_TRAIN, "Evolve", C_FUNC, C_PANEL);    // neuroevolution (no teacher)
   button(g, R_USE, _saved ? "saved!" : "Use it", _saved ? C_DIM : ui::rgb(120, 230, 245), C_PANEL);
   button(g, R_BACK, "Back", C_INK, C_PANEL);
 }
@@ -80,12 +86,16 @@ void NeuroTrainScreen::draw() {
 app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
-  if (R_TRAIN.contains(tx, ty)) {
+  if (R_TEACH.contains(tx, ty)) {  // distill the optimal solver into the brain (reliable)
+    distillSolver(_brain, *_maze, true, 700);
+    _taught = true; _saved = false;
+    tracePath(); hal::audio.blip(); draw();
+  } else if (R_TRAIN.contains(tx, ty)) {
     for (int gg = 0; gg < 5; gg++) { _evo.breed(); _evo.evaluate(*_maze, nullptr, 110); }
-    _saved = false;
+    _brain = _evo.best(); _taught = false; _saved = false;
     tracePath(); hal::audio.blip(); draw();
   } else if (R_USE.contains(tx, ty)) {
-    if (_prog && _idx < (int)_prog->brains.size()) _prog->brains[_idx] = _evo.best();
+    if (_prog && _idx < (int)_prog->brains.size()) _prog->brains[_idx] = _brain;
     _saved = true; hal::audio.badge(); draw();
   } else if (R_BACK.contains(tx, ty)) {
     return app::Signal::BACK;
