@@ -9,8 +9,9 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
       Artist, Star Collector. Sticky bitmask in the profile, count on the stats
       header, celebrated on the level-intro when earned, **+ a badges gallery screen
       with icons** (reachable from Stats).
-- [x] **Juice**: smooth tile-to-tile tween, breadcrumb trail, win celebration, and a
-      character shake on bonk. (Future: particle burst + star fly-in on win.)
+- [x] **Juice**: smooth tile-to-tile tween, breadcrumb trail, character shake on bonk,
+      and a win celebration with a **multicolour confetti burst + animated star fly-in**
+      (each earned star pops into the YOU WIN overlay over dim placeholders).
 - [x] **Character emotes**: happy face on win, dizzy/✖-eyes on bonk. (Future: pit splash.)
 - [ ] **Drag-to-reorder** program lines; an **Undo** button for edits.
 - [x] **Level biomes/themes**: floor/wall palette varies per level band (Meadow,

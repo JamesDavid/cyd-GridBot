@@ -211,8 +211,6 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
   bots correctly draw).
 - ESP-NOW radio battle/trade is built but **hardware-pending** — it needs two physical
   boards to verify end-to-end.
-- Richer juice (particle burst + star fly-in on win) is still planned, though the core
-  is in: smooth tile-to-tile tween, breadcrumb trail, win celebration, and bonk shake.
 - The on-screen mini-map and fog levels are reserved but not built.
 
 ---
@@ -222,7 +220,8 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
 **Recently shipped:** ✅ **Puzzle Race** (shared-maze, beat-the-clock coding contest) ·
 ✅ **smarter arena bots** ("Ace" navigates the board) so Races are more often decisive ·
 ✅ **coin & gem collectibles + a sprite-colour & emoji shop** · ✅ a **chiptune menu theme** +
-win fanfare + badge chime · ✅ smooth movement tween · ✅ five **level biomes** ·
+win fanfare + badge chime · ✅ smooth movement tween + a **win celebration** (confetti
+& star fly-in) · ✅ five **level biomes** ·
 ✅ a 13-badge **achievements gallery** · ✅ **breadcrumb trails** · ✅ Sumo (PUSH) ·
 ✅ a one-click **online flasher**.
 

@@ -234,18 +234,24 @@ void GameScreen::winCelebration() {
   int tile, ox, oy; mazeGeometry(tile, ox, oy);
   int cx = ox + _it.pose().col * tile + tile / 2;
   int cy = oy + _it.pose().row * tile + tile / 2;
-  const uint16_t cols[3] = {C_ACCENT, C_GO, C_MOVE};
+  const uint16_t cols[4] = {C_ACCENT, C_GO, C_MOVE, C_FUNC};
   for (int f = 0; f < 5; f++) {
     int rad = 6 + f * 7;
-    for (int a = 0; a < 360; a += 45) {
+    // alternate the spoke angle each frame so the burst shimmers rather than pulses
+    for (int a = (f & 1) ? 22 : 0; a < 360; a += 45) {
       float rr = a * 3.14159f / 180.f;
       int sx = cx + (int)(rad * cosf(rr)), sy = cy + (int)(rad * sinf(rr));
-      g.fillCircle(sx, sy, 2, cols[f % 3]);
+      g.fillCircle(sx, sy, 2, cols[(f + a / 45) % 4]);
     }
     drawCharacterPx(cx, cy - (f % 2 ? 2 : 0), _it.pose().facing, 1);  // happy bounce
+    if (f >= 2) assets::drawEmoji(g, 2, cx, cy - 14 - f, 8);          // a star rises up
     delay(45);
     if (f < 4) { drawCell(_it.pose().row, _it.pose().col); }
   }
+  // clear the rising-star trail above the robot, then settle the character
+  drawCell(_it.pose().row, _it.pose().col);
+  if (_it.pose().row > 0) drawCell(_it.pose().row - 1, _it.pose().col);
+  drawCharacterAt(_it.pose());
 }
 
 void GameScreen::drawMazeView(bool peek) {
@@ -783,9 +789,23 @@ void GameScreen::settleOutcome(Outcome o) {
     g.fillRoundRect(x, yy, w, h, 10, C_PANEL);
     g.drawRoundRect(x, yy, w, h, 10, C_GO);
     label(g, SCREEN_W / 2, yy + 20, "YOU WIN!", C_GO, textdatum_t::middle_center, 2);
+    // star rating: dim placeholders for all three, then pop each earned star in
+    int sy = yy + 44;
+    for (int i = 0; i < 3; i++) {
+      int sx = SCREEN_W / 2 + (i - 1) * 30;
+      g.fillCircle(sx, sy, 12, C_PANEL);
+      g.drawCircle(sx, sy, 8, C_LOCK);  // empty slot
+    }
+    for (int i = 0; i < _stars; i++) {
+      int sx = SCREEN_W / 2 + (i - 1) * 30;
+      const int sizes[3] = {10, 24, 19};  // grow -> overshoot -> settle (a little pop)
+      for (int f = 0; f < 3; f++) {
+        g.fillCircle(sx, sy, 13, C_PANEL);
+        assets::drawEmoji(g, 2, sx, sy, sizes[f]);  // gold 5-point star
+        delay(55);
+      }
+    }
     char st[28];
-    snprintf(st, sizeof(st), "%d star%s", _stars, _stars == 1 ? "" : "s");
-    label(g, SCREEN_W / 2, yy + 44, st, C_ACCENT, textdatum_t::middle_center);
     int totalCoins = _coinsThisRun + gemCoins, ly = yy + 60;
     if (totalCoins > 0) {
       snprintf(st, sizeof(st), "+%d coins!", totalCoins);
