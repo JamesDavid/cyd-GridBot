@@ -56,9 +56,13 @@ int shortestSolutionLen(const Maze& m, bool allowJump) {
   return -1;  // unreachable (generation should prevent this)
 }
 
+bool solveMaze(const Maze& m, bool allowJump, Program& out) {
+  return solveMazeFrom(m, m.startPose(), allowJump, out);
+}
+
 // BFS that records each state's predecessor + the action taken, then reconstructs
 // the command list. Mirrors shortestSolutionLen's transitions.
-bool solveMaze(const Maze& m, bool allowJump, Program& out) {
+bool solveMazeFrom(const Maze& m, const Pose& startPose, bool allowJump, Program& out) {
   out.clear();
   const int R = m.rows(), C = m.cols();
   if (R <= 0 || C <= 0) return false;
@@ -70,7 +74,7 @@ bool solveMaze(const Maze& m, bool allowJump, Program& out) {
   for (int i = 0; i < N; i++) { dist[i] = -1; prev[i] = -1; }
   auto idx = [&](int r, int c, int f) { return (r * C + c) * 4 + f; };
 
-  Pose s = m.startPose();
+  Pose s = startPose;
   int start = idx(s.row, s.col, s.facing);
   dist[start] = 0;
   int head = 0, tail = 0, goalState = -1;

@@ -6,6 +6,7 @@
 #include "game/Program.h"
 #include "game/Arena.h"
 #include "game/Bots.h"
+#include "game/Score.h"
 
 using namespace gb;
 
@@ -36,10 +37,12 @@ void test_arena_deterministic_log() {
 }
 
 void test_arena_match_plays_out() {
-  // A race must PLAY OUT over several ticks (watchable), not resolve instantly.
-  Program a = dashProgram(), b = dashProgram();
+  // Two navigators race to a photo-finish — it must PLAY OUT over several ticks.
   Maze m; Pose s0, s1;
   MazeGen::generateArena(m, 7, s0, s1);
+  Program a, b;
+  solveMazeFrom(m, s0, true, a);
+  solveMazeFrom(m, s1, true, b);
   Arena ar;
   ar.setup(&m, &a, &b, s0, s1, MatchType::RACE);
   ArenaOutcome o = ar.run();
@@ -48,11 +51,11 @@ void test_arena_match_plays_out() {
 }
 
 void test_arena_faster_bot_wins() {
-  // A dasher vs an idler (empty program): the dasher reaches the goal and wins.
-  Program fast = dashProgram();
-  Program idle;  // empty -> DONE_NO_WIN immediately
+  // A navigator vs an idler (empty program): the navigator reaches the goal and wins.
   Maze m; Pose s0, s1;
   MazeGen::generateArena(m, 11, s0, s1);
+  Program fast; solveMazeFrom(m, s0, true, fast);
+  Program idle;  // empty -> DONE_NO_WIN immediately
   Arena ar;
   ar.setup(&m, &fast, &idle, s0, s1, MatchType::RACE);
   ArenaOutcome o = ar.run();
@@ -123,9 +126,28 @@ void test_arena_board_in_bounds() {
   }
 }
 
+// A smart navigator (solved path) must beat a blind dasher on the arena board
+// (the dash wall makes the race decisive, not a draw).
+void test_arena_smart_beats_dasher() {
+  int decisive = 0;
+  for (uint32_t s = 1; s <= 20; s++) {
+    Maze m; Pose s0, s1;
+    MazeGen::generateArena(m, s, s0, s1);
+    Program smart, dumb = dashProgram();
+    if (!solveMazeFrom(m, s0, true, smart)) continue;  // s0 should be solvable
+    Arena ar;
+    ar.setup(&m, &smart, &dumb, s0, s1, MatchType::RACE);
+    ArenaOutcome o = ar.run();
+    if (o == ArenaOutcome::BOT0) decisive++;
+    TEST_ASSERT_NOT_EQUAL((int)ArenaOutcome::BOT1, (int)o);  // the dasher never wins
+  }
+  TEST_ASSERT_TRUE(decisive >= 12);  // the navigator wins most of the time
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_arena_board_in_bounds);
+  RUN_TEST(test_arena_smart_beats_dasher);
   RUN_TEST(test_arena_deterministic_log);
   RUN_TEST(test_arena_match_plays_out);
   RUN_TEST(test_arena_faster_bot_wins);

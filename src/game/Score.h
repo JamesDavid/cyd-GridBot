@@ -14,6 +14,8 @@ int shortestSolutionLen(const Maze& m, bool allowJump);
 // Reconstruct an actual shortest command sequence into out.main. Returns true if a
 // solution exists. Used to play levels (and by tests).
 bool solveMaze(const Maze& m, bool allowJump, Program& out);
+// Same, but starting from an arbitrary pose (used by the arena's smart AI bot).
+bool solveMazeFrom(const Maze& m, const Pose& start, bool allowJump, Program& out);
 
 // Walking distance (in tiles) from (r,c) to the goal over walkable cells, ignoring
 // facing; -1 if unreachable. Used to score Puzzle Race (closest-to-goal wins).

@@ -4,6 +4,7 @@
 #include "assets/Assets.h"
 #include "game/MazeGen.h"
 #include "game/Bots.h"
+#include "game/Score.h"
 
 using namespace ui;
 using namespace gb;
@@ -41,15 +42,16 @@ void ArenaScreen::buildCandidates() {
   // (Save>Lib) fights here. THIS is how you battle a custom program (SPEC §18.4).
   if (_profile) {
     for (auto& e : _profile->library) {
-      if (_cands.size() >= 4) break;
-      _cands.push_back({e.name, e.program, _profile->avatar, "your bot", false});
+      if (_cands.size() >= 3) break;
+      _cands.push_back({e.name, e.program, _profile->avatar, "your bot", false, false});
     }
   }
   // House battle-bots: themed names + characters to go up against.
-  _cands.push_back({"Rusty",  alwaysForwardProgram(), 5, "charges blindly", true});
-  _cands.push_back({"Bolt",   dashProgram(),          6, "fast & straight", true});
-  _cands.push_back({"Tank",   wallFollowerProgram(),  2, "hugs the walls",  true});
-  _cands.push_back({"Vex",    hunterProgram(),        7, "hunts & shoves",  true});
+  _cands.push_back({"Rusty", alwaysForwardProgram(), 5, "charges blindly", true, false});
+  _cands.push_back({"Bolt",  dashProgram(),          6, "fast & straight", true, false});
+  _cands.push_back({"Vex",   hunterProgram(),        7, "hunts & shoves",  true, false});
+  // Ace solves the board on the fly — a real navigator (program built at match start).
+  _cands.push_back({"Ace",   Program{},              3, "solves the maze", true, true});
 }
 
 int ArenaScreen::houseBotIndex(const char* name) const {
@@ -108,6 +110,9 @@ void ArenaScreen::drawHandoff() {
 // ---- match ----------------------------------------------------------------
 void ArenaScreen::startMatch() {
   MazeGen::generateArena(_maze, _profile ? _profile->seedBase + 7u : 7u, _s0, _s1);
+  // Smart bots build their program from the actual board (navigate the maze).
+  if (_cands[_pick0].smart) solveMazeFrom(_maze, _s0, true, _cands[_pick0].prog);
+  if (_cands[_pick1].smart) solveMazeFrom(_maze, _s1, true, _cands[_pick1].prog);
   const Program& p0 = _cands[_pick0].prog;
   const Program& p1 = _cands[_pick1].prog;
   _arena.setup(&_maze, &p0, &p1, _s0, _s1, _type);
@@ -234,8 +239,8 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
             // vs AI: a themed house bot DIFFERENT from the player's pick (so it's not
             // a symmetric instant-draw).
             int opp = (_type == MatchType::SUMO) ? houseBotIndex("Vex")
-                                                 : houseBotIndex("Bolt");
-            if (opp == _pick0) opp = houseBotIndex("Tank");
+                                                 : houseBotIndex("Ace");
+            if (opp == _pick0) opp = houseBotIndex("Bolt");
             _pick1 = (opp >= 0) ? opp : 0;
             startMatch();
           }

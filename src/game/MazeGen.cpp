@@ -185,24 +185,39 @@ void generateArena(Maze& out, uint32_t seed, Pose& s0, Pose& s1) {
   Rng rng(seed);
   out.reset(7, 9);                         // within MAZE_MAX (8x10); odd cols -> true centre
   int rows = out.rows(), cols = out.cols();  // use the ACTUAL (clamped) dimensions
-  out.fill(FLOOR);
   int rmid = rows / 2, cmid = cols / 2;
-
-  // Mirror symmetric pits/walls OFF the centre row for drama and so neither side is
-  // favoured (no RNG asymmetry). The centre row stays a clear lane to the goal.
-  int decos = 3 + (int)rng.below(3);
-  for (int k = 0; k < decos; k++) {
-    int rr = 1 + (int)rng.below(rows - 2);
-    int cc = 1 + (int)rng.below(cmid - 1);  // left half, off the start/goal columns
-    if (rr == rmid) continue;               // keep the mid lane clear
-    Tile t = rng.chance(55) ? WALL : PIT;
-    out.set(rr, cc, t);
-    out.set(rr, cols - 1 - cc, t);          // mirror to the right half
-  }
-
-  out.setGoal(rmid, cmid);
   s0.row = (int8_t)rmid; s0.col = 0;        s0.facing = EAST;
   s1.row = (int8_t)rmid; s1.col = (int8_t)(cols - 1); s1.facing = WEST;
+
+  // Build (and re-roll the decorations if they trap a bot) until both starts can
+  // reach the goal — so a navigator always has a route, but a blind dasher bonks on
+  // the mirrored wall in its lane.
+  for (int attempt = 0; attempt < 6; attempt++) {
+    out.fill(FLOOR);
+    // a wall on each bot's straight dash line -> dumb dashers bonk, navigators detour
+    out.set(rmid, 2, WALL);
+    out.set(rmid, cols - 3, WALL);
+    // mirrored decorations off the centre row (fair, deterministic)
+    int decos = 2 + (int)rng.below(3);
+    for (int k = 0; k < decos; k++) {
+      int rr = 1 + (int)rng.below(rows - 2);
+      int cc = 1 + (int)rng.below(cmid - 1);
+      if (rr == rmid) continue;
+      Tile t = rng.chance(55) ? WALL : PIT;
+      out.set(rr, cc, t);
+      out.set(rr, cols - 1 - cc, t);
+    }
+    out.setGoal(rmid, cmid);
+    out.set(s0.row, s0.col, START);
+    out.set(s1.row, s1.col, START);
+    if (distanceToGoal(out, s0.row, s0.col) >= 0 &&
+        distanceToGoal(out, s1.row, s1.col) >= 0)
+      return;  // both navigable
+  }
+  // fallback: just the two dash walls on an otherwise-open board (always solvable)
+  out.fill(FLOOR);
+  out.set(rmid, 2, WALL); out.set(rmid, cols - 3, WALL);
+  out.setGoal(rmid, cmid);
   out.set(s0.row, s0.col, START);
   out.set(s1.row, s1.col, START);
 }

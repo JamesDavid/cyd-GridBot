@@ -22,7 +22,7 @@ class ArenaScreen : public app::IScreen {
 
  private:
   enum class Phase : uint8_t { MENU, PICK1, HANDOFF, PICK2, BOARD, DONE };
-  struct Candidate { std::string name; gb::Program prog; uint8_t avatar; std::string style; bool house; };
+  struct Candidate { std::string name; gb::Program prog; uint8_t avatar; std::string style; bool house; bool smart; };
 
   void buildCandidates();
   void drawMenu();
