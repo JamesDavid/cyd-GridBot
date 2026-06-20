@@ -259,12 +259,17 @@ void GameScreen::drawCharacterAt(const Pose& p) {
 }
 
 // Redraw the static cells the tweening sprite passes over (so it leaves no trail).
+// The robot's antenna pokes ABOVE its tile and the facing-arrow nose pokes into the
+// NEXT tile, so we clear a one-cell margin around the from/to bounding box — otherwise
+// those yellow bits smear a trail along the path (antenna above, nose ahead).
 void GameScreen::redrawCellsBetween(const Pose& a, const Pose& b) {
-  int dr = (b.row > a.row) - (b.row < a.row);
-  int dc = (b.col > a.col) - (b.col < a.col);
-  int r = a.row, c = a.col;
-  drawCell(r, c);
-  while (r != b.row || c != b.col) { r += dr; c += dc; drawCell(r, c); }
+  int r0 = (a.row < b.row ? a.row : b.row) - 1;
+  int r1 = (a.row > b.row ? a.row : b.row) + 1;
+  int c0 = (a.col < b.col ? a.col : b.col) - 1;
+  int c1 = (a.col > b.col ? a.col : b.col) + 1;
+  for (int r = r0; r <= r1; r++)
+    for (int c = c0; c <= c1; c++)
+      if (_maze.inBounds(r, c)) drawCell(r, c);
 }
 
 void GameScreen::winCelebration() {
