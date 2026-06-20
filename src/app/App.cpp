@@ -242,7 +242,7 @@ void App::tick(uint32_t now) {
       Signal s = _game.tick(now, tp);
       if (s == Signal::GOTO_NEURO_TRAIN) {  // train a NEURO block's brain on this maze
         hal::audio.stopMusic();
-        _neuroTrain.begin(&_game.program(), _game.pendingNeuro(), &_game.maze());
+        _neuroTrain.begin(&_profile, &_game.program(), _game.pendingNeuro(), &_game.maze());
         _game.clearPendingNeuro();
         _neuroTrain.enter();
         _state = State::NEURO_TRAIN;
