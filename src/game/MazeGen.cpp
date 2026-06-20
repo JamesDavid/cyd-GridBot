@@ -191,6 +191,31 @@ void generate(Maze& out, uint32_t seedBase, int level) {
     if (d.rows > 3) out.set(1, s.col, COIN);
     return;
   }
+  if (level == 6) {
+    // Gentle JUMP intro (first level of the jump tier): a short corridor with one pit
+    // directly in the path -> forward, JUMP over it, forward. Isolates "pit ahead = jump"
+    // before levels 7-9 mix pits into full mazes. (Walk into the pit = a soft "you fell".)
+    out.reset(d.rows, 3);
+    out.fill(FLOOR);
+    Pose s; s.row = (int8_t)(d.rows - 1); s.col = 0; s.facing = NORTH;
+    out.setStart(s); out.set(s.row, s.col, START);
+    out.setGoal(0, 0);
+    out.set(s.row - 2, 0, PIT);            // two ahead -> a jump clears it
+    out.set(s.row - 1, 0, COIN);           // a coin right before the pit
+    return;
+  }
+  if (level == 10) {
+    // Gentle REPEAT intro (first level of the loop tier): a long straight corridor. You
+    // CAN win with a row of forwards, but "repeat N { forward }" is the short, 3-star way
+    // -> motivates loops without forcing them. Coins line the path.
+    out.reset(d.rows, 3);
+    out.fill(FLOOR);
+    Pose s; s.row = (int8_t)(d.rows - 1); s.col = 0; s.facing = NORTH;
+    out.setStart(s); out.set(s.row, s.col, START);
+    out.setGoal(0, 0);
+    for (int r = 1; r < d.rows - 1; r += 2) out.set(r, 0, COIN);
+    return;
+  }
   uint32_t base = seedFor(seedBase, (uint32_t)level);
   for (int attempt = 0; attempt < 8; attempt++) {
     if (tryGenerate(out, d, base + attempt)) return;  // reroll with seed+1 (§6.3)
