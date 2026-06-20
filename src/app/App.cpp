@@ -144,9 +144,8 @@ void App::debugStep() {
 
 void App::debugNeuroLesson() {
   hal::audio.stopMusic();
-  _neuro.begin();
-  _neuro.enter();
-  _state = State::NEURO_LESSON;
+  _lessonHub.enter();
+  _state = State::NEURO_HUB;
 }
 
 void App::debugFastPlay(uint32_t target) {
@@ -333,9 +332,28 @@ void App::tick(uint32_t now) {
       if (s == Signal::BACK) { _arena.begin(&_profile); _arena.enter(); _state = State::ARENA; }
       break;
     }
-    case State::NEURO_LESSON: {
-      Signal s = _neuro.tick(now, tp);
+    case State::NEURO_HUB: {
+      Signal s = _lessonHub.tick(now, tp);
       if (s == Signal::BACK) gotoSelect();
+      else if (s == Signal::PLAY) {
+        switch (_lessonHub.pick()) {
+          case 0: _neuro.begin(); _neuro.enter(); _state = State::NEURO_LESSON; break;
+          case 1: _qLesson.begin(); _qLesson.enter(); _state = State::Q_LESSON; break;
+          case 2: _evoLesson.begin(); _evoLesson.enter(); _state = State::EVO_LESSON; break;
+        }
+      }
+      break;
+    }
+    case State::NEURO_LESSON: {
+      if (_neuro.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      break;
+    }
+    case State::Q_LESSON: {
+      if (_qLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      break;
+    }
+    case State::EVO_LESSON: {
+      if (_evoLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
       break;
     }
     case State::CHALLENGE: {

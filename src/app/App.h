@@ -16,6 +16,9 @@
 #include "screens/PuzzleRaceScreen.h"
 #include "screens/ChallengeScreen.h"
 #include "screens/NeuroLessonScreen.h"
+#include "screens/LessonHubScreen.h"
+#include "screens/QLessonScreen.h"
+#include "screens/EvoLessonScreen.h"
 
 namespace app {
 
@@ -32,7 +35,8 @@ class App {
   void debugNeuroLesson();                // open the single-neuron lesson ('B')
 
  private:
-  enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE, NEURO_LESSON };
+  enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE,
+                               NEURO_HUB, NEURO_LESSON, Q_LESSON, EVO_LESSON };
 
   void gotoSelect();
   void gotoIntro(uint32_t level);
@@ -59,6 +63,9 @@ class App {
   screens::ChallengeScreen _challenge;
   bool _inChallenge = false;  // the GAME screen is running a seed challenge, not campaign
   screens::NeuroLessonScreen _neuro;
+  screens::LessonHubScreen _lessonHub;
+  screens::QLessonScreen _qLesson;
+  screens::EvoLessonScreen _evoLesson;
   TapDetector _introTap;
   ui::Rect _arenaBtn{90, 196, 140, 28};  // shown on the level intro post-sensing
 };
