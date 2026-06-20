@@ -171,21 +171,22 @@ void generateSpiral(Maze& out, int rows, int cols) {
 
 void generateArena(Maze& out, uint32_t seed, Pose& s0, Pose& s1) {
   Rng rng(seed);
-  int rows = 5 + (int)rng.below(2);       // 5..6 (odd-ish), keep a clear mid row
-  int cols = 9;                            // odd so there's a true centre column
+  int rows = 7;                            // bigger board -> longer, watchable races
+  int cols = 13;                           // odd so there's a true centre column
   out.reset(rows, cols);
   out.fill(FLOOR);
   int rmid = rows / 2, cmid = cols / 2;
 
-  // Mirror a few symmetric walls/pits so neither side is favoured (no RNG asymmetry).
-  int decos = 1 + (int)rng.below(2);
+  // Mirror symmetric pits/walls OFF the centre row for drama and so neither side is
+  // favoured (no RNG asymmetry). The centre row stays a clear lane to the goal.
+  int decos = 3 + (int)rng.below(3);
   for (int k = 0; k < decos; k++) {
-    int rr = (int)rng.below(rows);
-    int cc = (int)rng.below(cmid - 1);     // left half, away from the centre column
-    if (rr == rmid || cc == 0) continue;   // keep the mid row + start columns clear
-    Tile t = rng.chance(50) ? WALL : PIT;
+    int rr = 1 + (int)rng.below(rows - 2);
+    int cc = 1 + (int)rng.below(cmid - 1);  // left half, off the start/goal columns
+    if (rr == rmid) continue;               // keep the mid lane clear
+    Tile t = rng.chance(55) ? WALL : PIT;
     out.set(rr, cc, t);
-    out.set(rr, cols - 1 - cc, t);         // mirror to the right half
+    out.set(rr, cols - 1 - cc, t);          // mirror to the right half
   }
 
   out.setGoal(rmid, cmid);

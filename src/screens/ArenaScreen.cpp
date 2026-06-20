@@ -37,15 +37,25 @@ void ArenaScreen::begin(Profile* profile) {
 
 void ArenaScreen::buildCandidates() {
   _cands.clear();
-  _cands.push_back({"Wall Hugger", wallFollowerProgram(), 0});
-  _cands.push_back({"Dasher", dashProgram(), 3});
-  _cands.push_back({"Hunter", hunterProgram(), 5});
+  // The kid's OWN bots first — any program saved to the library in the campaign
+  // (Save>Lib) fights here. THIS is how you battle a custom program (SPEC §18.4).
   if (_profile) {
     for (auto& e : _profile->library) {
-      if (_cands.size() >= 7) break;
-      _cands.push_back({e.name, e.program, _profile->avatar});
+      if (_cands.size() >= 4) break;
+      _cands.push_back({e.name, e.program, _profile->avatar, "your bot", false});
     }
   }
+  // House battle-bots: themed names + characters to go up against.
+  _cands.push_back({"Rusty",  alwaysForwardProgram(), 5, "charges blindly", true});
+  _cands.push_back({"Bolt",   dashProgram(),          6, "fast & straight", true});
+  _cands.push_back({"Tank",   wallFollowerProgram(),  2, "hugs the walls",  true});
+  _cands.push_back({"Vex",    hunterProgram(),        7, "hunts & shoves",  true});
+}
+
+int ArenaScreen::houseBotIndex(const char* name) const {
+  for (int i = 0; i < (int)_cands.size(); i++)
+    if (_cands[i].house && _cands[i].name == name) return i;
+  return -1;
 }
 
 void ArenaScreen::enter() { drawMenu(); }
@@ -66,15 +76,23 @@ void ArenaScreen::drawMenu() {
   button(g, R_TYPE, _type == MatchType::RACE ? "Race" : "Sumo", C_ACCENT, C_PANEL);
 }
 
+ui::Rect ArenaScreen::pickRowRect(int i) const {
+  return {6, (int16_t)(BAND_Y + 6 + i * 26), 308, 24};
+}
+
 void ArenaScreen::drawPick(int player) {
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   char t[28]; snprintf(t, sizeof(t), "Player %d: pick a bot", player + 1);
-  label(g, 6, 4, t, C_ACCENT);
+  label(g, 6, 3, t, C_ACCENT, textdatum_t::top_left, 2);
   for (int i = 0; i < (int)_cands.size(); i++) {
-    Rect r = {6, (int16_t)(BAND_Y + 4 + i * 24), 308, 22};
-    button(g, r, _cands[i].name.c_str(), C_INK, C_PANEL);
+    Rect r = pickRowRect(i);
+    const Candidate& c = _cands[i];
+    g.fillRoundRect(r.x, r.y, r.w, r.h, 5, c.house ? C_PANEL : C_PANEL_HI);
+    assets::drawCharacter(g, r.x + 16, r.cy(), 22, c.avatar, gb::SOUTH);
+    label(g, r.x + 36, r.y + 3, c.name.c_str(), c.house ? C_INK : C_GO);
+    label(g, r.x + 36, r.y + 13, c.style.c_str(), C_DIM);
   }
 }
 
@@ -195,11 +213,18 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       break;
     case Phase::PICK1:
       for (int i = 0; i < (int)_cands.size(); i++) {
-        Rect r = {6, (int16_t)(BAND_Y + 4 + i * 24), 308, 22};
-        if (r.contains(tx, ty)) {
+        if (pickRowRect(i).contains(tx, ty)) {
           _pick0 = i; hal::audio.blip();
           if (_hotseat) { drawHandoff(); }
-          else { _pick1 = (_type == MatchType::SUMO) ? 2 : 0; startMatch(); }  // house bot
+          else {
+            // vs AI: a themed house bot DIFFERENT from the player's pick (so it's not
+            // a symmetric instant-draw).
+            int opp = (_type == MatchType::SUMO) ? houseBotIndex("Vex")
+                                                 : houseBotIndex("Bolt");
+            if (opp == _pick0) opp = houseBotIndex("Tank");
+            _pick1 = (opp >= 0) ? opp : 0;
+            startMatch();
+          }
           return app::Signal::NONE;
         }
       }
@@ -209,8 +234,7 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       break;
     case Phase::PICK2:
       for (int i = 0; i < (int)_cands.size(); i++) {
-        Rect r = {6, (int16_t)(BAND_Y + 4 + i * 24), 308, 22};
-        if (r.contains(tx, ty)) { _pick1 = i; hal::audio.blip(); startMatch(); return app::Signal::NONE; }
+        if (pickRowRect(i).contains(tx, ty)) { _pick1 = i; hal::audio.blip(); startMatch(); return app::Signal::NONE; }
       }
       break;
     case Phase::BOARD:

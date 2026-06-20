@@ -21,11 +21,13 @@ class ArenaScreen : public app::IScreen {
 
  private:
   enum class Phase : uint8_t { MENU, PICK1, HANDOFF, PICK2, BOARD, DONE };
-  struct Candidate { std::string name; gb::Program prog; uint8_t avatar; };
+  struct Candidate { std::string name; gb::Program prog; uint8_t avatar; std::string style; bool house; };
 
   void buildCandidates();
   void drawMenu();
   void drawPick(int player);
+  ui::Rect pickRowRect(int i) const;
+  int houseBotIndex(const char* name) const;
   void drawHandoff();
   void startMatch();
   void drawBoard();

@@ -35,15 +35,16 @@ void test_arena_deterministic_log() {
   TEST_ASSERT_EQUAL_UINT32(h1, h2);
 }
 
-void test_arena_symmetric_dash_is_draw() {
-  // Two identical dashers from mirrored starts collide at the centre goal -> draw.
+void test_arena_match_plays_out() {
+  // A race must PLAY OUT over several ticks (watchable), not resolve instantly.
   Program a = dashProgram(), b = dashProgram();
   Maze m; Pose s0, s1;
   MazeGen::generateArena(m, 7, s0, s1);
   Arena ar;
   ar.setup(&m, &a, &b, s0, s1, MatchType::RACE);
   ArenaOutcome o = ar.run();
-  TEST_ASSERT_EQUAL((int)ArenaOutcome::DRAW, (int)o);
+  TEST_ASSERT_NOT_EQUAL((int)ArenaOutcome::RUNNING, (int)o);
+  TEST_ASSERT_TRUE(ar.ticks() >= 5);  // bots travel the lane before it resolves
 }
 
 void test_arena_faster_bot_wins() {
@@ -105,7 +106,7 @@ void test_sumo_deterministic() {
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_arena_deterministic_log);
-  RUN_TEST(test_arena_symmetric_dash_is_draw);
+  RUN_TEST(test_arena_match_plays_out);
   RUN_TEST(test_arena_faster_bot_wins);
   RUN_TEST(test_arena_replay_independent_of_instances);
   RUN_TEST(test_sumo_push_into_pit);

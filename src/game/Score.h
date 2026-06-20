@@ -4,11 +4,16 @@
 // a fair yardstick for loop/function solutions too (a loop only ever helps).
 #pragma once
 #include "game/Maze.h"
+#include "game/Program.h"
 
 namespace gb {
 
 // Minimal number of primitive commands to reach the goal, or -1 if unreachable.
 int shortestSolutionLen(const Maze& m, bool allowJump);
+
+// Reconstruct an actual shortest command sequence into out.main. Returns true if a
+// solution exists. Used to play levels (and by tests).
+bool solveMaze(const Maze& m, bool allowJump, Program& out);
 
 // Star rating (SPEC §9): <=par ***, <=1.5*par **, win at all *.
 inline int starsFor(int writtenCount, int par) {

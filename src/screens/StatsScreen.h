@@ -15,7 +15,9 @@ class StatsScreen : public app::IScreen {
 
  private:
   void draw();
+  void drawConfirm();
   const gb::Profile* _p = nullptr;
+  uint8_t _confirm = 0;   // 0 = none, 1 = first confirm, 2 = second confirm
   app::TapDetector _tap;
 };
 

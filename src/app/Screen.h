@@ -14,8 +14,9 @@ enum class Signal : uint8_t {
   CREATED,       // profile-create finished -> create + play
   GOTO_STATS,    // open the stats screen
   GOTO_RADIO,    // open the radio (ESP-NOW) link screen
-  EDIT_PROFILE,  // edit the current profile's name/avatar (keeps stats)
-  GOTO_DRAW,     // open the pixel editor (custom character/goal)
+  EDIT_PROFILE,    // edit the current profile's name/avatar (keeps stats)
+  GOTO_DRAW,       // open the pixel editor (custom character/goal)
+  DELETE_PROFILE,  // delete the current profile (after multiple confirmations)
 };
 
 class IScreen {

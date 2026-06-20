@@ -6,9 +6,10 @@ using namespace ui;
 namespace screens {
 
 // Up to 6 profile cards in a 3x2 grid, plus a "+ New" card in the next slot.
-static constexpr int COLS = 3, CARD_W = 100, CARD_H = 78, GAP = 4;
+static constexpr int COLS = 3, CARD_W = 102, CARD_H = 84, GAP = 4;
 static constexpr int GRID_X = (SCREEN_W - (COLS * CARD_W + (COLS - 1) * GAP)) / 2;
-static constexpr int GRID_Y = BAND_Y + 6;
+static constexpr int GRID_Y = BAND_Y + 4;
+static constexpr int STRIP_H = 26;  // big, easy-to-hit stats/edit button
 
 void ProfileSelectScreen::begin(store::ProfileStore* store) {
   _store = store;
@@ -39,13 +40,14 @@ void ProfileSelectScreen::draw() {
     Rect r = cardRect(i);
     panel(g, r, C_PANEL);
     g.drawRoundRect(r.x, r.y, r.w, r.h, 6, C_PANEL_HI);
-    assets::drawCharacter(g, r.cx(), r.y + 26, 40, _metas[i].avatar, gb::SOUTH);
-    label(g, r.cx(), r.y + 46, _metas[i].name.c_str(), C_INK, textdatum_t::top_center);
+    assets::drawCharacter(g, r.cx(), r.y + 22, 36, _metas[i].avatar, gb::SOUTH);
+    label(g, r.cx(), r.y + 40, _metas[i].name.c_str(), C_INK, textdatum_t::top_center);
     char lv[16]; snprintf(lv, sizeof(lv), "Lv %u", (unsigned)_metas[i].level);
-    label(g, r.cx(), r.y + 58, lv, C_DIM, textdatum_t::top_center);
-    // lower "stats" strip hint
-    g.drawFastHLine(r.x + 6, r.y + r.h - 16, r.w - 12, C_PANEL_HI);
-    label(g, r.cx(), r.y + r.h - 14, "stats", C_DIM, textdatum_t::top_center);
+    label(g, r.cx(), r.y + 50, lv, C_DIM, textdatum_t::top_center);
+    // big stats/edit button across the bottom of the card
+    Rect strip = {r.x, (int16_t)(r.y + r.h - STRIP_H), r.w, STRIP_H};
+    g.fillRoundRect(strip.x + 2, strip.y, strip.w - 4, strip.h - 2, 5, C_PANEL_HI);
+    label(g, strip.cx(), strip.cy(), "STATS / EDIT", C_ACCENT, textdatum_t::middle_center);
   }
   // New Player card
   Rect nr = cardRect(n);
@@ -54,42 +56,24 @@ void ProfileSelectScreen::draw() {
   label(g, nr.cx(), nr.cy() - 10, "+", C_GO, textdatum_t::middle_center, 3);
   label(g, nr.cx(), nr.y + nr.h - 18, "New Player", C_GO, textdatum_t::top_center);
 
-  label(g, SCREEN_W / 2, SCREEN_H - 12, "tap to play - hold to delete", C_DIM,
-        textdatum_t::middle_center);
+  label(g, SCREEN_W / 2, SCREEN_H - 12, "tap a player to play - tap stats/edit for more",
+        C_DIM, textdatum_t::middle_center);
 }
 
 app::Signal ProfileSelectScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int tx, ty;
   int n = (int)_metas.size(); if (n > 6) n = 6;
+  if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
 
-  if (_tap.tapped(tp, now, tx, ty)) {
-    _pressActive = true; _longFired = false; _pressIdx = -1;
-    for (int i = 0; i <= n; i++) {  // include the New card at index n
-      if (cardRect(i).contains(tx, ty)) { _pressIdx = i; break; }
-    }
-  }
-
-  if (_pressActive) {
-    // long-press to delete an existing card
-    if (_pressIdx >= 0 && _pressIdx < n && !_longFired && _tap.heldMs(now) > 700) {
-      _longFired = true;
-      if (_store) { _store->remove(_metas[_pressIdx].id); _store->listProfiles(_metas); }
-      draw();
-    }
-    if (!_tap.held()) {  // released
-      _pressActive = false;
-      if (!_longFired && _pressIdx >= 0) {
-        if (_pressIdx == n) return app::Signal::NEW_PROFILE;
-        // lower strip -> stats, else play
-        Rect r = cardRect(_pressIdx);
-        if (_tap.y() >= r.y + r.h - 16) {
-          _chosenId = _metas[_pressIdx].id;
-          return app::Signal::GOTO_STATS;
-        }
-        _chosenId = _metas[_pressIdx].id;
-        return app::Signal::PLAY;
-      }
-    }
+  for (int i = 0; i <= n; i++) {        // include the New card at index n
+    Rect r = cardRect(i);
+    if (!r.contains(tx, ty)) continue;
+    if (i == n) return app::Signal::NEW_PROFILE;
+    _chosenId = _metas[i].id;
+    // lower strip -> stats/edit (easy); the rest of the card -> play.
+    // Deleting is intentionally NOT here — it lives behind confirmations in Stats.
+    if (ty >= r.y + r.h - 17) return app::Signal::GOTO_STATS;
+    return app::Signal::PLAY;
   }
   return app::Signal::NONE;
 }

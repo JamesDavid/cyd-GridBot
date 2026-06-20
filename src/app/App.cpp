@@ -6,10 +6,28 @@
 #include "ui/UI.h"
 #include "store/ProfileStore.h"
 #include "game/MazeGen.h"
+#include "game/Score.h"
+#include "game/Bots.h"
+#include "game/Interpreter.h"
 
 using namespace ui;
 
 namespace app {
+
+// Count a solved program's commands into the histogram (so stats look real).
+static void tallyCommands(const gb::Program& p, gb::Stats& st) {
+  for (const gb::Node& n : p.main) {
+    if (n.type != gb::N_CMD) continue;
+    switch (n.cmd) {
+      case gb::CMD_FWD:    st.commandsUsed[gb::CS_FWD]++; break;
+      case gb::CMD_BACK:   st.commandsUsed[gb::CS_BACK]++; break;
+      case gb::CMD_JUMP:   st.commandsUsed[gb::CS_JUMP]++; break;
+      case gb::CMD_TURN_L:
+      case gb::CMD_TURN_R: st.commandsUsed[gb::CS_TURN]++; break;
+      default: break;
+    }
+  }
+}
 
 void App::begin() {
   hal::touch.begin();
@@ -91,6 +109,54 @@ void App::debugGoToLevel(uint32_t level) {
   gotoIntro(level);
 }
 
+void App::debugFastPlay(uint32_t target) {
+  if (_profile.id.empty()) {
+    std::vector<store::ProfileMeta> metas;
+    store::profiles.listProfiles(metas);
+    if (!metas.empty()) loadProfileInto(metas[0].id);
+    else loadProfileInto(store::profiles.createProfile("Robo", 0));
+  }
+  int guard = 0;
+  while (_profile.level < target && guard++ < 300) {
+    uint32_t lvl = _profile.level;
+    gb::Program p;
+    bool won = false;
+    int par = 1;
+    if (gb::isMultiLevel((int)lvl)) {
+      gb::Maze boards[gb::MAX_BOARDS];
+      int nb = gb::MazeGen::generateBoards(boards, gb::MAX_BOARDS, _profile.seedBase, (int)lvl);
+      p = gb::wallFollowerProgram();
+      won = true;
+      for (int i = 0; i < nb; i++) {
+        gb::Interpreter it; it.load(&p, &boards[i], boards[i].startPose(), 2000);
+        if (it.runToEnd() != gb::OUT_WIN) won = false;
+      }
+      par = gb::shortestSolutionLen(boards[0], true);
+      _profile.stats.commandsUsed[gb::CS_SENSE]++;
+      _profile.stats.commandsUsed[gb::CS_FWD]++;
+    } else {
+      gb::Maze m; gb::MazeGen::generate(m, _profile.seedBase, (int)lvl);
+      par = gb::shortestSolutionLen(m, _profile.unlocks.jump);
+      if (gb::solveMaze(m, _profile.unlocks.jump, p)) {
+        gb::Interpreter it; it.load(&p, &m, m.startPose());
+        won = (it.runToEnd() == gb::OUT_WIN);
+      }
+      tallyCommands(p, _profile.stats);
+    }
+    if (!won) break;
+    int stars = gb::starsFor(gb::programWrittenCount(p), par > 0 ? par : 1);
+    _profile.stats.totalRuns++;
+    _profile.stats.totalWins++;
+    _profile.stats.levelsCompleted++;
+    _profile.stats.starsTotal += stars;
+    _profile.stats.currentStreak++;
+    _profile.level = lvl + 1;
+    _profile.unlocks = gb::computeUnlocks(_profile.level);
+  }
+  saveProfile();
+  gotoIntro(_profile.level);
+}
+
 void App::tick(uint32_t now) {
   hal::TouchPoint tp = hal::touch.read();
 
@@ -154,6 +220,11 @@ void App::tick(uint32_t now) {
       }
       else if (s == Signal::GOTO_DRAW) {
         _pixed.begin(&_profile); _pixed.enter(); _state = State::DRAW;
+      }
+      else if (s == Signal::DELETE_PROFILE) {
+        store::profiles.remove(_profile.id);
+        _profile = gb::Profile{};
+        gotoSelect();
       }
       break;
     }

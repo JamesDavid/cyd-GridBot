@@ -55,6 +55,14 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
       (SPEC §7.1 generation note) — basic version in Phase 5.
 - [ ] Par tuning per tier (loops/functions rewarded more explicitly).
 
+## Multiplayer modes (the "mix")
+- [x] Race (reach goal first) and Sumo (PUSH into a pit) vs House AI or Hotseat.
+- [x] Radio battle + Pokemon-style trade (ESP-NOW) — hardware-pending.
+- [ ] **Puzzle Race (shared maze)**: both players get a timer to write code for the
+      SAME maze; whoever's bot gets furthest before bonking/falling (or closest to the
+      goal) wins. A code-authoring contest, not a live battle. One of several modes.
+- [ ] More mode types: relay, co-op (two bots must both reach goals), king-of-the-hill.
+
 ## Arena mode (SPEC §18 — post-campaign capstone)
 - [x] Deterministic N=2 tick engine + Race match type + resolution pass (collision
       bounce, fall-out, win check). Determinism proven by byte-identical log test.

@@ -57,6 +57,12 @@ static void handleSerialLine(const String& line) {
       gApp.debugGoToLevel((uint32_t)lvl);
       Serial.printf("GOTO level %d\n", lvl);
     }
+  } else if (c == 'P') {
+    int lvl = 23;
+    if (sscanf(line.c_str() + 1, "%d", &lvl) == 1) {
+      gApp.debugFastPlay((uint32_t)lvl);
+      Serial.printf("PLAYED to level %d\n", lvl);
+    }
   }
 }
 #endif

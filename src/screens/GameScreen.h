@@ -90,6 +90,10 @@ class GameScreen : public app::IScreen {
   gb::Pose _drawnPose;          // last drawn character pose (for dirty-rect)
   const gb::Node* _failNode = nullptr;
 
+  // level-start maze preview (show the board, then auto-switch to code)
+  bool _previewing = false;
+  uint32_t _previewStart = 0;
+
   // deferred view-toggle / hold-to-peek state
   app::TapDetector _tap;
   bool _toggleActive = false;

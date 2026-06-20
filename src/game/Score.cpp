@@ -56,4 +56,54 @@ int shortestSolutionLen(const Maze& m, bool allowJump) {
   return -1;  // unreachable (generation should prevent this)
 }
 
+// BFS that records each state's predecessor + the action taken, then reconstructs
+// the command list. Mirrors shortestSolutionLen's transitions.
+bool solveMaze(const Maze& m, bool allowJump, Program& out) {
+  out.clear();
+  const int R = m.rows(), C = m.cols();
+  if (R <= 0 || C <= 0) return false;
+  const int N = R * C * 4;
+  static int16_t dist[MAZE_MAX_CELLS * 4];
+  static int16_t prev[MAZE_MAX_CELLS * 4];
+  static uint8_t act[MAZE_MAX_CELLS * 4];   // 0=TURN_L,1=TURN_R,2=FWD,3=JUMP
+  static int16_t queue[MAZE_MAX_CELLS * 4];
+  for (int i = 0; i < N; i++) { dist[i] = -1; prev[i] = -1; }
+  auto idx = [&](int r, int c, int f) { return (r * C + c) * 4 + f; };
+
+  Pose s = m.startPose();
+  int start = idx(s.row, s.col, s.facing);
+  dist[start] = 0;
+  int head = 0, tail = 0, goalState = -1;
+  queue[tail++] = start;
+  while (head < tail) {
+    int cur = queue[head++];
+    int f = cur & 3, rc = cur >> 2, c = rc % C, r = rc / C;
+    if (m.isGoal(r, c)) { goalState = cur; break; }
+    int d = dist[cur];
+    auto relax = [&](int ni, uint8_t a) {
+      if (dist[ni] < 0) { dist[ni] = d + 1; prev[ni] = cur; act[ni] = a; queue[tail++] = ni; }
+    };
+    relax(idx(r, c, (f + 1) & 3), 1);  // turn right
+    relax(idx(r, c, (f + 3) & 3), 0);  // turn left
+    int dr, dc; facingDelta((Facing)f, dr, dc);
+    int fr = r + dr, fc = c + dc;
+    if (m.inBounds(fr, fc) && m.isWalkable(fr, fc)) relax(idx(fr, fc, f), 2);
+    if (allowJump) {
+      int mr = r + dr, mc = c + dc, lr = r + 2 * dr, lc = c + 2 * dc;
+      if (m.inBounds(lr, lc) && m.at(mr, mc) != WALL && m.isWalkable(lr, lc))
+        relax(idx(lr, lc, f), 3);
+    }
+  }
+  if (goalState < 0) return false;
+
+  // walk back, collecting actions in reverse
+  static uint8_t seq[MAZE_MAX_CELLS * 4];
+  int n = 0;
+  for (int cur = goalState; cur != start && cur >= 0; cur = prev[cur]) seq[n++] = act[cur];
+  const Cmd cmdOf[4] = {CMD_TURN_L, CMD_TURN_R, CMD_FWD, CMD_JUMP};
+  for (int i = n - 1; i >= 0; i--) out.main.push_back(Node::command(cmdOf[seq[i]]));
+  return true;
+}
+
 }  // namespace gb
+

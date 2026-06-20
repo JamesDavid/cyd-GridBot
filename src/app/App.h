@@ -18,7 +18,8 @@ class App {
  public:
   void begin();
   void tick(uint32_t now);
-  void debugGoToLevel(uint32_t level);  // playtest aid (serial 'G <n>')
+  void debugGoToLevel(uint32_t level);    // playtest aid (serial 'G <n>')
+  void debugFastPlay(uint32_t target);    // auto-solve+win levels up to target ('P <n>')
 
  private:
   enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO, DRAW };

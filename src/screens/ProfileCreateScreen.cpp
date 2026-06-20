@@ -1,17 +1,21 @@
 #include "screens/ProfileCreateScreen.h"
 #include "assets/Assets.h"
+#include <string.h>
 
 using namespace ui;
 
 namespace screens {
 
 static constexpr int GB_NAME_MAX = 8;
-static constexpr int KB_COLS = 7, KEY_W = 44, KEY_H = 30, KB_X = 6, KB_Y = 80;
-static const char* KEY_LABELS[28] = {
-  "A","B","C","D","E","F","G",
-  "H","I","J","K","L","M","N",
-  "O","P","Q","R","S","T","U",
-  "V","W","X","Y","Z","DEL","OK"};
+// QWERTY layout. 28 keys: 26 letters in QWERTY order, then DEL, OK.
+// Row lengths: 10 (QWERTYUIOP), 9 (ASDFGHJKL), 9 (ZXCVBNM + DEL + OK).
+static const char* KB_CHARS = "QWERTYUIOPASDFGHJKLZXCVBNM";
+static constexpr int KEY_W = 31, KEY_H = 30, KB_Y = 82, ROW_GAP = 32;
+static constexpr int DEL_IDX = 26, OK_IDX = 27;
+
+static int rowOf(int i) { return i < 10 ? 0 : (i < 19 ? 1 : 2); }
+static int colOf(int i) { return i < 10 ? i : (i < 19 ? i - 10 : i - 19); }
+static int countOf(int row) { return row == 0 ? 10 : 9; }
 
 void ProfileCreateScreen::begin() { _name.clear(); _avatar = 0; _edit = false; }
 
@@ -20,8 +24,10 @@ void ProfileCreateScreen::beginEdit(const std::string& name, uint8_t avatar) {
 }
 
 ui::Rect ProfileCreateScreen::keyRect(int i) const {
-  int r = i / KB_COLS, c = i % KB_COLS;
-  return {(int16_t)(KB_X + c * KEY_W), (int16_t)(KB_Y + r * KEY_H),
+  int row = rowOf(i), col = colOf(i), cnt = countOf(row);
+  int rowW = cnt * KEY_W;
+  int x0 = (SCREEN_W - rowW) / 2;
+  return {(int16_t)(x0 + col * KEY_W), (int16_t)(KB_Y + row * ROW_GAP),
           (int16_t)(KEY_W - 2), (int16_t)(KEY_H - 2)};
 }
 
@@ -57,11 +63,15 @@ void ProfileCreateScreen::draw() {
     assets::drawCharacter(g, r.cx(), r.cy(), 24, i, gb::SOUTH);
   }
 
-  // keyboard
+  // QWERTY keyboard
   for (int i = 0; i < 28; i++) {
     Rect r = keyRect(i);
-    uint16_t fg = (i == 27) ? C_GO : (i == 26 ? C_BAD : C_INK);
-    button(g, r, KEY_LABELS[i], fg, C_PANEL);
+    char lab[4];
+    if (i == DEL_IDX) strcpy(lab, "DEL");
+    else if (i == OK_IDX) strcpy(lab, "OK");
+    else { lab[0] = KB_CHARS[i]; lab[1] = 0; }
+    uint16_t fg = (i == OK_IDX) ? C_GO : (i == DEL_IDX ? C_BAD : C_INK);
+    button(g, r, lab, fg, C_PANEL);
   }
 }
 
@@ -74,14 +84,14 @@ app::Signal ProfileCreateScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   }
   for (int i = 0; i < 28; i++) {
     if (!keyRect(i).contains(tx, ty)) continue;
-    if (i == 27) {  // OK
+    if (i == OK_IDX) {
       if (!_name.empty()) return app::Signal::CREATED;
       return app::Signal::NONE;
     }
-    if (i == 26) {  // DEL
+    if (i == DEL_IDX) {
       if (!_name.empty()) _name.pop_back();
     } else if ((int)_name.size() < GB_NAME_MAX) {
-      _name.push_back((char)('A' + i));
+      _name.push_back(KB_CHARS[i]);
     }
     drawNameField();
     return app::Signal::NONE;

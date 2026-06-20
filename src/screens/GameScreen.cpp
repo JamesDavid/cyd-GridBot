@@ -25,12 +25,11 @@ static const Rect R_CLEAR  = {6, 179, 48, 30};
 static const Rect R_DELPAD = {58, 179, 46, 30};    // delete selected line
 static const Rect R_RUNPAD = {108, 179, 54, 30};   // RUN sits with CLEAR/DEL
 static constexpr int LIST_X = 166, LIST_W = 320 - 166;
-static const Rect R_DEL = {298, 24, 16, 16};
 static const Rect R_RMINUS = {246, 24, 18, 16};   // repeat count -
 static const Rect R_RPLUS  = {268, 24, 18, 16};   // repeat count +
 static const Rect R_COND   = {244, 24, 46, 16};   // sense condition cycle
 static constexpr int ROW_Y0 = BAND_Y + 22, ROW_H = 24;
-static const Rect R_PAUSE = {296, 2, 22, 18};   // back/pause in the status bar
+static const Rect R_PAUSE = {238, 0, 82, 22};   // big back button in the status bar
 static const Rect R_TOGGLE = {6, (int16_t)(BOTBAR_Y + 2), 150, 26};
 static const Rect R_RUNBAR = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
 static const Rect R_STEP = {6, (int16_t)(BOTBAR_Y + 2), 150, 26};
@@ -65,7 +64,17 @@ void GameScreen::begin(Profile* profile, uint32_t level) {
   _it.load(&_prog, &_maze, _maze.startPose());
 }
 
-void GameScreen::enter() { drawCodeView(); }
+void GameScreen::enter() {
+  // Show the maze for a couple of seconds so the kid can study the layout, then
+  // auto-switch to the code view (a tap skips the preview).
+  _previewing = true;
+  _previewStart = 0;
+  _view = V_MAZE;
+  drawMazeView(false);
+  auto& g = hal::display.gfx();
+  label(g, SCREEN_W / 2, BAND_Y + 6, "Study the maze...", C_ACCENT,
+        textdatum_t::top_center);
+}
 
 bool GameScreen::cornerUnlocked(int slot) const {
   if (!_profile) return false;
@@ -92,9 +101,9 @@ void GameScreen::drawChrome() {
   label(g, 6, 4, buf, C_INK);
   uint32_t stars = _profile ? _profile->stats.starsTotal : 0;
   snprintf(buf, sizeof(buf), "*%u", (unsigned)stars);
-  label(g, 268, 4, buf, C_ACCENT, textdatum_t::top_right);
-  // back/pause button (SPEC §10): returns to the profile menu
-  button(g, R_PAUSE, "<", C_INK, C_PANEL_HI);
+  label(g, 232, 4, buf, C_ACCENT, textdatum_t::top_right);
+  // big back button (SPEC §10): returns to the profile menu
+  button(g, R_PAUSE, "< HOME", C_INK, C_PANEL_HI);
 }
 
 // ---- maze view ------------------------------------------------------------
@@ -197,11 +206,15 @@ void GameScreen::drawControlPad() {
   cell(1, 0, Glyph::TURN_L, C_TURN, false);            // TURN LEFT
   cell(1, 2, Glyph::TURN_R, C_TURN, false);            // TURN RIGHT
   cell(2, 1, Glyph::ARROW_DOWN, C_MOVE, !bw);          // BACKWARD (locked < Tier1.5)
-  // centre avatar
+  // centre avatar — faces the maze's START orientation so the kid can reason about
+  // "forward" before running.
   Rect ctr = padCell(1, 1);
   panel(g, ctr, C_PANEL);
-  assets::drawCharacter(g, ctr.cx(), ctr.cy(), 44, _profile ? _profile->avatar : 0,
-                        EAST);
+  if (_profile && spriteHasPixels(_profile->customChar))
+    assets::drawCustomSprite(g, ctr.cx(), ctr.cy(), 44, _profile->customChar.data());
+  else
+    assets::drawCharacter(g, ctr.cx(), ctr.cy(), 44, _profile ? _profile->avatar : 0,
+                          _maze.startPose().facing);
   // four corner growth slots
   const Glyph cg[4] = {Glyph::JUMP, Glyph::REPEAT, Glyph::CALL, Glyph::SENSE};
   const uint16_t cc[4] = {C_GO, C_LOOP, C_FUNC, C_SENSE};
@@ -235,14 +248,15 @@ void GameScreen::flatten(NodeList& list, int depth, std::vector<Row>& out, uint1
 
 int GameScreen::listTop() const {
   bool tabs = _profile && _profile->unlocks.func;
-  return ROW_Y0 + (tabs ? 18 : 0);
+  return ROW_Y0 + (tabs ? 26 : 0);
 }
 
 ui::Rect GameScreen::funcTabRect(int i) const {
-  // 5 cells: MAIN | F1 | F2 | Save>Lib | Load<Lib (SPEC §10, §11.1)
+  // 5 cells: MAIN | F1 | F2 | Save>Lib | Load<Lib (SPEC §10, §11.1). Taller and
+  // wider so F1/F2 are easy to tap on the resistive panel.
   int w = (LIST_W - 6) / 5;
   return {(int16_t)(LIST_X + 3 + i * w), (int16_t)(BAND_Y + 20),
-          (int16_t)(w - 2), 16};
+          (int16_t)(w - 2), 24};
 }
 
 NodeList* GameScreen::appendTarget() {
@@ -323,7 +337,7 @@ void GameScreen::drawProgramList() {
     } else if (sn->type == N_IF || sn->type == N_REPEAT_UNTIL) {
       button(g, R_COND, condName(sn->cond), C_SENSE, C_PANEL_HI);  // tap to cycle
     }
-    button(g, R_DEL, "x", C_BAD, C_PANEL_HI);
+    // (delete is the big DEL button under the pad)
   }
 
   // MAIN | F1 | F2 | Save | Load once functions/library unlock (SPEC §10, §11.1)
@@ -465,7 +479,6 @@ void GameScreen::handleListTap(int x, int y) {
         }
       }
     }
-    if (R_DEL.contains(x, y)) { deleteSelected(); return; }
   }
   // function-body tabs + library Save/Load
   if (_profile && _profile->unlocks.func) {
@@ -659,6 +672,17 @@ void GameScreen::stepOnce(uint32_t now) {
 app::Signal GameScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int tx = 0, ty = 0;
   bool tap = _tap.tapped(tp, now, tx, ty);
+
+  // level-start maze preview: hold ~2.5s (or until tapped), then go to code view
+  if (_previewing) {
+    if (_previewStart == 0) _previewStart = now;
+    if (tap || now - _previewStart > 2500) {
+      _previewing = false;
+      _view = V_CODE;
+      drawCodeView();
+    }
+    return app::Signal::NONE;
+  }
 
   if (_mode == M_WIN) {
     if (tap) return app::Signal::WON;

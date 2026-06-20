@@ -5,6 +5,8 @@
 #include "game/Maze.h"
 #include "game/MazeGen.h"
 #include "game/Score.h"
+#include "game/Program.h"
+#include "game/Interpreter.h"
 
 using namespace gb;
 
@@ -83,6 +85,29 @@ void test_grid_sizes_follow_curve() {
   TEST_ASSERT_EQUAL(10, m.cols());
 }
 
+// The solver must produce a winning program for every generated single-board level.
+void test_solver_wins_across_curve() {
+  int checked = 0;
+  for (uint32_t sb = 1; sb <= 20; sb++) {
+    for (int level = 1; level <= 21; level++) {  // single-board levels
+      Maze m; MazeGen::generate(m, sb, level);
+      Difficulty d = difficultyFor(level);
+      Program p;
+      bool solved = solveMaze(m, d.allowPitGaps, p);
+      TEST_ASSERT_TRUE(solved);
+      Interpreter it; it.load(&p, &m, m.startPose());
+      if (it.runToEnd() != OUT_WIN) {
+        char msg[64]; snprintf(msg, sizeof(msg), "solver failed sb=%u lvl=%d", sb, level);
+        TEST_FAIL_MESSAGE(msg);
+      }
+      // solver is optimal -> matches the par length
+      TEST_ASSERT_EQUAL(shortestSolutionLen(m, d.allowPitGaps), (int)p.main.size());
+      checked++;
+    }
+  }
+  TEST_ASSERT_TRUE(checked >= 400);
+}
+
 void test_star_math() {
   TEST_ASSERT_EQUAL(3, starsFor(5, 5));    // == par
   TEST_ASSERT_EQUAL(3, starsFor(4, 5));    // under par
@@ -98,6 +123,7 @@ int main(int, char**) {
   RUN_TEST(test_different_profiles_differ);
   RUN_TEST(test_start_faces_open_cell);
   RUN_TEST(test_grid_sizes_follow_curve);
+  RUN_TEST(test_solver_wins_across_curve);
   RUN_TEST(test_star_math);
   return UNITY_END();
 }
