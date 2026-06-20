@@ -35,6 +35,7 @@ static inline Rect repCycleRect(int y) { return {(int16_t)(LIST_X + LIST_W - 92)
 static inline Rect condRect(int y)     { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 80, (int16_t)(ROW_H - 2)}; }
 static const Rect R_PAUSE = {238, 0, 82, 22};   // big back button in the status bar
 static const Rect R_TOGGLE = {6, (int16_t)(BOTBAR_Y + 2), 156, 26};  // right edge aligns with the RUN/pad above
+static const Rect R_BRAIN  = {(int16_t)(LIST_X + LIST_W - 58), (int16_t)(BAND_Y + 1), 54, 17};  // +brain (neuro)
 static const Rect R_RUNBAR = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
 static const Rect R_STEP = {6, (int16_t)(BOTBAR_Y + 2), 150, 26};
 static const Rect R_RESET = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
@@ -458,6 +459,7 @@ static void nodeLabel(const Node& n, char* buf, size_t bn, Glyph& gl, uint16_t& 
     case N_REPEAT_UNTIL: gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "until %s", condName(n.cond)); break;
     case N_IF:           gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "if %s", condName(n.cond)); break;
     case N_CALL:         gl = Glyph::CALL;   col = C_FUNC;  snprintf(buf, bn, "call F%d", n.func); break;
+    case N_NEURO:        gl = Glyph::SENSE;  col = ui::rgb(120, 230, 245); snprintf(buf, bn, "brain"); break;
   }
 }
 
@@ -471,6 +473,8 @@ void GameScreen::drawProgramList() {
   _writtenCount = programWrittenCount(_prog);
   snprintf(hdr, sizeof(hdr), "%s  %d/%d", body, _writtenCount, _par);
   label(g, LIST_X + 6, BAND_Y + 5, hdr, C_INK);
+  if (_profile && _profile->unlocks.neuro)  // NeuroBot: add a trainable brain block
+    button(g, R_BRAIN, "+brain", ui::rgb(120, 230, 245), C_PANEL);
 
   std::vector<Row> rows;
   flatten(*_editList, 0, rows);
@@ -569,6 +573,9 @@ void GameScreen::drawProgramList() {
     } else if (sel && (nd->type == N_IF || nd->type == N_REPEAT_UNTIL)) {
       label(g, gx + 18, y + 6, nd->type == N_IF ? "if" : "until", C_SENSE);
       button(g, condRect(y), condName(nd->cond), C_SENSE, C_PANEL_HI);
+    } else if (sel && nd->type == N_NEURO) {
+      label(g, gx + 18, y + 6, "brain", ui::rgb(120, 230, 245));
+      button(g, condRect(y), "train >", ui::rgb(120, 230, 245), C_PANEL_HI);
     } else {
       label(g, gx + 18, y + 6, lab, C_INK);
     }
@@ -638,6 +645,12 @@ void GameScreen::handlePadTap(int x, int y) {
 }
 
 void GameScreen::handleListTap(int x, int y) {
+  // NeuroBot: add a fresh trainable brain block
+  if (_profile && _profile->unlocks.neuro && R_BRAIN.contains(x, y)) {
+    uint8_t idx = _prog.addBrain(_profile->seedBase + (uint32_t)_prog.brains.size() * 101u + 1u);
+    appendNodeToTarget(gb::Node::neuro(idx));
+    return;
+  }
   // function-body tabs + library Save/Load
   if (_profile && _profile->unlocks.func) {
     NodeList* lists[3] = {&_prog.main, &_prog.f1, &_prog.f2};
@@ -685,6 +698,10 @@ void GameScreen::handleListTap(int x, int y) {
             sn->cond = (sn->cond == WALL_AHEAD) ? PIT_AHEAD
                      : (sn->cond == PIT_AHEAD) ? AT_GOAL : WALL_AHEAD;
             hal::audio.blip(); drawProgramList(); return;
+          }
+        } else if (sn->type == N_NEURO) {
+          if (condRect(yy).contains(x, y)) {  // "train >" -> open the neuro interface
+            _pendingNeuro = sn->brainIdx; hal::audio.blip(); return;
           }
         }
       }
@@ -1027,6 +1044,7 @@ app::Signal GameScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   if (tap) {
     if (_view == V_CODE) handleCodeTap(tx, ty);
     else if (R_RUNBAR.contains(tx, ty)) startRun();
+    if (_pendingNeuro >= 0) return app::Signal::GOTO_NEURO_TRAIN;  // open the neuro interface
   }
   return app::Signal::NONE;
 }

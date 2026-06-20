@@ -18,6 +18,7 @@ struct Unlocks {
   bool repeat = false;
   bool func = false;
   bool sense = false;
+  bool neuro = false;     // NeuroBot: train a brain and drop it in your program
 };
 
 struct Settings {
@@ -93,6 +94,7 @@ inline Unlocks computeUnlocks(uint32_t level) {
   u.repeat   = level >= 10;
   u.func     = level >= 15;
   u.sense    = level >= 22;
+  u.neuro    = level >= 22;  // graduation: NeuroBot unlocks with the sensing tier
   return u;
 }
 

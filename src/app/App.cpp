@@ -241,6 +241,14 @@ void App::tick(uint32_t now) {
     }
     case State::GAME: {
       Signal s = _game.tick(now, tp);
+      if (s == Signal::GOTO_NEURO_TRAIN) {  // train a NEURO block's brain on this maze
+        hal::audio.stopMusic();
+        _neuroTrain.begin(&_game.program(), _game.pendingNeuro(), &_game.maze());
+        _game.clearPendingNeuro();
+        _neuroTrain.enter();
+        _state = State::NEURO_TRAIN;
+        break;
+      }
       // Seed Challenge: a one-off board — return to the picker, never touch the campaign.
       if (_inChallenge && (s == Signal::BACK || s == Signal::WON)) {
         _inChallenge = false;
@@ -354,6 +362,10 @@ void App::tick(uint32_t now) {
     }
     case State::EVO_LESSON: {
       if (_evoLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      break;
+    }
+    case State::NEURO_TRAIN: {  // came from the editor's brain block; return to the game
+      if (_neuroTrain.tick(now, tp) == Signal::BACK) { _game.enter(); _state = State::GAME; }
       break;
     }
     case State::CHALLENGE: {

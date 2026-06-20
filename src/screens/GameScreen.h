@@ -26,6 +26,11 @@ class GameScreen : public app::IScreen {
 
   int lastStars() const { return _stars; }
   int lastWrittenCount() const { return _writtenCount; }
+  // NeuroBot: which brain index to train (the editor asked to open the neuro interface)
+  int pendingNeuro() const { return _pendingNeuro; }
+  void clearPendingNeuro() { _pendingNeuro = -1; }
+  gb::Program& program() { return _prog; }
+  gb::Maze& maze() { return _maze; }
 
   // capture aids: solve the level and run it paused; advance one primitive
   void beginAutoRun();
@@ -102,6 +107,7 @@ class GameScreen : public app::IScreen {
   int _writtenCount = 0;
   int _stars = 0;
   int _selected = -1;   // selected program-list row
+  int _pendingNeuro = -1;  // brainIdx the user asked to train (-> Signal::GOTO_NEURO_TRAIN)
   int _scroll = 0;
   bool _followTail = true;  // keep the newest command in view as you add
 
