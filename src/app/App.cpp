@@ -45,6 +45,19 @@ void App::gotoSelect() {
     hal::audio.startMusic(hal::kTitleMusic, hal::kTitleMusicLen, true);  // menu theme
 }
 
+void App::gotoHome() {
+  _state = State::HOME;
+  _home.begin(&_profile);
+  _home.enter();
+  if (hal::audio.enabled())  // the hub keeps the menu theme
+    hal::audio.startMusic(hal::kTitleMusic, hal::kTitleMusicLen, true);
+}
+
+void App::returnToSub() {
+  if (_subFromHome) { gotoHome(); }
+  else { _stats.begin(&_profile); _stats.enter(); _state = State::STATS; }
+}
+
 void App::loadProfileInto(const std::string& id) {
   if (!store::profiles.load(id, _profile)) {
     _profile = gb::Profile{};
@@ -204,9 +217,24 @@ void App::tick(uint32_t now) {
   switch (_state) {
     case State::SELECT: {
       Signal s = _select.tick(now, tp);
-      if (s == Signal::PLAY) { loadProfileInto(_select.chosenId()); gotoIntro(_profile.level); }
+      if (s == Signal::PLAY) { loadProfileInto(_select.chosenId()); gotoHome(); }
       else if (s == Signal::NEW_PROFILE) { _create.begin(); _create.enter(); _state = State::CREATE; }
       else if (s == Signal::GOTO_STATS) { loadProfileInto(_select.chosenId()); _stats.begin(&_profile); _stats.enter(); _state = State::STATS; }
+      break;
+    }
+    case State::HOME: {
+      Signal s = _home.tick(now, tp);
+      if (s == Signal::GOTO_PLAY) gotoIntro(_profile.level);
+      else if (s == Signal::GOTO_ARENA) {
+        _arena.begin(&_profile); _arena.enter(); _state = State::ARENA;
+        if (hal::audio.enabled()) hal::audio.startMusic(hal::kArenaMusic, hal::kArenaMusicLen, true);
+      }
+      else if (s == Signal::GOTO_LEARN) { _lessonsMenu.enter(); _state = State::LESSONS_MENU; }
+      else if (s == Signal::GOTO_DRAW) { _subFromHome = true; _pixed.begin(&_profile); _pixed.enter(); _state = State::DRAW; }
+      else if (s == Signal::GOTO_BADGES) { _subFromHome = true; _badges.begin(&_profile); _badges.enter(); _state = State::BADGES; }
+      else if (s == Signal::GOTO_SHOP) { _subFromHome = true; _shop.begin(&_profile); _shop.enter(); _state = State::SHOP; }
+      else if (s == Signal::GOTO_STATS) { _stats.begin(&_profile); _stats.enter(); _state = State::STATS; }
+      else if (s == Signal::BACK) { saveProfile(); gotoSelect(); }
       break;
     }
     case State::CREATE: {
@@ -255,7 +283,7 @@ void App::tick(uint32_t now) {
         _challenge.begin(&_profile); _challenge.enter(); _state = State::CHALLENGE;
         break;
       }
-      if (s == Signal::BACK) { saveProfile(); gotoSelect(); break; }
+      if (s == Signal::BACK) { saveProfile(); gotoHome(); break; }
       if (s == Signal::WON) {
         _profile.stats.levelsCompleted++;
         if (_game.lastStars() == 3) _profile.stats.threeStarWins++;
@@ -285,20 +313,20 @@ void App::tick(uint32_t now) {
     }
     case State::STATS: {
       Signal s = _stats.tick(now, tp);
-      if (s == Signal::BACK) gotoSelect();
+      if (s == Signal::BACK) gotoHome();
       else if (s == Signal::EDIT_PROFILE) {
         _create.beginEdit(_profile.name, _profile.avatar);
         _create.enter();
         _state = State::CREATE;
       }
       else if (s == Signal::GOTO_BADGES) {
-        _badges.begin(&_profile); _badges.enter(); _state = State::BADGES;
+        _subFromHome = false; _badges.begin(&_profile); _badges.enter(); _state = State::BADGES;
       }
       else if (s == Signal::GOTO_SHOP) {
-        _shop.begin(&_profile); _shop.enter(); _state = State::SHOP;
+        _subFromHome = false; _shop.begin(&_profile); _shop.enter(); _state = State::SHOP;
       }
       else if (s == Signal::GOTO_DRAW) {
-        _pixed.begin(&_profile); _pixed.enter(); _state = State::DRAW;
+        _subFromHome = false; _pixed.begin(&_profile); _pixed.enter(); _state = State::DRAW;
       }
       else if (s == Signal::DELETE_PROFILE) {
         store::profiles.remove(_profile.id);
@@ -316,7 +344,7 @@ void App::tick(uint32_t now) {
         if (allZero(_profile.customChar)) _profile.customChar.clear();
         if (allZero(_profile.customGoal)) _profile.customGoal.clear();
         saveProfile();
-        _stats.begin(&_profile); _stats.enter(); _state = State::STATS;
+        returnToSub();
       }
       break;
     }
@@ -326,8 +354,8 @@ void App::tick(uint32_t now) {
         // an arena win may have earned the Champion badge
         _profile.achievements |= gb::evaluateAchievements(_profile);
         saveProfile();
-        hal::audio.stopMusic();  // drop the battle theme so the intro restarts its own
-        gotoIntro(_profile.level);
+        hal::audio.stopMusic();  // drop the battle theme so the hub restarts its own
+        gotoHome();
       }
       else if (s == Signal::GOTO_RADIO) {
         _radio.begin(&_profile); _radio.enter(); _state = State::RADIO;
@@ -350,7 +378,7 @@ void App::tick(uint32_t now) {
     }
     case State::LESSONS_MENU: {
       Signal s = _lessonsMenu.tick(now, tp);
-      if (s == Signal::BACK) gotoSelect();
+      if (s == Signal::BACK) gotoHome();
       else if (s == Signal::PLAY) {
         if (_lessonsMenu.pick() == 0) { _codeLab.enter(); _state = State::CODE_LAB; }
         else { _lessonHub.enter(); _state = State::NEURO_HUB; }
@@ -454,12 +482,12 @@ void App::tick(uint32_t now) {
     }
     case State::BADGES: {
       Signal s = _badges.tick(now, tp);
-      if (s == Signal::BACK) { _stats.begin(&_profile); _stats.enter(); _state = State::STATS; }
+      if (s == Signal::BACK) returnToSub();
       break;
     }
     case State::SHOP: {
       Signal s = _shop.tick(now, tp);
-      if (s == Signal::BACK) { saveProfile(); _stats.begin(&_profile); _stats.enter(); _state = State::STATS; }
+      if (s == Signal::BACK) { saveProfile(); returnToSub(); }
       break;
     }
   }

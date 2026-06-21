@@ -5,6 +5,7 @@
 #include "app/Screen.h"
 #include "game/Profile.h"
 #include "screens/GameScreen.h"
+#include "screens/HomeScreen.h"
 #include "screens/ProfileSelectScreen.h"
 #include "screens/ProfileCreateScreen.h"
 #include "screens/StatsScreen.h"
@@ -45,14 +46,16 @@ class App {
   void debugNeuroLesson();                // open the single-neuron lesson ('B')
 
  private:
-  enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE,
+  enum class State : uint8_t { SELECT, CREATE, HOME, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE,
                                NEURO_HUB, NEURO_LESSON, Q_LESSON, EVO_LESSON, NEURO_TRAIN, ARENA_TRAIN,
                                LESSONS_MENU, CODE_LAB, CODE_LESSON, TRANSFER_LESSON, BRAIN_VIEW, BRAIN_MAP,
                                PILOT_LESSON, RNN_LESSON };
 
   void gotoSelect();
+  void gotoHome();
   void gotoIntro(uint32_t level);
   void gotoGame();
+  void returnToSub();        // BACK from Badges/Shop/Draw -> Home or Stats (whoever opened it)
   void drawIntro();
   void loadProfileInto(const std::string& id);
   void saveProfile();
@@ -61,9 +64,11 @@ class App {
   gb::Profile _profile;
   uint32_t _introLevel = 1;
   const char* _newBadge = nullptr;  // achievement to celebrate on the next intro
+  bool _subFromHome = false;        // did Badges/Shop/Draw open from the hub (vs Stats)?
 
   screens::ProfileSelectScreen _select;
   screens::ProfileCreateScreen _create;
+  screens::HomeScreen _home;
   screens::GameScreen _game;
   screens::StatsScreen _stats;
   screens::ArenaScreen _arena;
