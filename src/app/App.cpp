@@ -406,7 +406,7 @@ void App::tick(uint32_t now) {
           case 4: _qLesson.begin(); _qLesson.enter(); _state = State::Q_LESSON; break;
           case 5: _evoLesson.begin(); _evoLesson.enter(); _state = State::EVO_LESSON; break;
           case 6: _transferLesson.begin(); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;
-          case 7: _brainView.begin(); _brainView.enter(); _state = State::BRAIN_VIEW; break;
+          case 7: _brainView.begin(&_profile); _brainView.enter(); _state = State::BRAIN_VIEW; break;
           case 8: _pilotLesson.begin(); _pilotLesson.enter(); _state = State::PILOT_LESSON; break;
           case 9: _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; break;
         }

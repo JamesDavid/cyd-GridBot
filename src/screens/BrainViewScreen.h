@@ -8,12 +8,13 @@
 #include "ui/UI.h"
 #include "game/Maze.h"
 #include "game/Program.h"   // Net, RNet, SENSOR_COUNT_FOR_BRAIN
+#include "game/Profile.h"   // library (save a trained brain)
 
 namespace screens {
 
 class BrainViewScreen : public app::IScreen {
  public:
-  void begin();
+  void begin(gb::Profile* profile = nullptr);  // profile -> can save brains to the library
   void enter() override;
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
 
@@ -64,6 +65,10 @@ class BrainViewScreen : public app::IScreen {
   int _mode = M_IDLE;
   int _sel = -1;            // zoomed neuron: -1 none, else layer*100 + idx (layer 1=hid, 2=out)
   uint32_t _last = 0;
+  gb::Profile* _profile = nullptr;   // for saving brains to the library
+  bool _saved = false;               // "saved!" feedback after a save
+  int  nextVersion() const;          // smallest free "Brain vN" number
+  void saveToLibrary();
   app::TapDetector _tap;
 };
 

@@ -17,6 +17,7 @@ static const Rect R_MAP   = {122, (int16_t)(BOTBAR_Y + 2), 52, 26};
 static const Rect R_NEW   = {178, (int16_t)(BOTBAR_Y + 2), 48, 26};  // scramble to a fresh brain
 static const Rect R_BACK  = {230, (int16_t)(BOTBAR_Y + 2), 84, 26};
 static const Rect R_TYPE  = {196, 1, 56, 20};   // ff/rnn toggle, top bar
+static const Rect R_SAVE  = {136, 1, 56, 20};   // save the brain to your library
 
 static const char* INLBL[SENSOR_COUNT_FOR_BRAIN] =
   {"wallF","wallL","wallR","pitF","goalF","goalR","goalD","foeF","foeR","foeD"};
@@ -69,11 +70,34 @@ void BrainViewScreen::resetBrains() {
   _epoch = 0; _loss = 1.0f;
 }
 
-void BrainViewScreen::begin() {
-  _level = 6; _useRnn = false; _sel = -1; _mode = M_IDLE;
+void BrainViewScreen::begin(Profile* profile) {
+  _profile = profile;
+  _level = 6; _useRnn = false; _sel = -1; _mode = M_IDLE; _saved = false;
   loadMaze();
   resetBrains();
   resetRun();
+}
+
+int BrainViewScreen::nextVersion() const {
+  int hi = 0;
+  if (_profile)
+    for (auto& e : _profile->library) { int v = 0; if (sscanf(e.name.c_str(), "Brain v%d", &v) == 1 && v > hi) hi = v; }
+  return hi + 1;
+}
+
+void BrainViewScreen::saveToLibrary() {
+  if (!_profile || (int)_profile->library.size() >= LIBRARY_MAX) { hal::audio.fail(); return; }
+  LibEntry e;
+  char nm[16]; snprintf(nm, sizeof(nm), "Brain v%d", nextVersion());
+  e.name = nm;
+  uint8_t idx = e.program.addBrain(1);          // makes brains[idx] + rbrains[idx]
+  Node nb = Node::neuro(idx);
+  if (_useRnn) { e.program.rbrains[idx] = rnn(); nb = Node::rnnBrain(idx); }  // the trained memory brain
+  else         { e.program.brains[idx]  = ff(); }                            // the trained feedforward brain
+  Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(nb); e.program.main.push_back(loop);
+  _profile->library.push_back(e);
+  if (_profile->stats.fightersSaved < 0xFFFF) _profile->stats.fightersSaved++;  // counts toward Battle-Ready
+  _saved = true; hal::audio.badge();
 }
 
 void BrainViewScreen::enter() { draw(); }
@@ -131,6 +155,10 @@ void BrainViewScreen::draw() {
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Brain Cam", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
+  if (_profile) {  // save the trained brain into your library (then usable in code + Arena)
+    char sv[12]; if (_saved) snprintf(sv, sizeof(sv), "saved!"); else snprintf(sv, sizeof(sv), "save v%d", nextVersion());
+    button(g, R_SAVE, sv, _saved ? C_DIM : C_GO, C_PANEL);
+  }
   button(g, R_TYPE, _useRnn ? "rnn >" : "plain >", _useRnn ? C_ACCENT : C_INK, C_PANEL);
 
   drawMaze();
@@ -257,12 +285,14 @@ app::Signal BrainViewScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
 
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
-  if (R_TYPE.contains(tx, ty)) {
-    _useRnn = !_useRnn; _sel = -1; _mode = M_IDLE; resetRun(); hal::audio.blip(); draw();
+  if (_profile && R_SAVE.contains(tx, ty)) {
+    saveToLibrary(); draw();
+  } else if (R_TYPE.contains(tx, ty)) {
+    _useRnn = !_useRnn; _sel = -1; _mode = M_IDLE; _saved = false; resetRun(); hal::audio.blip(); draw();
   } else if (R_TEACH.contains(tx, ty)) {
     if (_mode == M_LEARN) { _mode = M_IDLE; resetRun(); }
     else { _epoch = 0; _mode = M_LEARN; _last = now; }
-    hal::audio.blip(); draw();
+    _saved = false; hal::audio.blip(); draw();
   } else if (R_RUN.contains(tx, ty)) {
     if (_mode == M_RUN) { _mode = M_IDLE; }
     else { _sel = -1; resetRun(); _mode = M_RUN; _last = now; }
@@ -271,9 +301,9 @@ app::Signal BrainViewScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     _level = _level >= 14 ? 3 : _level + 1;   // cycle a few campaign maps
     // KEEP the trained brain — it carries over to the new map (transfer learning); Teach
     // then fine-tunes it. Tap "New" to scramble and learn the map from scratch instead.
-    _sel = -1; _mode = M_IDLE; loadMaze(); resetRun(); hal::audio.blip(); draw();
+    _sel = -1; _mode = M_IDLE; _saved = false; loadMaze(); resetRun(); hal::audio.blip(); draw();
   } else if (R_NEW.contains(tx, ty)) {
-    _sel = -1; _mode = M_IDLE; resetBrains(); resetRun(); hal::audio.blip(); draw();  // fresh brain
+    _sel = -1; _mode = M_IDLE; _saved = false; resetBrains(); resetRun(); hal::audio.blip(); draw();  // fresh brain
   } else if (R_BACK.contains(tx, ty)) {
     return app::Signal::BACK;
   } else {
