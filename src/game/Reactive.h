@@ -65,4 +65,39 @@ inline int reactiveCmdToAction(Cmd c) {
                case CMD_TURN_R: return 2; case CMD_JUMP: return 3; default: return 0; }
 }
 
+// Memory-using explorer: like reactiveActionTo, but it remembers visited tiles and prefers
+// UNVISITED ground, so it backs out of dead-ends instead of oscillating. This is the
+// stateful teacher a RECURRENT brain must learn to imitate from senses alone (the RNN has
+// no "visited" input — it has to build the memory internally). `visited` is MAZE_MAX_CELLS.
+inline Cmd exploreActionTo(const Maze& m, const Pose& p, const uint8_t* visited, int tr, int tc) {
+  int fdr, fdc; facingDelta(p.facing, fdr, fdc);
+  int rdr, rdc; facingDelta(turnRight(p.facing), rdr, rdc);
+  int ldr, ldc; facingDelta(turnLeft(p.facing), ldr, ldc);
+  int ar = p.row + fdr, ac = p.col + fdc;
+  int rr = p.row + rdr, rc = p.col + rdc;
+  int lr = p.row + ldr, lc = p.col + ldc;
+  int gr = tr - p.row, gc = tc - p.col;
+  int fwd = gr * fdr + gc * fdc, rgt = gr * rdr + gc * rdc;
+
+  if (m.inBounds(ar, ac) && m.at(ar, ac) == PIT) {
+    int jr = p.row + 2 * fdr, jc = p.col + 2 * fdc;
+    if (fwd > 0 && m.inBounds(jr, jc) && m.at(jr, jc) != WALL && m.at(jr, jc) != PIT)
+      return CMD_JUMP;
+    return rgt >= 0 ? CMD_TURN_R : CMD_TURN_L;
+  }
+  auto open  = [&](int r, int c) { return m.inBounds(r, c) && m.at(r, c) != WALL && m.at(r, c) != PIT; };
+  auto fresh = [&](int r, int c) { return open(r, c) && !(visited && visited[r * m.cols() + c]); };
+  bool fN = fresh(ar, ac), rN = fresh(rr, rc), lN = fresh(lr, lc);
+  if (fN && fwd >= 0) return CMD_FWD;
+  if (rN && rgt > 0)  return CMD_TURN_R;
+  if (lN && rgt < 0)  return CMD_TURN_L;
+  if (fN) return CMD_FWD;
+  if (rN) return CMD_TURN_R;
+  if (lN) return CMD_TURN_L;
+  if (open(ar, ac)) return CMD_FWD;     // all neighbours visited -> backtrack
+  if (open(rr, rc)) return CMD_TURN_R;
+  if (open(lr, lc)) return CMD_TURN_L;
+  return CMD_TURN_R;
+}
+
 }  // namespace gb
