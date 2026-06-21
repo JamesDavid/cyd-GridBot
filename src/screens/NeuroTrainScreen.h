@@ -32,6 +32,7 @@ class NeuroTrainScreen : public app::IScreen {
   void seedDrawStart();     // begin a drawn path at the robot's start tile
   bool tileAtPixel(int x, int y, int& r, int& c) const;  // maze hit-test
   void handleDrawTap(int r, int c);  // append/undo a tile on the drawn path
+  void setNodePilot(bool on);  // flag this brain's N_NEURO node as a pilot (planner+follower)
 
   gb::Profile* _profile = nullptr;
   gb::Program* _prog = nullptr;
@@ -50,6 +51,7 @@ class NeuroTrainScreen : public app::IScreen {
   uint8_t _drawPath[64];       // ordered tile indices of the drawn route
   int _drawLen = 0;
   int _gauntletScore = -1;     // last Generalist-challenge result (levels cleared), -1 = not run
+  bool _pilotMode = false;     // preview/save the brain as a planner-fed pilot
   app::TapDetector _tap;
 };
 

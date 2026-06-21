@@ -4,6 +4,7 @@
 #include "game/Interpreter.h"
 #include "game/Distill.h"
 #include "game/Gauntlet.h"
+#include "game/Pilot.h"
 #include "game/Achievements.h"
 
 using namespace ui;
@@ -14,12 +15,13 @@ namespace screens {
 static const Rect R_BASE  = {6,   (int16_t)(BAND_Y + 2), 118, 18};  // load a brain to fine-tune
 static const Rect R_GAUNT = {128, (int16_t)(BAND_Y + 2), 90,  18};  // Generalist challenge trainer
 static const Rect R_SAVEV = {222, (int16_t)(BAND_Y + 2), 92,  18};  // save a versioned copy
-// normal toolbar (5 buttons): distill solver / draw a path / neuroevolve / save to block / leave
-static const Rect R_TEACH = {6,   (int16_t)(BOTBAR_Y + 2), 54, 26};
-static const Rect R_DRAW  = {64,  (int16_t)(BOTBAR_Y + 2), 52, 26};
-static const Rect R_TRAIN = {120, (int16_t)(BOTBAR_Y + 2), 56, 26};
-static const Rect R_USE   = {180, (int16_t)(BOTBAR_Y + 2), 60, 26};
-static const Rect R_BACK  = {244, (int16_t)(BOTBAR_Y + 2), 70, 26};
+// normal toolbar (6): distill solver / draw a path / neuroevolve / planner+follow / save / leave
+static const Rect R_TEACH = {4,   (int16_t)(BOTBAR_Y + 2), 48, 26};
+static const Rect R_DRAW  = {54,  (int16_t)(BOTBAR_Y + 2), 44, 26};
+static const Rect R_TRAIN = {100, (int16_t)(BOTBAR_Y + 2), 52, 26};
+static const Rect R_PILOT = {154, (int16_t)(BOTBAR_Y + 2), 48, 26};
+static const Rect R_USE   = {204, (int16_t)(BOTBAR_Y + 2), 44, 26};
+static const Rect R_BACK  = {250, (int16_t)(BOTBAR_Y + 2), 64, 26};
 // draw-mode toolbar: learn from the drawn path / clear it / leave draw mode
 static const Rect R_LEARN  = {6,   (int16_t)(BOTBAR_Y + 2), 110, 26};
 static const Rect R_DCLEAR = {122, (int16_t)(BOTBAR_Y + 2), 90, 26};
@@ -66,15 +68,37 @@ void NeuroTrainScreen::begin(Profile* profile, Program* prog, int brainIdx, Maze
   _profile = profile; _prog = prog; _idx = brainIdx; _maze = maze;
   rebuildBrainLibs();
   _baseIdx = 0;
+  _pilotMode = false;   // reflect the program's existing brain block
+  if (_prog) {
+    NodeList* lists[3] = {&_prog->main, &_prog->f1, &_prog->f2};
+    for (NodeList* lst : lists)
+      for (Node& n : *lst) {
+        if (n.type == N_NEURO && n.brainIdx == _idx && n.pilot) _pilotMode = true;
+        for (Node& c : n.body)
+          if (c.type == N_NEURO && c.brainIdx == _idx && c.pilot) _pilotMode = true;
+      }
+  }
   applyBase();
 }
 
 void NeuroTrainScreen::enter() { draw(); }
 
+void NeuroTrainScreen::setNodePilot(bool on) {
+  if (!_prog) return;
+  NodeList* lists[3] = {&_prog->main, &_prog->f1, &_prog->f2};
+  // walk each list (one level of nesting covers the brain's repeat-until wrapper)
+  for (NodeList* lst : lists)
+    for (Node& n : *lst) {
+      if (n.type == N_NEURO && n.brainIdx == _idx) n.pilot = on;
+      for (Node& c : n.body)
+        if (c.type == N_NEURO && c.brainIdx == _idx) c.pilot = on;
+    }
+}
+
 void NeuroTrainScreen::tracePath() {
   Program prog; prog.brains.push_back(_brain);
   Node loop = Node::repeatUntil(AT_GOAL);
-  loop.body.push_back(Node::neuro(0));
+  loop.body.push_back(_pilotMode ? Node::pilotBrain(0) : Node::neuro(0));
   prog.main.push_back(loop);
   Interpreter it; it.load(&prog, _maze, _maze->startPose(), 64);
   _pathLen = 0; _won = false;
@@ -113,6 +137,9 @@ void NeuroTrainScreen::draw() {
       snprintf(hd, sizeof(hd), "%s %d/%d", won ? "GENERALIST!" : "gauntlet",
                _gauntletScore, GAUNTLET_MAZES);
       label(g, SCREEN_W - 6, 6, hd, won ? C_GO : C_ACCENT, textdatum_t::top_right);
+    } else if (_pilotMode) {
+      snprintf(hd, sizeof(hd), "pilot  %s", _won ? "solves!" : "...");
+      label(g, SCREEN_W - 6, 6, hd, _won ? C_GO : ui::rgb(255, 170, 60), textdatum_t::top_right);
     } else {
       if (_taught) snprintf(hd, sizeof(hd), "taught  %s", _won ? "solves!" : "...");
       else snprintf(hd, sizeof(hd), "gen %d  %s", _evo.gen, _won ? "solves!" : "...");
@@ -169,6 +196,7 @@ void NeuroTrainScreen::draw() {
     button(g, R_TEACH, "Teach", C_GO, C_PANEL);          // distill the solver (reliable)
     button(g, R_DRAW, "Draw", C_ACCENT, C_PANEL);        // imitation learning from a drawn path
     button(g, R_TRAIN, "Evolve", C_FUNC, C_PANEL);       // neuroevolution (no teacher)
+    button(g, R_PILOT, "Pilot", _pilotMode ? C_GO : ui::rgb(255, 170, 60), C_PANEL);  // planner + follower
     button(g, R_USE, _saved ? "saved!" : "Use it", _saved ? C_DIM : ui::rgb(120, 230, 245), C_PANEL);
     button(g, R_BACK, "Back", C_INK, C_PANEL);
   }
@@ -219,6 +247,7 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     if (R_LEARN.contains(tx, ty)) {                 // distill the brain to copy the drawn path
       if (distillPath(_brain, *_maze, _drawPath, _drawLen, 700)) {
         _taught = true; _saved = false; _savedCopy = false; _gauntletScore = -1;
+        _pilotMode = false; setNodePilot(false);
         _drawMode = false; tracePath(); hal::audio.badge();
       } else { hal::audio.fail(); }
       draw();
@@ -240,6 +269,7 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     gauntletTrain(_brain, 20);            // one batch (tap again to keep improving)
     _gauntletScore = gauntletRun(_brain); // score the FROZEN brain on the held-out test mazes
     _taught = false; _saved = false; _savedCopy = false;  // brain changed -> re-Use to save it
+    _pilotMode = false; setNodePilot(false);
     if (_profile) {
       if ((uint8_t)_gauntletScore > _profile->stats.gauntletBest)
         _profile->stats.gauntletBest = (uint8_t)_gauntletScore;
@@ -263,12 +293,19 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   } else if (R_TEACH.contains(tx, ty)) {  // distill the optimal solver into the brain (reliable)
     distillSolver(_brain, *_maze, true, 700);
     _taught = true; _saved = false; _savedCopy = false; _gauntletScore = -1;
+    _pilotMode = false; setNodePilot(false);
     tracePath(); hal::audio.blip(); draw();
   } else if (R_DRAW.contains(tx, ty)) {   // hand-draw a path to learn from (imitation learning)
     _drawMode = true; seedDrawStart(); hal::audio.blip(); draw();
+  } else if (R_PILOT.contains(tx, ty)) {  // planner + follower: learn to steer to waypoints
+    pilotTrain(_brain, _profile ? _profile->seedBase : 0u, 14, 18);
+    setNodePilot(true);                   // the program's brain block becomes a pilot
+    _pilotMode = true; _taught = false; _saved = false; _savedCopy = false; _gauntletScore = -1;
+    tracePath(); hal::audio.blip(); draw();
   } else if (R_TRAIN.contains(tx, ty)) {
     for (int gg = 0; gg < 5; gg++) { _evo.breed(); _evo.evaluate(*_maze, nullptr, 110); }
     _brain = _evo.best(); _taught = false; _saved = false; _savedCopy = false; _gauntletScore = -1;
+    _pilotMode = false; setNodePilot(false);
     tracePath(); hal::audio.blip(); draw();
   } else if (R_USE.contains(tx, ty)) {
     if (_prog && _idx < (int)_prog->brains.size()) _prog->brains[_idx] = _brain;

@@ -19,7 +19,7 @@ static bool sameNode(const Node& a, const Node& b) {
     case N_REPEAT_UNTIL:
     case N_IF: if (a.cond != b.cond) return false; break;
     case N_CALL: if (a.func != b.func) return false; break;
-    case N_NEURO: if (a.brainIdx != b.brainIdx) return false; break;
+    case N_NEURO: if (a.brainIdx != b.brainIdx || a.pilot != b.pilot) return false; break;
     default: break;
   }
   return sameList(a.body, b.body);
@@ -80,7 +80,7 @@ void test_neuro_program_roundtrip() {
   uint8_t idx = p.addBrain(1);
   p.brains[idx].w1[0][0] = 1.25f; p.brains[idx].b2[3] = -0.5f;  // distinctive weights
   Node loop = Node::repeatUntil(AT_GOAL);
-  loop.body.push_back(Node::neuro(idx));
+  loop.body.push_back(Node::pilotBrain(idx));   // a PILOT brain: the pilot flag must survive
   p.main.push_back(loop);
 
   JsonDocument doc; programToJson(p, doc.to<JsonObject>());

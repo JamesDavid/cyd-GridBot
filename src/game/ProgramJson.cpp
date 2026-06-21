@@ -13,7 +13,7 @@ void nodeListToJson(const NodeList& list, JsonArray out) {
       case N_REPEAT_UNTIL:
       case N_IF: o["cd"] = (int)n.cond; break;
       case N_CALL: o["fn"] = (int)n.func; break;
-      case N_NEURO: o["bi"] = (int)n.brainIdx; break;
+      case N_NEURO: o["bi"] = (int)n.brainIdx; if (n.pilot) o["pl"] = true; break;
       default: break;
     }
     if (!n.body.empty()) {
@@ -34,7 +34,7 @@ void nodeListFromJson(JsonArrayConst in, NodeList& out) {
       case N_REPEAT_UNTIL:
       case N_IF: n.cond = (Cond)(int)(o["cd"] | 0); break;
       case N_CALL: n.func = (uint8_t)(int)(o["fn"] | 1); break;
-      case N_NEURO: n.brainIdx = (uint8_t)(int)(o["bi"] | 0); break;
+      case N_NEURO: n.brainIdx = (uint8_t)(int)(o["bi"] | 0); n.pilot = (o["pl"] | false); break;
       default: break;
     }
     if (o["b"].is<JsonArrayConst>()) nodeListFromJson(o["b"].as<JsonArrayConst>(), n.body);

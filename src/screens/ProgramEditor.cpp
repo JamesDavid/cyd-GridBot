@@ -68,7 +68,7 @@ static void nodeLabel(const Node& n, char* buf, size_t bn, Glyph& gl, uint16_t& 
     case N_REPEAT_UNTIL: gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "until %s", condName(n.cond)); break;
     case N_IF:           gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "if %s", condName(n.cond)); break;
     case N_CALL:         gl = Glyph::CALL;   col = C_FUNC;  snprintf(buf, bn, "call F%d", n.func); break;
-    case N_NEURO:        gl = Glyph::SENSE;  col = ui::rgb(120, 230, 245); snprintf(buf, bn, "brain"); break;
+    case N_NEURO:        gl = Glyph::SENSE;  col = ui::rgb(120, 230, 245); snprintf(buf, bn, n.pilot ? "pilot" : "brain"); break;
   }
 }
 
