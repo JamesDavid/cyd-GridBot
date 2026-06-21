@@ -997,6 +997,7 @@ void GameScreen::settleOutcome(Outcome o) {
     // Multi-maze generalization level: the same program must clear every board.
     if (_boardIdx + 1 < _boardCount) { hal::audio.tick(); advanceBoard(); return; }
     _mode = M_WIN;
+    drawChrome();   // refresh the top button label (was "< Code" during the run -> "Menu")
     _writtenCount = programWrittenCount(_prog);
     _stars = starsFor(_writtenCount, _par);
     hal::audio.win();
@@ -1054,6 +1055,7 @@ void GameScreen::settleOutcome(Outcome o) {
   }
   _failNode = _it.currentNode();
   _mode = M_FAIL;
+  drawChrome();   // refresh the top button label -> "Menu"
   _auto = false;
   hal::audio.fail();
   hal::led.red();
