@@ -100,11 +100,13 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [x] **Enemy senses exposed in maze mode** — the campaign `if/until` cycler now offers
       `enemy`/`near` too (no-op without a foe), so a kid can author & test arena-bot logic
       while playing the campaign.
-- [x] **"Generalist" prize badge** (bar = first **50** levels). DONE: the Train-the-brain
-      page has a **vs 50** chip that runs the frozen working brain across campaign levels
-      1–50 (`game/Gauntlet.cpp`, every board of every level, no training), shows "cleared
-      N/50" in the header, records `stats.gauntletBest`, and grants the **Generalist** badge
-      on a clean 50/50 sweep. Best run also shown on the Stats screen.
+- [x] **"Generalist" prize badge.** DONE (redesigned to be winnable). A frozen reactive
+      brain can't plan whole campaign mazes (verified: best ~1-2/50), so the prize uses a
+      **Generalization Gauntlet** instead: `game/Gauntlet.cpp` makes reactive-solvable open
+      mazes (verified by a memoryless navigator), a **Generalize** button distills the brain
+      to imitate that navigator across a training set, and the badge is earned when the
+      FROZEN brain clears all `GAUNTLET_MAZES` (10) HELD-OUT test mazes it never trained on.
+      Winnability is regression-tested (`test_gauntlet_is_winnable`). Best run shown on Stats.
 - [ ] More ML topics the same engine could host (from the lessons discussion):
       regularization/overfitting, batching, reward shaping, exploration-vs-exploitation
       sliders, and a tiny recurrent/memory cell.

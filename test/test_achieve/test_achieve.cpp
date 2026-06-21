@@ -59,11 +59,11 @@ void test_neurobot_badges() {
   TEST_ASSERT_TRUE(evaluateAchievements(p) & A_NEURO_WIN);
   p.stats.fightersSaved = 1;
   TEST_ASSERT_TRUE(evaluateAchievements(p) & A_FIGHTER);
-  // the Generalist prize: only at the agreed 50-level bar
+  // the Generalist prize: only when the whole gauntlet is cleared
   TEST_ASSERT_FALSE(evaluateAchievements(p) & A_GENERALIST);
-  p.stats.gauntletBest = 49;
+  p.stats.gauntletBest = (uint8_t)(GAUNTLET_MAZES - 1);
   TEST_ASSERT_FALSE(evaluateAchievements(p) & A_GENERALIST);
-  p.stats.gauntletBest = 50;
+  p.stats.gauntletBest = (uint8_t)GAUNTLET_MAZES;
   TEST_ASSERT_TRUE(evaluateAchievements(p) & A_GENERALIST);
   // names exist for the new bits (13..16)
   TEST_ASSERT_EQUAL_STRING("Brainiac", achievementName(13));

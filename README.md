@@ -110,7 +110,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![Badges gallery](docs/img/badges.png) |
 |:--|
-| **17 badges to collect.** First Steps, Bright Spark (3 stars), Hopper (your first Jump), Looper, Architect (a Function), Sixth Sense, Champion (an arena win), On Fire (5-streak), Unstoppable (10-streak), Explorer (Lv 10), Veteran (Lv 20), Artist (draw a sprite), Star Collector, the **NeuroBot** trio — **Brainiac** (train a brain), **Mind Over Maze** (clear a level *with* a brain), **Battle-Ready** (save a brain as an Arena fighter) — and **Generalist** (train one frozen brain that clears levels 1–50 unchanged). Gold = earned; grey = a hint for how to get it. |
+| **17 badges to collect.** First Steps, Bright Spark (3 stars), Hopper (your first Jump), Looper, Architect (a Function), Sixth Sense, Champion (an arena win), On Fire (5-streak), Unstoppable (10-streak), Explorer (Lv 10), Veteran (Lv 20), Artist (draw a sprite), Star Collector, the **NeuroBot** trio — **Brainiac** (train a brain), **Mind Over Maze** (clear a level *with* a brain), **Battle-Ready** (save a brain as an Arena fighter) — and **Generalist** (train one brain that clears a gauntlet of 10 fresh mazes it never saw). Gold = earned; grey = a hint for how to get it. |
 
 ### Themed worlds & loot — *the maze changes as you climb*
 

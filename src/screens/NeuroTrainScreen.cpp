@@ -11,9 +11,9 @@ using namespace gb;
 
 namespace screens {
 
-static const Rect R_BASE  = {6,   (int16_t)(BAND_Y + 2), 150, 18};  // load a brain to fine-tune
-static const Rect R_GAUNT = {160, (int16_t)(BAND_Y + 2), 52,  18};  // Generalist 50-level challenge
-static const Rect R_SAVEV = {216, (int16_t)(BAND_Y + 2), 98,  18};  // save a versioned copy
+static const Rect R_BASE  = {6,   (int16_t)(BAND_Y + 2), 118, 18};  // load a brain to fine-tune
+static const Rect R_GAUNT = {128, (int16_t)(BAND_Y + 2), 90,  18};  // Generalist challenge trainer
+static const Rect R_SAVEV = {222, (int16_t)(BAND_Y + 2), 92,  18};  // save a versioned copy
 // normal toolbar (5 buttons): distill solver / draw a path / neuroevolve / save to block / leave
 static const Rect R_TEACH = {6,   (int16_t)(BOTBAR_Y + 2), 54, 26};
 static const Rect R_DRAW  = {64,  (int16_t)(BOTBAR_Y + 2), 52, 26};
@@ -109,9 +109,9 @@ void NeuroTrainScreen::draw() {
     label(g, 6, 3, "Train the brain", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
     char hd[36];
     if (_gauntletScore >= 0) {  // the Generalist challenge result takes over the header line
-      bool won = _gauntletScore >= GENERALIST_LEVELS;
-      snprintf(hd, sizeof(hd), "%s %d/%d", won ? "GENERALIST!" : "cleared",
-               _gauntletScore, GENERALIST_LEVELS);
+      bool won = _gauntletScore >= GAUNTLET_MAZES;
+      snprintf(hd, sizeof(hd), "%s %d/%d", won ? "GENERALIST!" : "gauntlet",
+               _gauntletScore, GAUNTLET_MAZES);
       label(g, SCREEN_W - 6, 6, hd, won ? C_GO : C_ACCENT, textdatum_t::top_right);
     } else {
       if (_taught) snprintf(hd, sizeof(hd), "taught  %s", _won ? "solves!" : "...");
@@ -122,7 +122,7 @@ void NeuroTrainScreen::draw() {
     // transfer-learning chips: pick a base brain to fine-tune, save a versioned copy
     char base[40]; snprintf(base, sizeof(base), "base: %s >", _baseName.c_str());
     button(g, R_BASE, base, ui::rgb(120, 230, 245), C_PANEL);
-    button(g, R_GAUNT, "vs 50", C_ACCENT, C_PANEL);   // the Generalist challenge
+    button(g, R_GAUNT, "Generalize", C_ACCENT, C_PANEL);  // train+test for the Generalist prize
     char sv[20];
     if (_savedCopy) snprintf(sv, sizeof(sv), "saved!");
     else            snprintf(sv, sizeof(sv), "save v%d >", nextVersion());
@@ -236,8 +236,10 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   if (R_BASE.contains(tx, ty)) {  // cycle the transfer base: block brain -> saved brains
     _baseIdx = (_baseIdx + 1) % (1 + (int)_brainLibs.size());
     applyBase(); hal::audio.blip(); draw();
-  } else if (R_GAUNT.contains(tx, ty)) {  // Generalist challenge: frozen brain vs levels 1..50
-    _gauntletScore = gauntletRun(_brain, _profile ? _profile->seedBase : 0, GENERALIST_LEVELS);
+  } else if (R_GAUNT.contains(tx, ty)) {  // Generalist: train across the gauntlet, then test it
+    gauntletTrain(_brain, 20);            // one batch (tap again to keep improving)
+    _gauntletScore = gauntletRun(_brain); // score the FROZEN brain on the held-out test mazes
+    _taught = false; _saved = false; _savedCopy = false;  // brain changed -> re-Use to save it
     if (_profile) {
       if ((uint8_t)_gauntletScore > _profile->stats.gauntletBest)
         _profile->stats.gauntletBest = (uint8_t)_gauntletScore;
@@ -246,7 +248,7 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       if ((_profile->achievements & ~before) & A_GENERALIST) hal::audio.badge();  // new prize!
       else hal::audio.blip();
     } else hal::audio.blip();
-    draw();
+    tracePath(); draw();
   } else if (R_SAVEV.contains(tx, ty)) {  // save the fine-tuned brain as a new version
     if (_profile && (int)_profile->library.size() < LIBRARY_MAX) {
       LibEntry e;

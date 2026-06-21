@@ -70,9 +70,9 @@ void StatsScreen::draw() {
              (unsigned)s.brainsTrained, (unsigned)s.neuroWins, (unsigned)s.fightersSaved);
     line("Brains", buf, ui::rgb(120, 230, 245));
     if (s.gauntletBest > 0) {  // best Generalist-challenge run for a frozen brain
-      snprintf(buf, sizeof(buf), "%u/50 levels%s", (unsigned)s.gauntletBest,
-               s.gauntletBest >= 50 ? " - GENERALIST!" : "");
-      line("Gauntlet", buf, s.gauntletBest >= 50 ? C_GO : C_ACCENT);
+      snprintf(buf, sizeof(buf), "%u/%d mazes%s", (unsigned)s.gauntletBest, gb::GAUNTLET_MAZES,
+               s.gauntletBest >= gb::GAUNTLET_MAZES ? " - GENERALIST!" : "");
+      line("Gauntlet", buf, s.gauntletBest >= gb::GAUNTLET_MAZES ? C_GO : C_ACCENT);
     }
   }
 

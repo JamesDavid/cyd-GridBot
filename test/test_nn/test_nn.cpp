@@ -202,21 +202,29 @@ void test_distill_path_navigates() {
   TEST_ASSERT_TRUE(o == OUT_WIN || distanceToGoal(m, it.pose().row, it.pose().col) <= 1);
 }
 
-// The Generalist gauntlet: counts consecutive cleared levels for a FROZEN brain, bounded
-// to [0, upToLevel] and deterministic for a given (brain, seed).
+// The Generalist gauntlet score is bounded and deterministic for a given brain.
 void test_gauntlet_bounded_and_deterministic() {
   Net brain; brain.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 7);
-  int a = gauntletRun(brain, 999u, 50);
-  int b = gauntletRun(brain, 999u, 50);
+  int a = gauntletRun(brain);
+  int b = gauntletRun(brain);
   TEST_ASSERT_EQUAL(a, b);
-  TEST_ASSERT_TRUE(a >= 0 && a <= 50);
-  TEST_ASSERT_EQUAL(0, gauntletRun(brain, 999u, 0));  // no levels asked -> none cleared
+  TEST_ASSERT_TRUE(a >= 0 && a <= GAUNTLET_MAZES);
+}
+
+// The prize must stay winnable: a reactive brain, trained by the Generalize batches,
+// clears the whole held-out gauntlet. (Guards against regressing into an impossible badge.)
+void test_gauntlet_is_winnable() {
+  Net brain; brain.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
+  gauntletTrain(brain, 50);
+  TEST_ASSERT_EQUAL_MESSAGE(GAUNTLET_MAZES, gauntletRun(brain),
+                            "a trained reactive brain should clear the whole gauntlet");
 }
 
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_distill_brain_navigates);
   RUN_TEST(test_gauntlet_bounded_and_deterministic);
+  RUN_TEST(test_gauntlet_is_winnable);
   RUN_TEST(test_path_to_program_walks_and_turns);
   RUN_TEST(test_path_to_program_jumps_pit);
   RUN_TEST(test_path_to_program_rejects_diagonal);

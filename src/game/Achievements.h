@@ -3,6 +3,7 @@
 // and celebrates any newly-set bits. Platform-agnostic (host-testable).
 #pragma once
 #include "game/Profile.h"
+#include "game/Gauntlet.h"  // GAUNTLET_MAZES (the Generalist bar)
 
 namespace gb {
 
@@ -23,7 +24,7 @@ enum Achievement : uint32_t {
   A_NEURO      = 1u << 13,  // train a brain (NeuroBot)
   A_NEURO_WIN  = 1u << 14,  // clear a level with a trained brain
   A_FIGHTER    = 1u << 15,  // save a brain as an Arena fighter
-  A_GENERALIST = 1u << 16,  // one frozen brain clears campaign levels 1-50 unchanged
+  A_GENERALIST = 1u << 16,  // one brain generalizes — clears the whole held-out gauntlet
   ACH_COUNT    = 17
 };
 
@@ -56,7 +57,7 @@ inline uint32_t evaluateAchievements(const Profile& p) {
   if (s.brainsTrained >= 1)           a |= A_NEURO;
   if (s.neuroWins >= 1)               a |= A_NEURO_WIN;
   if (s.fightersSaved >= 1)           a |= A_FIGHTER;
-  if (s.gauntletBest >= 50)           a |= A_GENERALIST;
+  if (s.gauntletBest >= GAUNTLET_MAZES) a |= A_GENERALIST;
   return a;
 }
 
