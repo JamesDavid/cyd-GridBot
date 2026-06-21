@@ -17,4 +17,10 @@ constexpr int SENSOR_COUNT = 10;
 // Fill out[0..SENSOR_COUNT). `enemy` may be null (campaign) -> the enemy senses are 0.
 void senseEgo(const Maze& m, const Pose& p, const EnemyView* enemy, float* out);
 
+// Same, but the goal-bearing senses (4,5,6) point at an arbitrary target (tr,tc) instead
+// of the maze goal. Used by Pilot mode so the brain steers toward the next WAYPOINT — the
+// brain can't tell a waypoint from the goal, it just heads for the bearing it's given.
+void senseEgoTo(const Maze& m, const Pose& p, const EnemyView* enemy,
+                int tr, int tc, float* out);
+
 }  // namespace gb

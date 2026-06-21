@@ -19,6 +19,7 @@ struct Node {
   uint8_t count = 2;       // N_REPEAT (2..5)
   uint8_t func  = 1;       // N_CALL  (1 or 2)
   uint8_t brainIdx = 0;    // N_NEURO -> index into Program::brains
+  bool pilot = false;      // N_NEURO: steer toward planned WAYPOINTS, not just the goal
   std::vector<Node> body;  // N_REPEAT / N_REPEAT_UNTIL / N_IF
 
   static Node command(Cmd c)            { Node n; n.type = N_CMD; n.cmd = c; return n; }
@@ -27,6 +28,7 @@ struct Node {
   static Node ifCond(Cond c)            { Node n; n.type = N_IF; n.cond = c; return n; }
   static Node call(uint8_t f)           { Node n; n.type = N_CALL; n.func = f; return n; }
   static Node neuro(uint8_t idx)        { Node n; n.type = N_NEURO; n.brainIdx = idx; return n; }
+  static Node pilotBrain(uint8_t idx)   { Node n; n.type = N_NEURO; n.brainIdx = idx; n.pilot = true; return n; }
 };
 
 using NodeList = std::vector<Node>;

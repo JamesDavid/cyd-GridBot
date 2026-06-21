@@ -379,6 +379,7 @@ void App::tick(uint32_t now) {
           case 5: _evoLesson.begin(); _evoLesson.enter(); _state = State::EVO_LESSON; break;
           case 6: _transferLesson.begin(); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;
           case 7: _brainView.begin(); _brainView.enter(); _state = State::BRAIN_VIEW; break;
+          case 8: _pilotLesson.begin(); _pilotLesson.enter(); _state = State::PILOT_LESSON; break;
         }
       }
       break;
@@ -401,6 +402,10 @@ void App::tick(uint32_t now) {
     }
     case State::BRAIN_VIEW: {
       if (_brainView.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      break;
+    }
+    case State::PILOT_LESSON: {
+      if (_pilotLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
       break;
     }
     case State::BRAIN_MAP: {

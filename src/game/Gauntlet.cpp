@@ -3,6 +3,7 @@
 #include "game/Program.h"
 #include "game/Interpreter.h"
 #include "game/Sensors.h"
+#include "game/Reactive.h"
 
 namespace gb {
 namespace {
@@ -15,70 +16,11 @@ struct Rng {
   int range(int n) { return (int)(next() % (uint32_t)n); }
 };
 
-// --- apply one primitive to a pose (mirrors Interpreter, used by the reactive teacher) -
-Outcome applyCmd(const Maze& m, Pose& p, Cmd cmd) {
-  int dr, dc; facingDelta(p.facing, dr, dc);
-  switch (cmd) {
-    case CMD_TURN_L: p.facing = turnLeft(p.facing);  return OUT_OK;
-    case CMD_TURN_R: p.facing = turnRight(p.facing); return OUT_OK;
-    case CMD_FWD: {
-      int nr = p.row + dr, nc = p.col + dc;
-      if (!m.inBounds(nr, nc) || m.at(nr, nc) == WALL) return OUT_BONK;
-      if (m.at(nr, nc) == PIT) return OUT_FELL;
-      p.row = (int8_t)nr; p.col = (int8_t)nc;
-      return m.isGoal(nr, nc) ? OUT_WIN : OUT_OK;
-    }
-    case CMD_JUMP: {
-      int mr = p.row + dr, mc = p.col + dc, lr = p.row + 2 * dr, lc = p.col + 2 * dc;
-      if (!m.inBounds(lr, lc) || m.at(mr, mc) == WALL || m.at(lr, lc) == WALL) return OUT_BONK;
-      if (m.at(lr, lc) == PIT) return OUT_FELL;
-      p.row = (int8_t)lr; p.col = (int8_t)lc;
-      return m.isGoal(lr, lc) ? OUT_WIN : OUT_OK;
-    }
-    default: return OUT_OK;
-  }
-}
-
-// --- the reactive teacher: a memoryless navigator that uses ONLY sensor-equivalent info
-// (straight-line goal bearing + the wall/pit immediately around it), so its decisions ARE
-// a function of the brain's inputs and can be learned. Solves open/sparse mazes; concave
-// traps it can't escape are simply filtered out by gauntletMaze()'s solvability check.
-Cmd reactiveAction(const Maze& m, const Pose& p) {
-  int fdr, fdc; facingDelta(p.facing, fdr, fdc);
-  int rdr, rdc; facingDelta(turnRight(p.facing), rdr, rdc);
-  int gr = m.goalRow() - p.row, gc = m.goalCol() - p.col;
-  int fwd = gr * fdr + gc * fdc;       // how much the goal is straight ahead
-  int rgt = gr * rdr + gc * rdc;       // how much the goal is to the right
-  int ar = p.row + fdr, ac = p.col + fdc;
-  bool wallAhead = !m.inBounds(ar, ac) || m.at(ar, ac) == WALL;
-  bool pitAhead  = m.inBounds(ar, ac) && m.at(ar, ac) == PIT;
-
-  if (pitAhead) {                      // jump a pit if the landing is safe and we want forward
-    int lr = p.row + 2 * fdr, lc = p.col + 2 * fdc;
-    if (fwd > 0 && m.inBounds(lr, lc) && m.at(lr, lc) != WALL && m.at(lr, lc) != PIT)
-      return CMD_JUMP;
-    return rgt >= 0 ? CMD_TURN_R : CMD_TURN_L;   // can't pass -> turn away
-  }
-  if (wallAhead) return rgt >= 0 ? CMD_TURN_R : CMD_TURN_L;   // steer around the wall
-  if (fwd > 0) {                       // goal is ahead-ish
-    if (rgt > fwd)  return CMD_TURN_R; // but strongly to a side -> face it first
-    if (-rgt > fwd) return CMD_TURN_L;
-    return CMD_FWD;
-  }
-  if (rgt != 0) return rgt > 0 ? CMD_TURN_R : CMD_TURN_L;     // goal beside/behind -> rotate
-  return CMD_TURN_R;                                          // goal directly behind
-}
-
-int cmdToAction(Cmd c) {
-  switch (c) { case CMD_FWD: return 0; case CMD_TURN_L: return 1;
-               case CMD_TURN_R: return 2; case CMD_JUMP: return 3; default: return 0; }
-}
-
 bool reactiveSolves(const Maze& m) {
   Pose p = m.startPose();
   if (m.isGoal(p.row, p.col)) return true;
   for (int s = 0; s < 200; s++) {
-    Outcome o = applyCmd(m, p, reactiveAction(m, p));
+    Outcome o = reactiveApply(m, p, reactiveActionTo(m, p, m.goalRow(), m.goalCol()));
     if (o == OUT_WIN) return true;
     if (o == OUT_BONK || o == OUT_FELL) return false;
   }
@@ -135,10 +77,10 @@ void gauntletTrain(Net& brain, int epochs) {
       for (int s = 0; s < 200; s++) {
         if (m.isGoal(p.row, p.col)) break;
         float sv[SENSOR_COUNT]; senseEgo(m, p, nullptr, sv);
-        Cmd c = reactiveAction(m, p);
-        float t[NET_MAX_OUT] = {0}; t[cmdToAction(c)] = 1.0f;
+        Cmd c = reactiveActionTo(m, p, m.goalRow(), m.goalCol());
+        float t[NET_MAX_OUT] = {0}; t[reactiveCmdToAction(c)] = 1.0f;
         brain.trainStep(sv, t);             // backprop one teacher example
-        if (applyCmd(m, p, c) != OUT_OK) break;
+        if (reactiveApply(m, p, c) != OUT_OK) break;
       }
     }
 }

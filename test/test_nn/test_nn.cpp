@@ -12,6 +12,7 @@
 #include "game/Interpreter.h"
 #include "game/Distill.h"
 #include "game/Gauntlet.h"
+#include "game/Pilot.h"
 #include "game/Score.h"
 
 using namespace gb;
@@ -220,8 +221,19 @@ void test_gauntlet_is_winnable() {
                             "a trained reactive brain should clear the whole gauntlet");
 }
 
+// Pilot mode (planner waypoints + a pilot-trained follower) clears the campaign that a bare
+// reactive brain cannot — the planner-decides-where / brain-decides-how split.
+void test_pilot_clears_campaign() {
+  const uint32_t seed = 4242;
+  Net brain; brain.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
+  pilotTrain(brain, seed, 30, 30);          // learn to steer toward waypoints on lvls 1..30
+  TEST_ASSERT_EQUAL_MESSAGE(30, pilotRun(brain, seed, 30),
+                            "a pilot-trained brain should clear the whole campaign chunk");
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
+  RUN_TEST(test_pilot_clears_campaign);
   RUN_TEST(test_distill_brain_navigates);
   RUN_TEST(test_gauntlet_bounded_and_deterministic);
   RUN_TEST(test_gauntlet_is_winnable);
