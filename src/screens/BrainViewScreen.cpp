@@ -156,7 +156,10 @@ void BrainViewScreen::draw() {
   }
 
   // ---- nodes (fill = activation) ----
-  for (int i = 0; i < SENSOR_COUNT_FOR_BRAIN; i++) g.fillCircle(IX, iy(i), 3, actCol(_in[i]));
+  for (int i = 0; i < SENSOR_COUNT_FOR_BRAIN; i++) {
+    label(g, IX - 8, iy(i) - 3, INLBL[i], C_DIM, textdatum_t::top_right);  // sense name, left of the dot
+    g.fillCircle(IX, iy(i), 3, actCol(_in[i]));
+  }
   for (int j = 0; j < nHid(); j++) {
     g.fillCircle(HX, hy(j), 5, actCol(_hid[j]));
     if (selLayer == 1 && selIdx == j) g.drawCircle(HX, hy(j), 7, C_ACCENT);
