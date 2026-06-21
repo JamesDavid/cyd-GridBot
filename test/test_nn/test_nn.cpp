@@ -293,9 +293,11 @@ static int rnnBrainCount(RNet& brain, uint32_t seed, int N) {
 // state the feedforward brain can't hold. Guards the RNN lesson's core claim.
 void test_rnn_memory_beats_feedforward() {
   const uint32_t seed = 4242; const int N = 30;
-  Net ff; ff.config(SENSOR_COUNT_FOR_BRAIN, 16, 5, 1);
-  RNet rnn; rnn.config(SENSOR_COUNT_FOR_BRAIN, 16, 5, 1); rnn.lr = 0.05f;
-  static float X[80 * SENSOR_COUNT]; static int act[80];
+  // Same 8-neuron hidden layer as the real robot brain — the ONLY difference is the RNN's
+  // recurrent memory loop, so the win is attributable to memory, not extra capacity.
+  Net ff; ff.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
+  RNet rnn; rnn.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1); rnn.lr = 0.05f;
+  static float X[56 * SENSOR_COUNT]; static int act[56];
   for (int e = 0; e < 100; e++)
     for (int l = 1; l <= N; l++) {
       Maze m; MazeGen::generate(m, seed, l);

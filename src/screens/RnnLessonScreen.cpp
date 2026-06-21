@@ -39,8 +39,10 @@ static int rollout(const Maze& m, float* X, int* act, int maxT) {
 }
 
 void RnnLessonScreen::begin() {
-  _ff.config(SENSOR_COUNT_FOR_BRAIN, 16, 5, 1);
-  _rnn.config(SENSOR_COUNT_FOR_BRAIN, 16, 5, 1); _rnn.lr = 0.05f;
+  // Same 8-neuron hidden layer as the real robot brain; the ONLY difference is the RNN's
+  // recurrent memory loop, so the kid sees memory (not extra neurons) do the work.
+  _ff.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
+  _rnn.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1); _rnn.lr = 0.05f;
   static float X[56 * SENSOR_COUNT]; static int act[56];
   for (int e = 0; e < 60; e++)
     for (int l = 1; l <= 26; l++) {
