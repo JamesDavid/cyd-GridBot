@@ -30,4 +30,12 @@ bool distillPath(Net& brain, const Maze& m, const uint8_t* tiles, int n, int epo
 // so calling again keeps improving it.
 void rnnTrainGeneral(RNet& brain, uint32_t seedBase, int levels, int epochs);
 
+// Brain Cam's animated backprop reuses ONE shared episode buffer (so it costs no extra
+// static DRAM). captureSolverShared() records the BFS solver's (senses -> action) sequence
+// for maze `m` into that buffer and returns its length T (0 if unsolvable); ffTrainShared /
+// rnnTrainShared then run a few backprop passes over it in place and return the loss.
+int   captureSolverShared(const Maze& m);
+float ffTrainShared(Net& brain, int passes);
+float rnnTrainShared(RNet& brain, int passes);
+
 }  // namespace gb

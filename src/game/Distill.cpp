@@ -8,8 +8,55 @@
 
 namespace gb {
 
+// One shared episode scratch buffer, reused by rnnTrainGeneral and Brain Cam (saves DRAM).
+static float gEpiX[RNET_MAX_T * SENSOR_COUNT];
+static int   gEpiAct[RNET_MAX_T];
+static int   gEpiT = 0;
+
+int captureSolverShared(const Maze& m) {
+  gEpiT = 0;
+  Program sol;
+  if (!solveMaze(m, true, sol)) return 0;
+  Interpreter it; it.load(&sol, &m, m.startPose(), 500);
+  int guard = 0;
+  while (!it.finished() && guard++ < 400 && gEpiT < RNET_MAX_T) {
+    Pose before = it.pose();
+    float s[SENSOR_COUNT]; senseEgo(m, before, nullptr, s);
+    it.step();
+    const Node* n = it.currentNode();
+    if (!n || n->type != N_CMD) continue;
+    int a = -1;
+    switch (n->cmd) { case CMD_FWD: a = 0; break; case CMD_TURN_L: a = 1; break;
+                      case CMD_TURN_R: a = 2; break; case CMD_JUMP: a = 3; break; default: break; }
+    if (a < 0) continue;
+    for (int i = 0; i < SENSOR_COUNT; i++) gEpiX[gEpiT * SENSOR_COUNT + i] = s[i];
+    gEpiAct[gEpiT] = a; gEpiT++;
+  }
+  return gEpiT;
+}
+
+float ffTrainShared(Net& brain, int passes) {
+  if (gEpiT <= 0) return 0.0f;
+  float L = 0;
+  for (int e = 0; e < passes; e++) {
+    L = 0;
+    for (int t = 0; t < gEpiT; t++) {
+      float tg[NET_MAX_OUT] = {0}; tg[gEpiAct[t]] = 1.0f;
+      L += brain.trainStep(&gEpiX[t * SENSOR_COUNT], tg);
+    }
+    L /= gEpiT;
+  }
+  return L;
+}
+
+float rnnTrainShared(RNet& brain, int passes) {
+  if (gEpiT <= 0) return 0.0f;
+  float L = 0;
+  for (int e = 0; e < passes; e++) L = brain.trainEpisode(gEpiX, gEpiAct, gEpiT);
+  return L;
+}
+
 void rnnTrainGeneral(RNet& brain, uint32_t seedBase, int levels, int epochs) {
-  static float X[RNET_MAX_T * SENSOR_COUNT]; static int act[RNET_MAX_T];
   for (int e = 0; e < epochs; e++)
     for (int l = 1; l <= levels; l++) {
       Maze m; MazeGen::generate(m, seedBase, l);
@@ -19,13 +66,13 @@ void rnnTrainGeneral(RNet& brain, uint32_t seedBase, int levels, int epochs) {
       int T = 0;
       for (int s = 0; s < RNET_MAX_T; s++) {
         if (m.isGoal(p.row, p.col)) break;
-        senseEgo(m, p, nullptr, X + T * SENSOR_COUNT);
+        senseEgo(m, p, nullptr, gEpiX + T * SENSOR_COUNT);
         Cmd c = exploreActionTo(m, p, vis, m.goalRow(), m.goalCol());
-        act[T] = reactiveCmdToAction(c); T++;
+        gEpiAct[T] = reactiveCmdToAction(c); T++;
         if (reactiveApply(m, p, c) != OUT_OK) break;
         vis[p.row * m.cols() + p.col] = 1;
       }
-      if (T > 0) brain.trainEpisode(X, act, T);
+      if (T > 0) brain.trainEpisode(gEpiX, gEpiAct, T);
     }
 }
 
