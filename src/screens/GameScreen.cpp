@@ -163,8 +163,8 @@ void GameScreen::drawChrome() {
   uint32_t stars = _profile ? _profile->stats.starsTotal : 0;
   snprintf(buf, sizeof(buf), "*%u", (unsigned)stars);
   label(g, 232, 4, buf, C_ACCENT, textdatum_t::top_right);
-  // big back button (SPEC §10): returns to the profile menu
-  button(g, R_PAUSE, "< HOME", C_INK, C_PANEL_HI);
+  // big nav button (SPEC §10): while running it backs out to the code editor, else to the menu
+  button(g, R_PAUSE, _mode == M_RUN ? "< Code" : "Menu", C_INK, C_PANEL_HI);
 }
 
 // Live step counter, drawn over the stars during a run so you can watch the count
@@ -1080,12 +1080,17 @@ app::Signal GameScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int tx = 0, ty = 0;
   bool tap = _tap.tapped(tp, now, tx, ty);
 
-  // HOME/back always exits to the profile menu, from ANY mode (run/win/fail too) — it
-  // used to be checked after the mode handlers, so tapping it on the win/fail screen was
-  // swallowed and dropped you back in the editor instead. Autosave the resume slot first.
+  // Top-right nav button. Two levels: while a run is playing it backs out to the CODE
+  // EDITOR (so you can tweak and re-run); in the editor it goes up to the MENU (hub).
+  // Win/fail are end states -> menu. Autosave the resume slot first.
   if (tap && R_PAUSE.contains(tx, ty)) {
+    if (_mode == M_RUN) {                 // running -> back to the code editor
+      _auto = false; _tween = false;
+      _mode = M_EDIT; _view = V_CODE; drawCodeView();
+      return app::Signal::NONE;
+    }
     if (_profile) { _profile->workLevel = _level; _profile->work = _prog; }
-    return app::Signal::BACK;
+    return app::Signal::BACK;             // editing / win / fail -> menu (hub)
   }
 
   // level-start maze preview: hold ~2.5s (or until tapped), then go to code view

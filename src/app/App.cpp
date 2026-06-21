@@ -249,7 +249,7 @@ void App::tick(uint32_t now) {
         } else {
           std::string id = store::profiles.createProfile(_create.name(), _create.avatar());
           loadProfileInto(id);
-          gotoIntro(_profile.level);
+          gotoHome();   // land on the menu/hub (Play / Arena / Learn / ...), not straight in a level
         }
       }
       break;
