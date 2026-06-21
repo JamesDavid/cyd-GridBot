@@ -161,10 +161,10 @@ void NeuroTrainScreen::draw() {
     label(g, 6, 3, "Memory brain", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
     char hd[36];
     snprintf(hd, sizeof(hd), "%s%s", _pilotMode ? "rnn+pilot " : "rnn ",
-             _won ? "solves!" : (_taught ? "..." : "untrained"));
+             _won ? "solves!" : (_taught ? "trained" : "untrained"));
     label(g, SCREEN_W - 6, 6, hd, _won ? C_GO : ui::rgb(255, 170, 60), textdatum_t::top_right);
   } else {
-    label(g, 6, 3, "Train the brain", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
+    label(g, 6, 3, "Train brain", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
     char hd[36];
     if (_gauntletScore >= 0) {  // the Generalist challenge result takes over the header line
       bool won = _gauntletScore >= GAUNTLET_MAZES;
@@ -220,6 +220,8 @@ void NeuroTrainScreen::draw() {
                    _won ? C_GO : C_MOVE);
     }
   }
+
+  if (!_drawMode) drawNeuronWidget(_widgetAt);  // flashing input/hidden/output dots
 
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   if (_drawMode) {
@@ -278,7 +280,28 @@ void NeuroTrainScreen::handleDrawTap(int r, int c) {
   if (_drawLen < (int)sizeof(_drawPath)) { _drawPath[_drawLen++] = (uint8_t)t; hal::audio.blip(); draw(); }
 }
 
+// A tiny network (2 inputs -> 3 hidden -> 2 outputs) tucked in the top bar. The layers
+// light up in a wave (input -> hidden -> output) so the page always looks alive; right
+// after a training tap it pulses faster/brighter. Small fixed region = no flicker.
+void NeuroTrainScreen::drawNeuronWidget(uint32_t now) {
+  auto& g = hal::display.gfx();
+  g.fillRect(156, 1, 70, 20, C_PANEL);  // clear our slice of the top bar (right of the title)
+  const uint16_t cyan = ui::rgb(120, 230, 245);
+  bool hot = now < _pulseUntil;
+  int phase = (int)((now / (hot ? 90u : 240u)) % 3);   // 0=inputs, 1=hidden, 2=outputs lit
+  const int ix = 164, hx = 188, ox = 212;
+  const int iy[2] = {7, 15}, hy[3] = {4, 11, 18}, oy[2] = {7, 15};
+  for (int a = 0; a < 2; a++) for (int b = 0; b < 3; b++) g.drawLine(ix, iy[a], hx, hy[b], C_LOCK);
+  for (int b = 0; b < 3; b++) for (int c = 0; c < 2; c++) g.drawLine(hx, hy[b], ox, oy[c], C_LOCK);
+  auto dot = [&](int x, int y, bool lit) { g.fillCircle(x, y, lit ? 3 : 2, lit ? cyan : C_DIM); };
+  for (int a = 0; a < 2; a++) dot(ix, iy[a], phase == 0);
+  for (int b = 0; b < 3; b++) dot(hx, hy[b], phase == 1);
+  for (int c = 0; c < 2; c++) dot(ox, oy[c], phase == 2);
+}
+
 app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
+  if (!_drawMode && now - _widgetAt >= 90) { _widgetAt = now; drawNeuronWidget(now); }  // keep the net "alive"
+
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
 
@@ -304,7 +327,7 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   if (_rnnMode) {                                  // ---- recurrent (memory) brain toolbar ----
     if (R_RTEACH.contains(tx, ty)) {               // BPTT-train the memory brain (tap to improve)
       rnnTrainGeneral(_rbrain, _profile ? _profile->seedBase : 0u, 16, 40);
-      _taught = true; _saved = false; tracePath(); hal::audio.blip(); draw();
+      _taught = true; _saved = false; _pulseUntil = now + 1500; tracePath(); hal::audio.blip(); draw();
     } else if (R_RPILOT.contains(tx, ty)) {        // pilot works for an rnn brain too
       _pilotMode = !_pilotMode; setNodePilot(_pilotMode);
       _saved = false; tracePath(); hal::audio.blip(); draw();
@@ -349,7 +372,7 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   } else if (R_TEACH.contains(tx, ty)) {  // distill the optimal solver into the brain (reliable)
     distillSolver(_brain, *_maze, true, 700);
     _taught = true; _saved = false; _savedCopy = false; _gauntletScore = -1;
-    _pilotMode = false; setNodePilot(false);
+    _pilotMode = false; setNodePilot(false); _pulseUntil = now + 1500;
     tracePath(); hal::audio.blip(); draw();
   } else if (R_DRAW.contains(tx, ty)) {   // hand-draw a path to learn from (imitation learning)
     _drawMode = true; seedDrawStart(); hal::audio.blip(); draw();
@@ -361,7 +384,7 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   } else if (R_TRAIN.contains(tx, ty)) {
     for (int gg = 0; gg < 5; gg++) { _evo.breed(); _evo.evaluate(*_maze, nullptr, 110); }
     _brain = _evo.best(); _taught = false; _saved = false; _savedCopy = false; _gauntletScore = -1;
-    _pilotMode = false; setNodePilot(false);
+    _pilotMode = false; setNodePilot(false); _pulseUntil = now + 1500;
     tracePath(); hal::audio.blip(); draw();
   } else if (R_USE.contains(tx, ty)) {
     if (_prog && _idx < (int)_prog->brains.size()) _prog->brains[_idx] = _brain;

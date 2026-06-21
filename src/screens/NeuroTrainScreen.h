@@ -55,6 +55,11 @@ class NeuroTrainScreen : public app::IScreen {
   int _gauntletScore = -1;     // last Generalist-challenge result (levels cleared), -1 = not run
   bool _pilotMode = false;     // preview/save the brain as a planner-fed pilot
   bool _rnnMode = false;       // this brain block is recurrent (memory) — train/run the RNet
+  // a tiny always-on "neuron activity" widget in the top bar: input->hidden->output dots
+  // light in a wave so the page never looks frozen; it pulses brighter just after training.
+  uint32_t _widgetAt = 0;      // last widget-frame time (throttle)
+  uint32_t _pulseUntil = 0;    // pulse brightly/faster until this time (set on a train action)
+  void drawNeuronWidget(uint32_t now);
   app::TapDetector _tap;
 };
 
