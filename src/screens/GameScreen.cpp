@@ -360,14 +360,17 @@ void GameScreen::drawControlPad() {
   else
     cell(2, 1, Glyph::SENSE, C_DIM, true);  // locked padlock until NeuroBot unlocks (Lv 28)
   // centre avatar — faces the maze's START orientation so the kid can reason about
-  // "forward" before running.
+  // "forward" before running. Once the Arena opens it doubles as the ZAP button (the
+  // robot zaps!) — a big central target, with a lightning badge to show it's tappable.
   Rect ctr = padCell(1, 1);
-  panel(g, ctr, C_PANEL);
+  bool zapOn = _profile && _profile->unlocks.sense;
+  panel(g, ctr, zapOn ? C_PANEL_HI : C_PANEL);
   if (_profile && spriteHasPixels(_profile->customChar))
-    assets::drawCustomSprite(g, ctr.cx(), ctr.cy(), 44, _profile->customChar.data());
+    assets::drawCustomSprite(g, ctr.cx(), ctr.cy(), 40, _profile->customChar.data());
   else
-    assets::drawCharacter(g, ctr.cx(), ctr.cy(), 44, _profile ? _profile->avatar : 0,
+    assets::drawCharacter(g, ctr.cx(), ctr.cy(), 40, _profile ? _profile->avatar : 0,
                           _maze.startPose().facing);
+  if (zapOn) drawGlyph(g, Glyph::ZAP, ctr.x + ctr.w - 9, ctr.y + 9, 12, ui::rgb(255, 200, 40));
   // four corner growth slots
   const Glyph cg[4] = {Glyph::JUMP, Glyph::REPEAT, Glyph::CALL, Glyph::SENSE};
   const uint16_t cc[4] = {C_GO, C_LOOP, C_FUNC, C_SENSE};
@@ -477,6 +480,7 @@ static void nodeLabel(const Node& n, char* buf, size_t bn, Glyph& gl, uint16_t& 
         case CMD_TURN_L: gl = Glyph::TURN_L;    col = C_TURN; snprintf(buf, bn, "turn L"); break;
         case CMD_TURN_R: gl = Glyph::TURN_R;    col = C_TURN; snprintf(buf, bn, "turn R"); break;
         case CMD_JUMP:   gl = Glyph::JUMP;      col = C_GO;   snprintf(buf, bn, "jump"); break;
+        case CMD_FIRE:   gl = Glyph::ZAP;       col = ui::rgb(255, 200, 40); snprintf(buf, bn, "zap"); break;
         default:         gl = Glyph::PLAY;      col = C_INK;  snprintf(buf, bn, "?"); break;
       }
       break;
@@ -658,6 +662,10 @@ void GameScreen::handlePadTap(int x, int y) {
   if (padCell(0, 1).contains(x, y)) { appendCommand(CMD_FWD); return; }
   if (padCell(1, 0).contains(x, y)) { appendCommand(CMD_TURN_L); return; }
   if (padCell(1, 2).contains(x, y)) { appendCommand(CMD_TURN_R); return; }
+  if (padCell(1, 1).contains(x, y)) {  // the centre robot doubles as ZAP once the Arena opens
+    if (_profile && _profile->unlocks.sense) appendCommand(CMD_FIRE);
+    return;
+  }
   if (padCell(2, 1).contains(x, y)) {  // the brain slot (was backward)
     if (_profile && _profile->unlocks.neuro) {
       uint8_t idx = _prog.addBrain(_profile->seedBase + (uint32_t)_prog.brains.size() * 101u + 1u);
@@ -909,6 +917,21 @@ void GameScreen::stepOnce(uint32_t now) {
   drawCell(old.row, old.col);
   drawCharacterAt(_it.pose());
   _drawnPose = _it.pose();
+  if (_it.lastCmd() == CMD_FIRE) {  // ZAP animation — a bolt + sparks in the tile ahead
+    auto& g = hal::display.gfx();   // (a no-op for solving outside the Arena, but it animates)
+    int tile, ox, oy; mazeGeometry(tile, ox, oy);
+    int dr, dc; facingDelta(_it.pose().facing, dr, dc);
+    int zc = _it.pose().col + dc, zr = _it.pose().row + dr;
+    if (_maze.inBounds(zr, zc)) {
+      int cx = ox + zc * tile + tile / 2, cy = oy + zr * tile + tile / 2;
+      for (int a = 0; a < 360; a += 45) {  // a little spark burst
+        float rr = a * 3.14159f / 180.f;
+        g.drawLine(cx, cy, cx + (int)(cosf(rr) * tile / 2), cy + (int)(sinf(rr) * tile / 2), ui::rgb(255, 220, 60));
+      }
+      drawGlyph(g, Glyph::ZAP, cx, cy, tile / 2, ui::rgb(255, 240, 120));
+    }
+    hal::audio.blip();
+  }
   settleOutcome(o);
 }
 

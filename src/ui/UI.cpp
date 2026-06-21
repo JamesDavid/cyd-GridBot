@@ -61,6 +61,11 @@ void drawGlyph(LGFX& g, Glyph gl, int cx, int cy, int s, uint16_t color) {
       g.drawCircle(cx, cy, h - 1, color);
       g.fillCircle(cx, cy, 2, color);
       break;
+    case Glyph::ZAP: {  // a lightning bolt
+      g.fillTriangle(cx + 1, cy - h, cx - h / 2, cy + 1, cx, cy + 1, color);
+      g.fillTriangle(cx - 1, cy + h, cx + h / 2, cy - 1, cx, cy - 1, color);
+      break;
+    }
   }
 }
 
