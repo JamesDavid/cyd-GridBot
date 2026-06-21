@@ -68,7 +68,9 @@ static void nodeLabel(const Node& n, char* buf, size_t bn, Glyph& gl, uint16_t& 
     case N_REPEAT_UNTIL: gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "until %s", condName(n.cond)); break;
     case N_IF:           gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "if %s", condName(n.cond)); break;
     case N_CALL:         gl = Glyph::CALL;   col = C_FUNC;  snprintf(buf, bn, "call F%d", n.func); break;
-    case N_NEURO:        gl = Glyph::SENSE;  col = ui::rgb(120, 230, 245); snprintf(buf, bn, n.pilot ? "pilot" : "brain"); break;
+    case N_NEURO:        gl = Glyph::SENSE;  col = ui::rgb(120, 230, 245);
+      snprintf(buf, bn, n.rnn ? (n.pilot ? "rnn pilot" : "rnn brain")
+                              : (n.pilot ? "pilot" : "brain")); break;
   }
 }
 
@@ -323,6 +325,10 @@ void ProgramEditor::drawProgramList() {
       char cl[8]; snprintf(cl, sizeof(cl), "F%d", nd->func);
       label(g, gx + 18, y + 6, "call", C_FUNC);
       button(g, callCycleRect(y), cl, C_FUNC, C_PANEL_HI);
+    } else if (sel && nd->type == N_NEURO) {
+      const char* mode = nd->rnn ? (nd->pilot ? "rnn+pilot" : "rnn")
+                                 : (nd->pilot ? "pilot" : "plain");
+      button(g, callCycleRect(y), mode, ui::rgb(120, 230, 245), C_PANEL_HI);
     } else {
       label(g, gx + 18, y + 6, lab, C_INK);
     }
@@ -412,6 +418,14 @@ ProgramEditor::Action ProgramEditor::handleListTap(int x, int y) {
         } else if (sn->type == N_CALL) {
           if (callCycleRect(yy).contains(x, y)) {
             sn->func = (sn->func == 1) ? 2 : 1;
+            hal::audio.blip(); drawProgramList(); return Action::NONE;
+          }
+        } else if (sn->type == N_NEURO) {
+          if (callCycleRect(yy).contains(x, y)) {  // cycle brain mode: plain -> pilot -> rnn -> rnn+pilot
+            if (!sn->pilot && !sn->rnn)      sn->pilot = true;
+            else if (sn->pilot && !sn->rnn)  { sn->pilot = false; sn->rnn = true; }
+            else if (!sn->pilot && sn->rnn)  sn->pilot = true;
+            else                             { sn->pilot = false; sn->rnn = false; }
             hal::audio.blip(); drawProgramList(); return Action::NONE;
           }
         }

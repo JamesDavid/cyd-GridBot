@@ -488,7 +488,9 @@ static void nodeLabel(const Node& n, char* buf, size_t bn, Glyph& gl, uint16_t& 
     case N_REPEAT_UNTIL: gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "until %s", condName(n.cond)); break;
     case N_IF:           gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "if %s", condName(n.cond)); break;
     case N_CALL:         gl = Glyph::CALL;   col = C_FUNC;  snprintf(buf, bn, "call F%d", n.func); break;
-    case N_NEURO:        gl = Glyph::SENSE;  col = ui::rgb(120, 230, 245); snprintf(buf, bn, "brain"); break;
+    case N_NEURO:        gl = Glyph::SENSE;  col = ui::rgb(120, 230, 245);
+      snprintf(buf, bn, n.rnn ? (n.pilot ? "rnn pilot" : "rnn brain")
+                              : (n.pilot ? "pilot" : "brain")); break;
   }
 }
 
@@ -606,6 +608,14 @@ void GameScreen::drawProgramList() {
     } else if (sel && (nd->type == N_IF || nd->type == N_REPEAT_UNTIL)) {
       label(g, gx + 18, y + 6, nd->type == N_IF ? "if" : "until", C_SENSE);
       button(g, condRect(y), condName(nd->cond), C_SENSE, C_PANEL_HI);
+    } else if (sel && nd->type == N_CALL) {
+      char cl[6]; snprintf(cl, sizeof(cl), "F%d", nd->func);
+      label(g, gx + 18, y + 6, "call", C_FUNC);
+      button(g, condRect(y), cl, C_FUNC, C_PANEL_HI);   // tap to switch F1<->F2
+    } else if (sel && nd->type == N_NEURO) {
+      const char* mode = nd->rnn ? (nd->pilot ? "rnn+pilot" : "rnn")
+                                 : (nd->pilot ? "pilot" : "plain");
+      button(g, condRect(y), mode, ui::rgb(120, 230, 245), C_PANEL_HI);  // cycle brain mode
     } else {
       label(g, gx + 18, y + 6, lab, C_INK);
     }
@@ -745,6 +755,19 @@ void GameScreen::handleListTap(int x, int y) {
           if (condRect(yy).contains(x, y)) {
             sn->cond = (sn->cond == WALL_AHEAD) ? PIT_AHEAD
                      : (sn->cond == PIT_AHEAD) ? AT_GOAL : WALL_AHEAD;
+            hal::audio.blip(); drawProgramList(); return;
+          }
+        } else if (sn->type == N_CALL) {
+          if (condRect(yy).contains(x, y)) {       // switch which function this call runs
+            sn->func = (sn->func == 1) ? 2 : 1;
+            hal::audio.blip(); drawProgramList(); return;
+          }
+        } else if (sn->type == N_NEURO) {
+          if (condRect(yy).contains(x, y)) {       // plain -> pilot -> rnn -> rnn+pilot
+            if (!sn->pilot && !sn->rnn)      sn->pilot = true;
+            else if (sn->pilot && !sn->rnn)  { sn->pilot = false; sn->rnn = true; }
+            else if (!sn->pilot && sn->rnn)  sn->pilot = true;
+            else                             { sn->pilot = false; sn->rnn = false; }
             hal::audio.blip(); drawProgramList(); return;
           }
         }

@@ -314,9 +314,31 @@ void test_rnn_memory_beats_feedforward() {
   TEST_ASSERT_TRUE_MESSAGE(rnnN >= ffN + 3, "the RNN's memory should clear clearly more mazes");
 }
 
+// A NEURO node with rnn=true runs the program's recurrent brain (rbrains), not the
+// feedforward one — verifies the interpreter wiring + per-run memory reset.
+void test_rnn_brain_node_runs() {
+  Program prog;
+  uint8_t idx = prog.addBrain(1);             // creates brains[idx] AND rbrains[idx]
+  RNet& r = prog.rbrains[idx];
+  for (int m = 0; m < 5; m++) {               // force argmax -> forward (action 0)
+    for (int j = 0; j < r.nHid; j++) r.who[m][j] = 0.0f;
+    r.bo[m] = (m == 0) ? 6.0f : -6.0f;
+  }
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(Node::rnnBrain(idx));   // the RECURRENT brain
+  prog.main.push_back(loop);
+
+  Maze m; m.reset(1, 5); m.fill(FLOOR);
+  Pose s; s.row = 0; s.col = 0; s.facing = EAST;
+  m.setStart(s); m.set(0, 0, START); m.setGoal(0, 4);
+  Interpreter it; it.load(&prog, &m, m.startPose());
+  TEST_ASSERT_EQUAL((int)OUT_WIN, (int)it.runToEnd());   // the rnn node drove it to the goal
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_rnn_memory_beats_feedforward);
+  RUN_TEST(test_rnn_brain_node_runs);
   RUN_TEST(test_pilot_clears_campaign);
   RUN_TEST(test_distill_brain_navigates);
   RUN_TEST(test_gauntlet_bounded_and_deterministic);

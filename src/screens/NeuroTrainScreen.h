@@ -33,13 +33,15 @@ class NeuroTrainScreen : public app::IScreen {
   bool tileAtPixel(int x, int y, int& r, int& c) const;  // maze hit-test
   void handleDrawTap(int r, int c);  // append/undo a tile on the drawn path
   void setNodePilot(bool on);  // flag this brain's N_NEURO node as a pilot (planner+follower)
+  void setNodeRnn(bool on);    // flag this brain's N_NEURO node as recurrent (memory)
 
   gb::Profile* _profile = nullptr;
   gb::Program* _prog = nullptr;
   int _idx = 0;
   gb::Maze* _maze = nullptr;
   gb::Evolve _evo;
-  gb::Net _brain;         // the working brain (set by Teach=distill or Evolve)
+  gb::Net _brain;         // the working feedforward brain (Teach/Draw/Evolve/Generalize/Pilot)
+  gb::RNet _rbrain;       // the working recurrent brain (rnn mode)
   bool _taught = false;
   uint8_t _path[64];
   int _pathLen = 0;
@@ -52,6 +54,7 @@ class NeuroTrainScreen : public app::IScreen {
   int _drawLen = 0;
   int _gauntletScore = -1;     // last Generalist-challenge result (levels cleared), -1 = not run
   bool _pilotMode = false;     // preview/save the brain as a planner-fed pilot
+  bool _rnnMode = false;       // this brain block is recurrent (memory) — train/run the RNet
   app::TapDetector _tap;
 };
 

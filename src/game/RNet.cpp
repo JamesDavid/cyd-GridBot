@@ -24,11 +24,11 @@ void RNet::config(int in, int hid, int out, uint32_t seed) {
   resetState();
 }
 
-void RNet::resetState() { for (int j = 0; j < nHid; j++) h[j] = 0.0f; }
+void RNet::resetState() const { for (int j = 0; j < nHid; j++) h[j] = 0.0f; }
 
 static inline float sigmoidf(float x) { return 1.0f / (1.0f + expf(-x)); }
 
-void RNet::step(const float* x, float* out) {
+void RNet::step(const float* x, float* out) const {
   float nh[RNET_MAX_HID];
   for (int j = 0; j < nHid; j++) {
     float z = bh[j];
@@ -44,7 +44,7 @@ void RNet::step(const float* x, float* out) {
   }
 }
 
-int RNet::argmaxStep(const float* x) {
+int RNet::argmaxStep(const float* x) const {
   float out[RNET_MAX_OUT];
   step(x, out);
   int best = 0;
@@ -53,6 +53,7 @@ int RNet::argmaxStep(const float* x) {
 }
 
 float RNet::trainEpisode(const float* X, const int* act, int T) {
+  trained = true;
   if (T <= 0) return 0.0f;
   if (T > RNET_MAX_T) T = RNET_MAX_T;
 

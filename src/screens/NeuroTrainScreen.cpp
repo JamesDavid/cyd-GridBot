@@ -26,6 +26,11 @@ static const Rect R_BACK  = {250, (int16_t)(BOTBAR_Y + 2), 64, 26};
 static const Rect R_LEARN  = {6,   (int16_t)(BOTBAR_Y + 2), 110, 26};
 static const Rect R_DCLEAR = {122, (int16_t)(BOTBAR_Y + 2), 90, 26};
 static const Rect R_DCANCEL= {218, (int16_t)(BOTBAR_Y + 2), 96, 26};
+// rnn-mode toolbar: BPTT-train memory / pilot toggle / save to block / leave
+static const Rect R_RTEACH = {6,   (int16_t)(BOTBAR_Y + 2), 86, 26};
+static const Rect R_RPILOT = {98,  (int16_t)(BOTBAR_Y + 2), 70, 26};
+static const Rect R_RUSE   = {174, (int16_t)(BOTBAR_Y + 2), 66, 26};
+static const Rect R_RBACK  = {246, (int16_t)(BOTBAR_Y + 2), 68, 26};
 
 void NeuroTrainScreen::rebuildBrainLibs() {
   _brainLibs.clear();
@@ -68,17 +73,26 @@ void NeuroTrainScreen::begin(Profile* profile, Program* prog, int brainIdx, Maze
   _profile = profile; _prog = prog; _idx = brainIdx; _maze = maze;
   rebuildBrainLibs();
   _baseIdx = 0;
-  _pilotMode = false;   // reflect the program's existing brain block
+  _pilotMode = false; _rnnMode = false;   // reflect the program's existing brain block
   if (_prog) {
     NodeList* lists[3] = {&_prog->main, &_prog->f1, &_prog->f2};
     for (NodeList* lst : lists)
       for (Node& n : *lst) {
-        if (n.type == N_NEURO && n.brainIdx == _idx && n.pilot) _pilotMode = true;
+        const Node* hit = nullptr;
+        if (n.type == N_NEURO && n.brainIdx == _idx) hit = &n;
         for (Node& c : n.body)
-          if (c.type == N_NEURO && c.brainIdx == _idx && c.pilot) _pilotMode = true;
+          if (c.type == N_NEURO && c.brainIdx == _idx) hit = &c;
+        if (hit) { if (hit->pilot) _pilotMode = true; if (hit->rnn) _rnnMode = true; }
       }
   }
-  applyBase();
+  if (_rnnMode) {                          // recurrent brain block: load + preview the RNet
+    _baseName = "memory";
+    if (_prog && _idx < (int)_prog->rbrains.size()) _rbrain = _prog->rbrains[_idx];
+    _taught = _rbrain.trained; _saved = false; _savedCopy = false; _gauntletScore = -1;
+    tracePath();
+  } else {
+    applyBase();
+  }
 }
 
 void NeuroTrainScreen::enter() { draw(); }
@@ -95,10 +109,24 @@ void NeuroTrainScreen::setNodePilot(bool on) {
     }
 }
 
+void NeuroTrainScreen::setNodeRnn(bool on) {
+  if (!_prog) return;
+  NodeList* lists[3] = {&_prog->main, &_prog->f1, &_prog->f2};
+  for (NodeList* lst : lists)
+    for (Node& n : *lst) {
+      if (n.type == N_NEURO && n.brainIdx == _idx) n.rnn = on;
+      for (Node& c : n.body)
+        if (c.type == N_NEURO && c.brainIdx == _idx) c.rnn = on;
+    }
+}
+
 void NeuroTrainScreen::tracePath() {
-  Program prog; prog.brains.push_back(_brain);
+  Program prog;
+  if (_rnnMode) prog.rbrains.push_back(_rbrain);   // run the recurrent brain
+  else          prog.brains.push_back(_brain);
   Node loop = Node::repeatUntil(AT_GOAL);
-  loop.body.push_back(_pilotMode ? Node::pilotBrain(0) : Node::neuro(0));
+  Node nb = Node::neuro(0); nb.rnn = _rnnMode; nb.pilot = _pilotMode;  // any of the 4 modes
+  loop.body.push_back(nb);
   prog.main.push_back(loop);
   Interpreter it; it.load(&prog, _maze, _maze->startPose(), 64);
   _pathLen = 0; _won = false;
@@ -129,6 +157,12 @@ void NeuroTrainScreen::draw() {
     label(g, 6, 3, "Draw the path", C_ACCENT, textdatum_t::top_left, 2);
     label(g, SCREEN_W - 6, 6, "tap start->goal", C_DIM, textdatum_t::top_right);
     label(g, 6, BAND_Y + 4, "tap tiles to walk/jump; tap last to undo", C_DIM);
+  } else if (_rnnMode) {
+    label(g, 6, 3, "Memory brain", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
+    char hd[36];
+    snprintf(hd, sizeof(hd), "%s%s", _pilotMode ? "rnn+pilot " : "rnn ",
+             _won ? "solves!" : (_taught ? "..." : "untrained"));
+    label(g, SCREEN_W - 6, 6, hd, _won ? C_GO : ui::rgb(255, 170, 60), textdatum_t::top_right);
   } else {
     label(g, 6, 3, "Train the brain", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
     char hd[36];
@@ -192,6 +226,11 @@ void NeuroTrainScreen::draw() {
     button(g, R_LEARN, "Learn it", C_GO, C_PANEL);       // distill from the drawn path
     button(g, R_DCLEAR, "Clear", C_ACCENT, C_PANEL);
     button(g, R_DCANCEL, "Cancel", C_INK, C_PANEL);
+  } else if (_rnnMode) {                                  // recurrent brain: BPTT + pilot + use
+    button(g, R_RTEACH, "Teach mem", C_GO, C_PANEL);     // BPTT-train the memory brain (tap to improve)
+    button(g, R_RPILOT, "Pilot", _pilotMode ? C_GO : ui::rgb(255, 170, 60), C_PANEL);
+    button(g, R_RUSE, _saved ? "saved!" : "Use it", _saved ? C_DIM : ui::rgb(120, 230, 245), C_PANEL);
+    button(g, R_RBACK, "Back", C_INK, C_PANEL);
   } else {
     button(g, R_TEACH, "Teach", C_GO, C_PANEL);          // distill the solver (reliable)
     button(g, R_DRAW, "Draw", C_ACCENT, C_PANEL);        // imitation learning from a drawn path
@@ -258,6 +297,23 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     } else {
       int r, c;
       if (tileAtPixel(tx, ty, r, c)) handleDrawTap(r, c);
+    }
+    return app::Signal::NONE;
+  }
+
+  if (_rnnMode) {                                  // ---- recurrent (memory) brain toolbar ----
+    if (R_RTEACH.contains(tx, ty)) {               // BPTT-train the memory brain (tap to improve)
+      rnnTrainGeneral(_rbrain, _profile ? _profile->seedBase : 0u, 16, 40);
+      _taught = true; _saved = false; tracePath(); hal::audio.blip(); draw();
+    } else if (R_RPILOT.contains(tx, ty)) {        // pilot works for an rnn brain too
+      _pilotMode = !_pilotMode; setNodePilot(_pilotMode);
+      _saved = false; tracePath(); hal::audio.blip(); draw();
+    } else if (R_RUSE.contains(tx, ty)) {          // store the memory brain into the block
+      if (_prog && _idx < (int)_prog->rbrains.size()) _prog->rbrains[_idx] = _rbrain;
+      setNodeRnn(true);
+      _saved = true; hal::audio.badge(); draw();
+    } else if (R_RBACK.contains(tx, ty)) {
+      return app::Signal::BACK;
     }
     return app::Signal::NONE;
   }

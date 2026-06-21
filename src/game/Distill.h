@@ -6,6 +6,7 @@
 #pragma once
 #include "game/Maze.h"
 #include "game/Net.h"
+#include "game/RNet.h"
 
 namespace gb {
 
@@ -23,5 +24,10 @@ bool pathToProgram(const Maze& m, const uint8_t* tiles, int n, Program& out);
 // of the auto-solver. `brain` is trained in place, so passing an already-trained brain
 // fine-tunes it on the new path. Returns false if the path isn't walkable.
 bool distillPath(Net& brain, const Maze& m, const uint8_t* tiles, int n, int epochs);
+
+// Train a RECURRENT brain (BPTT) to imitate the memory-using explorer across campaign
+// mazes 1..levels — a generally-capable memory brain to drop into a program. In place,
+// so calling again keeps improving it.
+void rnnTrainGeneral(RNet& brain, uint32_t seedBase, int levels, int epochs);
 
 }  // namespace gb

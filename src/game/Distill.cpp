@@ -2,9 +2,32 @@
 #include "game/Program.h"
 #include "game/Interpreter.h"
 #include "game/Sensors.h"
+#include "game/Reactive.h"
+#include "game/MazeGen.h"
 #include "game/Score.h"
 
 namespace gb {
+
+void rnnTrainGeneral(RNet& brain, uint32_t seedBase, int levels, int epochs) {
+  static float X[RNET_MAX_T * SENSOR_COUNT]; static int act[RNET_MAX_T];
+  for (int e = 0; e < epochs; e++)
+    for (int l = 1; l <= levels; l++) {
+      Maze m; MazeGen::generate(m, seedBase, l);
+      // roll out the memory-using explorer, capturing (senses, action) each step
+      uint8_t vis[MAZE_MAX_CELLS] = {0};
+      Pose p = m.startPose(); vis[p.row * m.cols() + p.col] = 1;
+      int T = 0;
+      for (int s = 0; s < RNET_MAX_T; s++) {
+        if (m.isGoal(p.row, p.col)) break;
+        senseEgo(m, p, nullptr, X + T * SENSOR_COUNT);
+        Cmd c = exploreActionTo(m, p, vis, m.goalRow(), m.goalCol());
+        act[T] = reactiveCmdToAction(c); T++;
+        if (reactiveApply(m, p, c) != OUT_OK) break;
+        vis[p.row * m.cols() + p.col] = 1;
+      }
+      if (T > 0) brain.trainEpisode(X, act, T);
+    }
+}
 
 // The shared backprop loop: run `teacher` on `m` and train `brain` to copy each primitive
 // move (egocentric sensors -> one-hot action). Re-simulates each epoch (no big buffers).

@@ -20,6 +20,8 @@ void Interpreter::load(const Program* prog, const Maze* maze, const Pose& start,
   _last = OUT_OK;
   _current = nullptr;
   _wpPlanned = false; _wpN = 0; _wpIdx = 0;
+  if (prog)  // clear any recurrent brain's memory so each run starts fresh
+    for (size_t i = 0; i < prog->rbrains.size(); i++) prog->rbrains[i].resetState();
   _stack.clear();
   if (prog && !prog->main.empty()) push(F_SEQ, &prog->main);
   // An empty program that doesn't start on the goal will end as DONE_NO_WIN.
@@ -165,7 +167,9 @@ Outcome Interpreter::step() {
         fr.ip++;
         if (++_prim > _stepCap) { finish(OUT_DONE_NO_WIN); return OUT_DONE_NO_WIN; }
         _current = &n;
-        if (!_prog || n.brainIdx >= _prog->brains.size()) return OUT_OK;  // untrained: no-op
+        // pick the brain store: recurrent (memory) or feedforward
+        bool useRnn = n.rnn && _prog && n.brainIdx < _prog->rbrains.size();
+        if (!_prog || (!useRnn && n.brainIdx >= _prog->brains.size())) return OUT_OK;  // none: no-op
         float s[SENSOR_COUNT];
         if (n.pilot) {
           // Planner + follower: plan the route once, then steer toward the next corner.
@@ -178,7 +182,8 @@ Outcome Interpreter::step() {
         } else {
           senseEgo(*_maze, _pose, _enemy, s);
         }
-        int act = _prog->brains[n.brainIdx].argmax(s);
+        int act = useRnn ? _prog->rbrains[n.brainIdx].argmaxStep(s)
+                         : _prog->brains[n.brainIdx].argmax(s);
         _lastCmd = kBrainAction[act];
         Outcome o = execCmd(_lastCmd);
         if (o != OUT_OK) { finish(o); return o; }

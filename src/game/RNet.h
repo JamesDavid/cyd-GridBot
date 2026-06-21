@@ -9,7 +9,7 @@
 namespace gb {
 
 constexpr int RNET_MAX_IN  = 12;
-constexpr int RNET_MAX_HID = 16;
+constexpr int RNET_MAX_HID = 12;   // brains use 8; 12 is headroom (keeps static DRAM down)
 constexpr int RNET_MAX_OUT = 5;
 constexpr int RNET_MAX_T   = 56;   // longest episode we backprop through (bounds DRAM)
 
@@ -20,13 +20,14 @@ struct RNet {
   float bh[RNET_MAX_HID] = {0};
   float who[RNET_MAX_OUT][RNET_MAX_HID] = {{0}};  // hidden -> output
   float bo[RNET_MAX_OUT] = {0};
-  float h[RNET_MAX_HID] = {0};                     // current hidden state (the memory)
+  mutable float h[RNET_MAX_HID] = {0};             // current hidden state (transient run memory)
   float lr = 0.1f;
+  bool trained = false;                            // has BPTT run? (untrained = don't use/save)
 
   void config(int in, int hid, int out, uint32_t seed);
-  void resetState();                               // zero the memory (call at run start)
-  void step(const float* x, float* out);           // forward one tick; advances the memory
-  int  argmaxStep(const float* x);                 // step() + index of the strongest output
+  void resetState() const;                         // zero the memory (call at run start)
+  void step(const float* x, float* out) const;     // forward one tick; advances the memory
+  int  argmaxStep(const float* x) const;           // step() + index of the strongest output
 
   // Backprop-through-time over one episode: X is T*nIn (row-major), act[t] is the target
   // action index at step t. Trains all weights; resets/uses a fresh memory internally.
