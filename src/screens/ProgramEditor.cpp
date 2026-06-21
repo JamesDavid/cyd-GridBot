@@ -38,6 +38,7 @@ static const char* condName(Cond c) {
     case AT_GOAL: return "goal";
     case ENEMY_AHEAD: return "enemy";
     case ENEMY_NEAR: return "near";
+    case BLOCKED_AHEAD: return "wall/pit";
   }
   return "?";
 }
@@ -410,7 +411,8 @@ ProgramEditor::Action ProgramEditor::handleListTap(int x, int y) {
             // arena conditions, but we expose them in maze mode too so a kid can write
             // and test their battle-bot's logic here (they simply read false with no foe).
             sn->cond = (sn->cond == WALL_AHEAD) ? PIT_AHEAD
-                     : (sn->cond == PIT_AHEAD) ? AT_GOAL
+                     : (sn->cond == PIT_AHEAD) ? BLOCKED_AHEAD
+                     : (sn->cond == BLOCKED_AHEAD) ? AT_GOAL
                      : (sn->cond == AT_GOAL) ? ENEMY_AHEAD
                      : (sn->cond == ENEMY_AHEAD) ? ENEMY_NEAR : WALL_AHEAD;
             hal::audio.blip(); drawProgramList(); return Action::NONE;

@@ -50,6 +50,8 @@ bool Interpreter::evalCond(Cond c) const {
     case ENEMY_NEAR:  return _enemy && _enemy->pose &&
                              (absv(_enemy->pose->row - _pose.row) +
                               absv(_enemy->pose->col - _pose.col)) <= _enemy->nearDist;
+    case BLOCKED_AHEAD: return !_maze->inBounds(ar, ac) ||
+                               _maze->at(ar, ac) == WALL || _maze->at(ar, ac) == PIT;
   }
   return false;
 }

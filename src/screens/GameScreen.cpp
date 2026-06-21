@@ -467,6 +467,7 @@ static const char* condName(Cond c) {
     case AT_GOAL: return "goal";
     case ENEMY_AHEAD: return "enemy";
     case ENEMY_NEAR: return "near";
+    case BLOCKED_AHEAD: return "wall/pit";
   }
   return "?";
 }
@@ -752,9 +753,10 @@ void GameScreen::handleListTap(int x, int y) {
             hal::audio.blip(); drawProgramList(); return;
           }
         } else if (sn->type == N_IF || sn->type == N_REPEAT_UNTIL) {
-          if (condRect(yy).contains(x, y)) {
+          if (condRect(yy).contains(x, y)) {       // wall -> pit -> wall/pit -> goal -> wall
             sn->cond = (sn->cond == WALL_AHEAD) ? PIT_AHEAD
-                     : (sn->cond == PIT_AHEAD) ? AT_GOAL : WALL_AHEAD;
+                     : (sn->cond == PIT_AHEAD) ? BLOCKED_AHEAD
+                     : (sn->cond == BLOCKED_AHEAD) ? AT_GOAL : WALL_AHEAD;
             hal::audio.blip(); drawProgramList(); return;
           }
         } else if (sn->type == N_CALL) {
