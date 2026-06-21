@@ -22,9 +22,11 @@ static constexpr int PAD_X0 = 6, PAD_Y0 = BAND_Y + 2, PAD_CELL = 50, PAD_PITCH =
 static Rect padCell(int i, int j) { return {(int16_t)(PAD_X0 + j * PAD_PITCH),
                                             (int16_t)(PAD_Y0 + i * PAD_PITCH),
                                             PAD_CELL, PAD_CELL}; }
-static const Rect R_CLEAR  = {6, 179, 48, 30};
-static const Rect R_DELPAD = {58, 179, 46, 30};    // delete selected line
-static const Rect R_RUNPAD = {108, 179, 54, 30};   // RUN sits with CLEAR/DEL
+static const Rect R_CLEAR  = {6, 179, 30, 30};
+static const Rect R_DELPAD = {38, 179, 30, 30};    // delete selected line
+static const Rect R_UP     = {70, 179, 26, 30};    // move selected line up
+static const Rect R_DN     = {98, 179, 26, 30};    // move selected line down
+static const Rect R_RUNPAD = {126, 179, 36, 30};   // RUN sits with CLEAR/DEL/move
 static constexpr int LIST_X = 166, LIST_W = 320 - 166;
 static constexpr int ROW_Y0 = BAND_Y + 22, ROW_H = 24;
 // Block controls live INLINE on the selected row (kept left of the scrollbar zone and
@@ -379,12 +381,19 @@ void GameScreen::drawControlPad() {
     cell(ci[s], cj[s], cg[s], cc[s], !cornerUnlocked(s));
   // CLEAR / DEL / RUN under the pad
   button(g, R_CLEAR, "CLR", C_BAD, C_PANEL);
-  bool canDel = false;
+  bool canDel = false, canUp = false, canDn = false;
   if (_selected >= 0) {
     std::vector<Row> rows; flatten(*_editList, 0, rows);
-    canDel = (_selected < (int)rows.size() && !rows[_selected].addSlot);
+    if (_selected < (int)rows.size() && !rows[_selected].addSlot && !rows[_selected].trainSlot) {
+      canDel = true;
+      Row& r = rows[_selected];
+      canUp = r.index > 0;                          // a sibling above to swap with
+      canDn = r.index + 1 < (int)r.list->size();    // a sibling below
+    }
   }
   button(g, R_DELPAD, "DEL", canDel ? C_BAD : C_DIM, C_PANEL);
+  button(g, R_UP, "Up", canUp ? C_INK : C_DIM, C_PANEL);   // move the selected line up
+  button(g, R_DN, "Dn", canDn ? C_INK : C_DIM, C_PANEL);   // ...or down (= insert anywhere)
   button(g, R_RUNPAD, "RUN", C_GO, C_PANEL);
 }
 
@@ -795,9 +804,31 @@ void GameScreen::deleteSelected() {
   drawProgramList();
 }
 
+void GameScreen::moveSelected(int dir) {
+  std::vector<Row> rows;
+  flatten(*_editList, 0, rows);
+  if (_selected < 0 || _selected >= (int)rows.size()) return;
+  Row& r = rows[_selected];
+  if (r.addSlot || r.trainSlot) return;
+  NodeList* lst = r.list;
+  int i = r.index, j = i + dir;
+  if (j < 0 || j >= (int)lst->size()) return;   // already at the top/bottom of its block
+  std::swap((*lst)[i], (*lst)[j]);              // moves the whole block (its body rides along)
+  _failNode = nullptr;
+  // re-flatten and keep the moved node selected at its new spot
+  std::vector<Row> rows2;
+  flatten(*_editList, 0, rows2);
+  for (int k = 0; k < (int)rows2.size(); k++)
+    if (rows2[k].list == lst && rows2[k].index == j && !rows2[k].addSlot && !rows2[k].trainSlot) { _selected = k; break; }
+  hal::audio.blip();
+  drawProgramList(); drawControlPad();
+}
+
 void GameScreen::handleCodeTap(int x, int y) {
   if (R_CLEAR.contains(x, y)) { _editList->clear(); _selected = -1; _failNode = nullptr; hal::audio.blip(); drawProgramList(); drawControlPad(); return; }
   if (R_DELPAD.contains(x, y)) { if (_selected >= 0) { deleteSelected(); drawControlPad(); } return; }
+  if (R_UP.contains(x, y)) { if (_selected >= 0) moveSelected(-1); return; }
+  if (R_DN.contains(x, y)) { if (_selected >= 0) moveSelected(+1); return; }
   if (R_RUNPAD.contains(x, y)) { startRun(); return; }
   if (x < LIST_X) handlePadTap(x, y);
   else handleListTap(x, y);

@@ -16,9 +16,11 @@ static constexpr int PAD_X0 = 6, PAD_Y0 = BAND_Y + 2, PAD_CELL = 50, PAD_PITCH =
 static Rect padCell(int i, int j) { return {(int16_t)(PAD_X0 + j * PAD_PITCH),
                                             (int16_t)(PAD_Y0 + i * PAD_PITCH),
                                             PAD_CELL, PAD_CELL}; }
-static const Rect R_CLEAR  = {6, 179, 48, 30};
-static const Rect R_DELPAD = {58, 179, 46, 30};
-static const Rect R_RUNPAD = {108, 179, 54, 30};
+static const Rect R_CLEAR  = {6, 179, 30, 30};
+static const Rect R_DELPAD = {38, 179, 30, 30};
+static const Rect R_UP     = {70, 179, 26, 30};    // move selected line up
+static const Rect R_DN     = {98, 179, 26, 30};    // move selected line down (= insert anywhere)
+static const Rect R_RUNPAD = {126, 179, 36, 30};
 static constexpr int LIST_X = 166, LIST_W = 320 - 166;
 static constexpr int ROW_Y0 = BAND_Y + 22, ROW_H = 24;
 static inline Rect repCycleRect(int y) { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 80, (int16_t)(ROW_H - 2)}; }
@@ -135,12 +137,19 @@ void ProgramEditor::drawControlPad() {
   const int ci[4] = {0, 0, 2, 2}, cj[4] = {0, 2, 0, 2};
   for (int s = 0; s < 4; s++) cell(ci[s], cj[s], cg[s], cc[s], !cornerUnlocked(s));
   button(g, R_CLEAR, "CLR", C_BAD, C_PANEL);
-  bool canDel = false;
+  bool canDel = false, canUp = false, canDn = false;
   if (_selected >= 0) {
     std::vector<Row> rows; flatten(*_editList, 0, rows);
-    canDel = (_selected < (int)rows.size() && !rows[_selected].addSlot);
+    if (_selected < (int)rows.size() && !rows[_selected].addSlot && !rows[_selected].trainSlot) {
+      canDel = true;
+      Row& r = rows[_selected];
+      canUp = r.index > 0;
+      canDn = r.index + 1 < (int)r.list->size();
+    }
   }
   button(g, R_DELPAD, "DEL", canDel ? C_BAD : C_DIM, C_PANEL);
+  button(g, R_UP, "Up", canUp ? C_INK : C_DIM, C_PANEL);
+  button(g, R_DN, "Dn", canDn ? C_INK : C_DIM, C_PANEL);
   button(g, R_RUNPAD, "RUN", C_GO, C_PANEL);
 }
 
@@ -454,10 +463,31 @@ void ProgramEditor::deleteSelected() {
   drawProgramList();
 }
 
+void ProgramEditor::moveSelected(int dir) {
+  std::vector<Row> rows;
+  flatten(*_editList, 0, rows);
+  if (_selected < 0 || _selected >= (int)rows.size()) return;
+  Row& r = rows[_selected];
+  if (r.addSlot || r.trainSlot) return;
+  NodeList* lst = r.list;
+  int i = r.index, j = i + dir;
+  if (j < 0 || j >= (int)lst->size()) return;
+  std::swap((*lst)[i], (*lst)[j]);            // moves the whole block (its body rides along)
+  _failNode = nullptr;
+  std::vector<Row> rows2;
+  flatten(*_editList, 0, rows2);
+  for (int k = 0; k < (int)rows2.size(); k++)
+    if (rows2[k].list == lst && rows2[k].index == j && !rows2[k].addSlot && !rows2[k].trainSlot) { _selected = k; break; }
+  hal::audio.blip();
+  drawProgramList(); drawControlPad();
+}
+
 ProgramEditor::Action ProgramEditor::handleTap(int x, int y) {
   if (_cfg.readOnly) return Action::NONE;
   if (R_CLEAR.contains(x, y)) { _editList->clear(); _selected = -1; _failNode = nullptr; hal::audio.blip(); drawProgramList(); drawControlPad(); return Action::NONE; }
   if (R_DELPAD.contains(x, y)) { if (_selected >= 0) { deleteSelected(); drawControlPad(); } return Action::NONE; }
+  if (R_UP.contains(x, y)) { if (_selected >= 0) moveSelected(-1); return Action::NONE; }
+  if (R_DN.contains(x, y)) { if (_selected >= 0) moveSelected(+1); return Action::NONE; }
   if (R_RUNPAD.contains(x, y)) return Action::RUN;
   if (x < LIST_X) { handlePadTap(x, y); return Action::NONE; }
   return handleListTap(x, y);
