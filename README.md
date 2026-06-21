@@ -62,6 +62,10 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 |:--|
 | **Make a robot.** A big-key **QWERTY** keyboard (tuned for finger-on-resistive-glass), a name up to 8 letters, and a row of **eight differently-coloured robots** to pick from. Each kid also gets a hidden global ID so two GridBots can recognise each other over the radio. |
 
+| ![Home menu](docs/img/home-hub.png) |
+|:--|
+| **One menu, everything one tap away.** Picking (or making) a player lands here — not buried in a maze. **Play** jumps to your current level; **Arena**, **Learn** (CodeLab + NeuroLab), **Customize** (the pixel editor), **Badges**, and **Shop** are each a single tap. The header shows your level, stars, and badge count; Arena stays locked-but-visible until you reach it, so a kid can *see* what's coming. Every screen's top button returns here. |
+
 ### Write code, run it, fix it — *the core loop*
 
 | ![The Code view](docs/img/code-view.png) |
@@ -70,7 +74,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![A built program](docs/img/code-program.png) |
 |:--|
-| **A real program.** Snap blocks together and they stack up — each colour-coded with its glyph and **hierarchically numbered** (`1, 2, 3 …`, nested steps as `4a, 4b`). Tap a block to edit it: a `repeat` shows a big button that **cycles its count 2→3→4→5**, an `if`/`until` cycles its condition. Dim **`+ add inside`** / **`+ add here`** slots make it obvious *exactly where* your next step lands. The list scrolls — no length limit. |
+| **A real program.** Snap blocks together and they stack up — each colour-coded with its glyph and **hierarchically numbered** (`1, 2, 3 …`, nested steps as `4a, 4b`). Tap a block to edit it: a `repeat` cycles its count **2→3→4→5**, an `if`/`until` cycles its condition (wall → pit → **wall/pit** → goal), a `call` switches **F1↔F2**, a `brain` cycles its mode (plain → pilot → rnn). **Reorder** any line with the **Up/Dn** buttons — so you can drop a block in, then slide it exactly where it belongs — and the top button reads **Menu** (back to the hub) or **< Code** (back to the editor while a run plays). |
 
 | ![Study the maze](docs/img/maze-preview.png) |
 |:--|
@@ -316,7 +320,7 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
   test, which hands you fair rematches and replays for free.
 - **Neural nets on a no-PSRAM ESP32** — a tiny MLP + backprop, Q-learning, evolution, and
   distillation in a few KB, with a learned brain embedded as an interpreter node and trained
-  on-device fast enough to animate. **67 host tests** cover the engine.
+  on-device fast enough to animate. **79 host tests** cover the engine.
 
 **Still open / known limits**
 - ESP-NOW radio battle/trade is built but **hardware-pending** — needs two physical boards.
@@ -343,10 +347,10 @@ Still on deck (full list in **[BACKLOG.md](BACKLOG.md)**):
 
 - More **mode types** — relay, co-op, king-of-the-hill — building on Race / Sumo / Puzzle Race.
 - **Daily shared-seed challenges** and a leaderboard; library-bot **tournaments**.
-- **Draw-the-path** brain training (teach by demonstration); deeper ML topics (regularization,
-  reward shaping, a tiny memory cell).
-- **Verify the radio link** on two boards; an optional **mini-map** in the Code view;
-  **drag-to-reorder** + **Undo** in the editor.
+- Deeper ML topics (regularization/overfitting, reward shaping, batching) building on the
+  existing **draw-the-path**, **Pilot** (planner+follower), and **RNN memory** trainers.
+- **Verify the radio link** on two boards; an optional **mini-map** in the Code view; **Undo**
+  in the editor (reorder already ships as Up/Dn).
 
 ---
 
@@ -354,7 +358,7 @@ Still on deck (full list in **[BACKLOG.md](BACKLOG.md)**):
 
 Working firmware, verified on a real CYD — the campaign (all unlock tiers), the arena,
 lessons, NeuroBot training, the pixel editor, and achievements all run on hardware. Built
-phase-by-phase from `SPEC.md` following `IMPLEMENTATION_STEPS.md`; **67 host unit tests** plus
+phase-by-phase from `SPEC.md` following `IMPLEMENTATION_STEPS.md`; **79 host unit tests** plus
 an on-device self-test gate every change.
 
 **License: [PolyForm Noncommercial 1.0.0](LICENSE).** Free for personal, hobby, research, and
