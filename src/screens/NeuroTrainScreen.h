@@ -49,6 +49,7 @@ class NeuroTrainScreen : public app::IScreen {
   bool _drawMode = false;      // kid is hand-drawing the path to learn from
   uint8_t _drawPath[64];       // ordered tile indices of the drawn route
   int _drawLen = 0;
+  int _gauntletScore = -1;     // last Generalist-challenge result (levels cleared), -1 = not run
   app::TapDetector _tap;
 };
 

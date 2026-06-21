@@ -23,7 +23,8 @@ enum Achievement : uint32_t {
   A_NEURO      = 1u << 13,  // train a brain (NeuroBot)
   A_NEURO_WIN  = 1u << 14,  // clear a level with a trained brain
   A_FIGHTER    = 1u << 15,  // save a brain as an Arena fighter
-  ACH_COUNT    = 16
+  A_GENERALIST = 1u << 16,  // one frozen brain clears campaign levels 1-50 unchanged
+  ACH_COUNT    = 17
 };
 
 inline const char* achievementName(int bit) {
@@ -31,7 +32,7 @@ inline const char* achievementName(int bit) {
     "First Steps", "Bright Spark", "Hopper", "Looper", "Architect",
     "Sixth Sense", "Champion", "On Fire", "Unstoppable", "Explorer",
     "Veteran", "Artist", "Star Collector",
-    "Brainiac", "Mind Over Maze", "Battle-Ready"};
+    "Brainiac", "Mind Over Maze", "Battle-Ready", "Generalist"};
   return (bit >= 0 && bit < ACH_COUNT) ? N[bit] : "?";
 }
 
@@ -55,6 +56,7 @@ inline uint32_t evaluateAchievements(const Profile& p) {
   if (s.brainsTrained >= 1)           a |= A_NEURO;
   if (s.neuroWins >= 1)               a |= A_NEURO_WIN;
   if (s.fightersSaved >= 1)           a |= A_FIGHTER;
+  if (s.gauntletBest >= 50)           a |= A_GENERALIST;
   return a;
 }
 

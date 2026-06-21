@@ -11,6 +11,7 @@
 #include "game/Program.h"
 #include "game/Interpreter.h"
 #include "game/Distill.h"
+#include "game/Gauntlet.h"
 #include "game/Score.h"
 
 using namespace gb;
@@ -201,9 +202,21 @@ void test_distill_path_navigates() {
   TEST_ASSERT_TRUE(o == OUT_WIN || distanceToGoal(m, it.pose().row, it.pose().col) <= 1);
 }
 
+// The Generalist gauntlet: counts consecutive cleared levels for a FROZEN brain, bounded
+// to [0, upToLevel] and deterministic for a given (brain, seed).
+void test_gauntlet_bounded_and_deterministic() {
+  Net brain; brain.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 7);
+  int a = gauntletRun(brain, 999u, 50);
+  int b = gauntletRun(brain, 999u, 50);
+  TEST_ASSERT_EQUAL(a, b);
+  TEST_ASSERT_TRUE(a >= 0 && a <= 50);
+  TEST_ASSERT_EQUAL(0, gauntletRun(brain, 999u, 0));  // no levels asked -> none cleared
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_distill_brain_navigates);
+  RUN_TEST(test_gauntlet_bounded_and_deterministic);
   RUN_TEST(test_path_to_program_walks_and_turns);
   RUN_TEST(test_path_to_program_jumps_pit);
   RUN_TEST(test_path_to_program_rejects_diagonal);

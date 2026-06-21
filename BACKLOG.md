@@ -100,11 +100,11 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [x] **Enemy senses exposed in maze mode** — the campaign `if/until` cycler now offers
       `enemy`/`near` too (no-op without a foe), so a kid can author & test arena-bot logic
       while playing the campaign.
-- [ ] **"Generalist" prize badge** (DEFERRED, agreed bar = first **50** levels). Award a
-      badge for training ONE frozen brain that clears campaign levels 1–50 with no edits.
-      Needs: a challenge trigger that runs the saved brain across the 50 deterministic mazes,
-      counts wins, and grants the badge only on a clean sweep. (A second 100-level tier was
-      considered but we settled on 50 for now.)
+- [x] **"Generalist" prize badge** (bar = first **50** levels). DONE: the Train-the-brain
+      page has a **vs 50** chip that runs the frozen working brain across campaign levels
+      1–50 (`game/Gauntlet.cpp`, every board of every level, no training), shows "cleared
+      N/50" in the header, records `stats.gauntletBest`, and grants the **Generalist** badge
+      on a clean 50/50 sweep. Best run also shown on the Stats screen.
 - [ ] More ML topics the same engine could host (from the lessons discussion):
       regularization/overfitting, batching, reward shaping, exploration-vs-exploitation
       sliders, and a tiny recurrent/memory cell.

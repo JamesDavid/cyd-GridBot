@@ -42,6 +42,7 @@ struct Stats {
   uint16_t brainsTrained = 0;   // brains trained & used/saved
   uint16_t neuroWins = 0;       // levels cleared with a NEURO brain in the program
   uint16_t fightersSaved = 0;   // brains saved as Arena fighters
+  uint8_t  gauntletBest = 0;    // most consecutive campaign levels a frozen brain cleared
 };
 
 struct LibEntry {
