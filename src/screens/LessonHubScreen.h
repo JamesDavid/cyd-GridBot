@@ -17,6 +17,7 @@ class LessonHubScreen : public app::IScreen {
  private:
   void draw();
   int _pick = -1;
+  int _page = 0;            // 0 or 1 — lessons are paginated 5 per page (10 total)
   app::TapDetector _tap;
 };
 

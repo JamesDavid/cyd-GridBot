@@ -15,12 +15,14 @@ static const uint32_t DEMO_SEED = 4242u;
 static const Rect R_NEXT = {6,   (int16_t)(BOTBAR_Y + 2), 188, 26};
 static const Rect R_BACK = {200, (int16_t)(BOTBAR_Y + 2), 114, 26};
 
-static const char* STATUS[3] = {
-  "No memory: it forgets it's been here - loops, stuck.",
-  "Memory (RNN): remembers its trail, backs out -> solved!",
-  "RNN: action = senses NOW + memory. It remembers on its own.",
+static const char* STATUS[4] = {
+  "No memory: it forgets it's been here - loops.",
+  "Memory (RNN): remembers its trail -> solved!",
+  "New: the THINK layer feeds back into itself (8x8).",
+  "RNN action = senses NOW + memory (remembers).",
 };
-static const char* BTN[3] = {"Now give it memory >", "How is this different? >", "Start over"};
+static const char* BTN[4] = {"Now give it memory >", "See the one new wire >",
+                             "Why it works >", "Start over"};
 
 // One explorer episode -> (senses, action) examples (the memory-using teacher).
 static int rollout(const Maze& m, float* X, int* act, int maxT) {
@@ -98,6 +100,40 @@ void RnnLessonScreen::draw() {
   label(g, 6, TOPBAR_H + 4, STATUS[_phase], _won ? C_GO : C_INK);
 
   if (_phase == 2) {
+    // "See the one new wire": the 10->8->5 brain with the recurrent memory loop drawn in.
+    const int IX = 50, HX = 150, OX = 252;
+    const uint16_t cyan = ui::rgb(120, 230, 245);
+    label(g, IX - 18, 40, "SEES", C_MOVE);
+    label(g, HX - 22, 40, "THINKS", C_SENSE);
+    label(g, OX - 18, 40, "DOES", C_GO);
+    int iy[4], hy[8], oy2[5];
+    for (int i = 0; i < 4; i++) iy[i] = 54 + i * 26;
+    for (int j = 0; j < 8; j++) hy[j] = 50 + j * 12;
+    for (int k = 0; k < 5; k++) oy2[k] = 52 + k * 21;
+    // dim forward wires (the brain it always had)
+    for (int i = 0; i < 4; i++) for (int j = 0; j < 8; j++) g.drawLine(IX, iy[i], HX, hy[j], C_LOCK);
+    for (int j = 0; j < 8; j++) for (int k = 0; k < 5; k++) g.drawLine(HX, hy[j], OX, oy2[k], C_LOCK);
+    // THE memory feedback: the WHOLE hidden layer feeds back into the whole hidden layer
+    // (an 8x8 weight matrix, not one wire). Drawn as a bundle of arcs to read as "many".
+    for (int strand = 0; strand < 3; strand++) {
+      int b = 18 + strand * 9;
+      int ax[5] = {HX, HX + b * 3 / 4, HX + b, HX + b * 3 / 4, HX};
+      int ay[5] = {hy[0], 70, 91, 112, hy[7]};
+      for (int s = 0; s < 4; s++) g.drawLine(ax[s], ay[s], ax[s + 1], ay[s + 1], cyan);
+    }
+    g.fillTriangle(HX, hy[7], HX + 9, hy[7] - 5, HX + 9, hy[7] + 4, cyan);  // arrowhead into column
+    label(g, HX + 42, 86, "8x8", cyan);
+    // nodes on top
+    for (int i = 0; i < 4; i++) g.fillCircle(IX, iy[i], 4, C_MOVE);
+    for (int j = 0; j < 8; j++) g.fillCircle(HX, hy[j], 5, C_SENSE);
+    for (int k = 0; k < 5; k++) g.fillCircle(OX, oy2[k], 5, C_GO);
+    // the takeaway (the kid's own framing: the feedback weights were 0, now they're trained)
+    int y = 150;
+    label(g, 10, y, "Same 10 -> 8 -> 5 brain + a feedback path:", C_INK); y += 14;
+    label(g, 10, y, "every THINK neuron -> every THINK neuron", cyan); y += 14;
+    label(g, 10, y, "(8x8 = 64 wires, including itself).", C_DIM); y += 14;
+    label(g, 10, y, "A plain brain has them 0; the RNN trains them.", C_GO);
+  } else if (_phase == 3) {
     int y = BAND_Y + 26;
     label(g, 14, y, "FEEDFORWARD brain", C_MOVE); y += 18;
     label(g, 22, y, "action = f(senses NOW)", C_DIM); y += 16;
@@ -133,9 +169,10 @@ app::Signal RnnLessonScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
   if (R_NEXT.contains(tx, ty)) {
-    if (_phase == 0)      { _phase = 1; trace(true); }
-    else if (_phase == 1) { _phase = 2; }
-    else                  { _phase = 0; trace(false); }
+    if (_phase == 0)      { _phase = 1; trace(true); }   // give it memory -> solves
+    else if (_phase == 1) { _phase = 2; }                // see the loop diagram
+    else if (_phase == 2) { _phase = 3; }                // the takeaway
+    else                  { _phase = 0; trace(false); }  // start over
     hal::audio.blip(); draw();
   } else if (R_BACK.contains(tx, ty)) {
     return app::Signal::BACK;

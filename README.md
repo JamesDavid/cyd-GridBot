@@ -229,7 +229,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![Memory — a recurrent brain](docs/img/neuro-rnn.gif) |
 |:--|
-| **Memory — the brain that remembers (an RNN).** Pilot gave the brain an *outside* planner; this gives it its *own* memory. A plain brain picks `action = f(senses **now**)`, so in a dead-end it forgets it's been there and **loops** (red). A **recurrent** brain picks `action = f(senses now **+ memory**)` — it remembers its trail, **backs out, and solves it** (green). Same maze, same teacher; only the one with memory gets through. Trained on-device by **backprop-through-time**. |
+| **Memory — the brain that remembers (an RNN).** Pilot gave the brain an *outside* planner; this gives it its *own* memory. A plain brain picks `action = f(senses **now**)`, so in a dead-end it forgets it's been there and **loops** (red). A **recurrent** brain picks `action = f(senses now **+ memory**)` — it remembers its trail, **backs out, and solves it** (green). The only change is a **feedback path**: the hidden layer feeds back into itself (an **8×8 weight matrix** that a plain brain keeps at 0). Same maze, same teacher; only the one with memory gets through. Trained on-device by **backprop-through-time**. |
 
 | ![Train a fighter for the Arena](docs/img/neuro-arena-train.png) |
 |:--|
