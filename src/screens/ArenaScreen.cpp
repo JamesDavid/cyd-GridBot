@@ -35,6 +35,9 @@ static const Rect R_G2 = {20, 94,  280, 34};
 static const Rect R_G3 = {20, 132, 280, 34};
 static const Rect R_G4 = {20, 170, 280, 34};
 static const Rect R_READY= {84, 150, 150, 34};
+// result-overlay buttons (a kid wants to instantly retry, not dead-end on a loss)
+static const Rect R_AGAIN = {62, 129, 96, 26};
+static const Rect R_RESULT_EXIT = {170, 129, 86, 26};
 
 static Program dashProgram() {
   Program p;
@@ -178,14 +181,26 @@ void ArenaScreen::drawHandoff() {
 }
 
 // ---- match ----------------------------------------------------------------
+// A kid's SAVED NeuroBot fighter is over-fit to the board it was trained on, so it flails
+// on a different battle board. Fine-tune its brain on THIS match board (keeping the kid's
+// brain as the starting point — transfer learning at battle time) so it actually competes.
+static void adaptNeuroBot(Program& p, const Maze& m, const Pose& start) {
+  if (p.brains.empty()) return;
+  Maze mm = m; mm.setStart(start);
+  distillSolver(p.brains[0], mm, true, 500);
+}
+
 void ArenaScreen::startMatch() {
   hal::audio.stopMusic();  // the board uses step-tick SFX; silence the battle theme
   MazeGen::generateArena(_maze, _profile ? _profile->seedBase + 7u : 7u, _s0, _s1);
-  // Smart bots solve the board; NeuroBots train a brain on it — both at match start.
+  // Smart bots solve the board; house NeuroBots distill fresh; a kid's saved NeuroBot
+  // fighter is fine-tuned to this board — all at match start.
   if (_cands[_pick0].smart) solveMazeFrom(_maze, _s0, true, _cands[_pick0].prog);
   else if (_cands[_pick0].neuro) buildNeuroBot(_cands[_pick0].prog, _maze, _s0, 7u + (uint32_t)_cands[_pick0].avatar * 13u);
+  else adaptNeuroBot(_cands[_pick0].prog, _maze, _s0);
   if (_cands[_pick1].smart) solveMazeFrom(_maze, _s1, true, _cands[_pick1].prog);
   else if (_cands[_pick1].neuro) buildNeuroBot(_cands[_pick1].prog, _maze, _s1, 7u + (uint32_t)_cands[_pick1].avatar * 13u);
+  else adaptNeuroBot(_cands[_pick1].prog, _maze, _s1);
   const Program& p0 = _cands[_pick0].prog;
   const Program& p1 = _cands[_pick1].prog;
   _arena.setup(&_maze, &p0, &p1, _s0, _s1, _type);
@@ -253,11 +268,12 @@ void ArenaScreen::finishOverlay() {
     case ArenaOutcome::BOT1: msg = _hotseat ? "Player 2 wins!" : "Computer wins!"; col = C_FUNC; hal::led.red(); hal::audio.fail(); break;
     default: break;
   }
-  int w = 220, h = 60, x = (SCREEN_W - w) / 2, y = (SCREEN_H - h) / 2;
+  int w = 220, h = 78, x = (SCREEN_W - w) / 2, y = (SCREEN_H - h) / 2;
   g.fillRoundRect(x, y, w, h, 10, C_PANEL);
   g.drawRoundRect(x, y, w, h, 10, col);
   label(g, SCREEN_W / 2, y + 22, msg, col, textdatum_t::middle_center, 2);
-  label(g, SCREEN_W / 2, y + 44, "tap Back to exit", C_DIM, textdatum_t::middle_center);
+  button(g, R_AGAIN, "Play again", C_GO, C_PANEL_HI);   // rematch — pick a (different) bot
+  button(g, R_RESULT_EXIT, "Exit", C_INK, C_PANEL_HI);
 }
 
 // ---- input ----------------------------------------------------------------
@@ -319,11 +335,11 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
           _pick0 = i; hal::audio.blip();
           if (_hotseat) { drawHandoff(); }
           else {
-            // vs AI: a themed house bot DIFFERENT from the player's pick (so it's not
-            // a symmetric instant-draw).
-            int opp = (_type == MatchType::SUMO) ? houseBotIndex("Vex")
-                                                 : houseBotIndex("Ace");
-            if (opp == _pick0) opp = houseBotIndex("Bolt");
+            // vs the Computer, give a BEATABLE opponent (a blind dasher) so a kid's bot —
+            // or a freshly-trained Brainy — can actually win; the clever bots (Ace, Vex)
+            // are there to PICK and play as, and Hotseat-vs-a-friend is the real challenge.
+            int opp = houseBotIndex("Bolt");
+            if (opp == _pick0) opp = houseBotIndex("Rusty");
             _pick1 = (opp >= 0) ? opp : 0;
             startMatch();
           }
@@ -341,8 +357,14 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       }
       break;
     case Phase::BOARD:
-    case Phase::DONE:
       if (R_BACK.contains(tx, ty)) { hal::led.off(); return app::Signal::BACK; }
+      break;
+    case Phase::DONE:
+      if (R_AGAIN.contains(tx, ty)) {  // rematch: back to the bot picker (try a different one)
+        hal::led.off(); _pick0 = _pick1 = -1; _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
+      } else if (R_RESULT_EXIT.contains(tx, ty) || R_BACK.contains(tx, ty)) {
+        hal::led.off(); return app::Signal::BACK;
+      }
       break;
   }
   return app::Signal::NONE;

@@ -28,16 +28,18 @@ int ArenaTrainScreen::oppCount() const {
 
 void ArenaTrainScreen::buildOpponent(int idx) {
   _ai.clear();
-  if (idx == 0) {  // "Ace": a navigator that solves from its own start (the classic foe)
+  // Ordered EASY -> HARD so a kid's first Teach reliably beats the default (Bolt), for the
+  // satisfying "I taught it and it WINS!"; cycle up to Ace (a perfect navigator) for a challenge.
+  if (idx == 0) {                  // "Bolt": a blind dasher (easy first win)
+    _oppName = "Bolt"; _ai = alwaysForwardProgram();
+  } else if (idx == 1) {           // "Vex": hunts and zaps (a Sumo-style aggressor)
+    _oppName = "Vex"; _ai = hunterProgram();
+  } else if (idx == 2) {           // "Ace": a navigator that solves from its own start (hard)
     _oppName = "Ace";
     if (!solveMazeFrom(_maze, _s1, true, _ai)) {
       _ai.clear();
       Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::command(CMD_FWD)); _ai.main.push_back(loop);
     }
-  } else if (idx == 1) {           // "Vex": hunts and zaps (a Sumo-style aggressor)
-    _oppName = "Vex"; _ai = hunterProgram();
-  } else if (idx == 2) {           // "Bolt": a blind dasher
-    _oppName = "Bolt"; _ai = alwaysForwardProgram();
   } else {                         // your library: code OR neuro, incl. radio-traded bots
     int li = idx - N_HOUSE_OPP;
     if (_profile && li >= 0 && li < (int)_profile->library.size()) {
