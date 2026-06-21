@@ -11,10 +11,11 @@ using namespace gb;
 
 namespace screens {
 
-static const Rect R_TEACH = {6,   (int16_t)(BOTBAR_Y + 2), 78, 26};
-static const Rect R_RUN   = {88,  (int16_t)(BOTBAR_Y + 2), 70, 26};
-static const Rect R_MAP   = {162, (int16_t)(BOTBAR_Y + 2), 70, 26};
-static const Rect R_BACK  = {236, (int16_t)(BOTBAR_Y + 2), 78, 26};
+static const Rect R_TEACH = {6,   (int16_t)(BOTBAR_Y + 2), 60, 26};
+static const Rect R_RUN   = {70,  (int16_t)(BOTBAR_Y + 2), 48, 26};
+static const Rect R_MAP   = {122, (int16_t)(BOTBAR_Y + 2), 52, 26};
+static const Rect R_NEW   = {178, (int16_t)(BOTBAR_Y + 2), 48, 26};  // scramble to a fresh brain
+static const Rect R_BACK  = {230, (int16_t)(BOTBAR_Y + 2), 84, 26};
 static const Rect R_TYPE  = {196, 1, 56, 20};   // ff/rnn toggle, top bar
 
 static const char* INLBL[SENSOR_COUNT_FOR_BRAIN] =
@@ -200,8 +201,9 @@ void BrainViewScreen::draw() {
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_TEACH, _mode == M_LEARN ? "..." : "Teach", C_GO, C_PANEL);
   button(g, R_RUN, _mode == M_RUN ? "stop" : "Run", C_GO, C_PANEL);
-  char mp[10]; snprintf(mp, sizeof(mp), "Map %d>", _level);
-  button(g, R_MAP, mp, C_FUNC, C_PANEL);
+  char mp[10]; snprintf(mp, sizeof(mp), "Map%d>", _level);
+  button(g, R_MAP, mp, C_FUNC, C_PANEL);      // next map, KEEP the brain (transfer learning)
+  button(g, R_NEW, "New", C_ACCENT, C_PANEL); // scramble to a fresh untrained brain
   button(g, R_BACK, "Back", C_INK, C_PANEL);
 }
 
@@ -223,7 +225,11 @@ app::Signal BrainViewScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     hal::audio.blip(); draw();
   } else if (R_MAP.contains(tx, ty)) {
     _level = _level >= 14 ? 3 : _level + 1;   // cycle a few campaign maps
-    _sel = -1; _mode = M_IDLE; loadMaze(); resetBrains(); resetRun(); hal::audio.blip(); draw();
+    // KEEP the trained brain — it carries over to the new map (transfer learning); Teach
+    // then fine-tunes it. Tap "New" to scramble and learn the map from scratch instead.
+    _sel = -1; _mode = M_IDLE; loadMaze(); resetRun(); hal::audio.blip(); draw();
+  } else if (R_NEW.contains(tx, ty)) {
+    _sel = -1; _mode = M_IDLE; resetBrains(); resetRun(); hal::audio.blip(); draw();  // fresh brain
   } else if (R_BACK.contains(tx, ty)) {
     return app::Signal::BACK;
   } else {
