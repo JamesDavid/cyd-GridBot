@@ -18,21 +18,21 @@ static const Rect R_BASE  = {6,   (int16_t)(BAND_Y + 2), 118, 18};  // load a br
 static const Rect R_GAUNT = {128, (int16_t)(BAND_Y + 2), 90,  18};  // Generalist challenge trainer
 static const Rect R_SAVEV = {222, (int16_t)(BAND_Y + 2), 92,  18};  // save a versioned copy
 // normal toolbar (6): distill solver / draw a path / neuroevolve / planner+follow / save / leave
-static const Rect R_TEACH = {4,   (int16_t)(BOTBAR_Y + 2), 48, 26};
-static const Rect R_DRAW  = {54,  (int16_t)(BOTBAR_Y + 2), 44, 26};
-static const Rect R_TRAIN = {100, (int16_t)(BOTBAR_Y + 2), 52, 26};
-static const Rect R_PILOT = {154, (int16_t)(BOTBAR_Y + 2), 48, 26};
-static const Rect R_USE   = {204, (int16_t)(BOTBAR_Y + 2), 44, 26};
-static const Rect R_BACK  = {250, (int16_t)(BOTBAR_Y + 2), 64, 26};
+static const Rect R_TEACH = {4,   (int16_t)(BOTBAR_Y + 2), 48, 32};
+static const Rect R_DRAW  = {54,  (int16_t)(BOTBAR_Y + 2), 44, 32};
+static const Rect R_TRAIN = {100, (int16_t)(BOTBAR_Y + 2), 52, 32};
+static const Rect R_PILOT = {154, (int16_t)(BOTBAR_Y + 2), 48, 32};
+static const Rect R_USE   = {204, (int16_t)(BOTBAR_Y + 2), 44, 32};
+static const Rect R_BACK  = {250, (int16_t)(BOTBAR_Y + 2), 64, 32};
 // draw-mode toolbar: learn from the drawn path / clear it / leave draw mode
-static const Rect R_LEARN  = {6,   (int16_t)(BOTBAR_Y + 2), 110, 26};
-static const Rect R_DCLEAR = {122, (int16_t)(BOTBAR_Y + 2), 90, 26};
-static const Rect R_DCANCEL= {218, (int16_t)(BOTBAR_Y + 2), 96, 26};
+static const Rect R_LEARN  = {6,   (int16_t)(BOTBAR_Y + 2), 110, 32};
+static const Rect R_DCLEAR = {122, (int16_t)(BOTBAR_Y + 2), 90, 32};
+static const Rect R_DCANCEL= {218, (int16_t)(BOTBAR_Y + 2), 96, 32};
 // rnn-mode toolbar: BPTT-train memory / pilot toggle / save to block / leave
-static const Rect R_RTEACH = {6,   (int16_t)(BOTBAR_Y + 2), 86, 26};
-static const Rect R_RPILOT = {98,  (int16_t)(BOTBAR_Y + 2), 70, 26};
-static const Rect R_RUSE   = {174, (int16_t)(BOTBAR_Y + 2), 66, 26};
-static const Rect R_RBACK  = {246, (int16_t)(BOTBAR_Y + 2), 68, 26};
+static const Rect R_RTEACH = {6,   (int16_t)(BOTBAR_Y + 2), 86, 32};
+static const Rect R_RPILOT = {98,  (int16_t)(BOTBAR_Y + 2), 70, 32};
+static const Rect R_RUSE   = {174, (int16_t)(BOTBAR_Y + 2), 66, 32};
+static const Rect R_RBACK  = {246, (int16_t)(BOTBAR_Y + 2), 68, 32};
 
 void NeuroTrainScreen::rebuildBrainLibs() {
   _brainLibs.clear();

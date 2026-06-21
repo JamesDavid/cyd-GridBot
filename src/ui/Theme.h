@@ -35,9 +35,10 @@ constexpr uint16_t C_PIT       = rgb(8, 9, 14);       // (legacy) — pits drawn
 // Layout bands.
 constexpr int SCREEN_W = 320, SCREEN_H = 240;
 constexpr int TOPBAR_H = 22;
-constexpr int BOTBAR_H = 30;
+constexpr int BOTBAR_H = 36;  // taller toolbar so buttons sit clear of the touch-
+                              // inaccurate bottom edge (kids kept missing them)
 constexpr int BAND_Y = TOPBAR_H;
-constexpr int BAND_H = SCREEN_H - TOPBAR_H - BOTBAR_H;  // ~188
+constexpr int BAND_H = SCREEN_H - TOPBAR_H - BOTBAR_H;  // ~182
 constexpr int BOTBAR_Y = SCREEN_H - BOTBAR_H;
 
 // Level biomes — the floor/wall palette shifts as you climb so progress feels

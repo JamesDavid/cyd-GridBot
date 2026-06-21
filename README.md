@@ -237,7 +237,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![Train a fighter for the Arena](docs/img/neuro-arena-train.png) |
 |:--|
-| **Train a fighter for the Arena.** A **"Train a fighter"** mode off the Computer branch: **Teach** or **Evolve** a brain to **win real arena matches**. A **"spar vs"** chip cycles your sparring partner easy→hard (so a first Teach reliably reads *"taught WINS!"*). **Save** it and it joins your roster as **your bot** — and it **fine-tunes to each new battle board** at match start, so a trained fighter actually wins instead of over-fitting. |
+| **Train a fighter for the Arena.** A **"Train a fighter"** mode off the Computer branch: **Teach** or **Evolve** a brain to **win real arena matches**. A **"spar vs"** chip cycles your sparring partner easy→hard — the blind dasher **Bolt**, the wall-huggers **Coil** & **Spin** (left- and right-hand rule, so they take different routes), the hunter **Vex**, and the perfect solver **Ace**, then every bot in your **library** (incl. radio-traded ones) — so a first Teach reliably reads *"taught WINS!"* and you can climb to a real challenge. **Save** it and it joins your roster as **your bot** — and it **fine-tunes to each new battle board** at match start, so a trained fighter actually wins instead of over-fitting. |
 
 **The ML ideas a kid actually meets here** — not as jargon, but as things you *do* and *watch*:
 gradient-descent **backprop**; **multi-class** outputs (argmax picks the action); why a

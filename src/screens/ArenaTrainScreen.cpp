@@ -14,11 +14,11 @@ using namespace gb;
 namespace screens {
 
 static const Rect R_OPP   = {6, (int16_t)(BAND_Y + 2), 200, 18};  // tap to change sparring partner
-static const Rect R_TEACH = {6,   (int16_t)(BOTBAR_Y + 2), 70, 26};
-static const Rect R_EVO   = {80,  (int16_t)(BOTBAR_Y + 2), 78, 26};
-static const Rect R_SAVE  = {162, (int16_t)(BOTBAR_Y + 2), 88, 26};
-static const Rect R_BACK  = {254, (int16_t)(BOTBAR_Y + 2), 60, 26};
-static constexpr int N_HOUSE_OPP = 3;  // Ace (navigator), Vex (zapper), Bolt (dasher)
+static const Rect R_TEACH = {6,   (int16_t)(BOTBAR_Y + 2), 70, 32};
+static const Rect R_EVO   = {80,  (int16_t)(BOTBAR_Y + 2), 78, 32};
+static const Rect R_SAVE  = {162, (int16_t)(BOTBAR_Y + 2), 88, 32};
+static const Rect R_BACK  = {254, (int16_t)(BOTBAR_Y + 2), 60, 32};
+static constexpr int N_HOUSE_OPP = 5;  // Bolt, Coil, Spin, Vex, Ace (easy -> hard)
 
 // The sparring roster = house bots + every bot in your library (incl. radio-traded
 // friends' bots and fighters you saved). Train against code OR neuro opponents.
@@ -29,12 +29,17 @@ int ArenaTrainScreen::oppCount() const {
 void ArenaTrainScreen::buildOpponent(int idx) {
   _ai.clear();
   // Ordered EASY -> HARD so a kid's first Teach reliably beats the default (Bolt), for the
-  // satisfying "I taught it and it WINS!"; cycle up to Ace (a perfect navigator) for a challenge.
+  // satisfying "I taught it and it WINS!"; cycle up through navigators and a hunter to Ace
+  // (a perfect solver) for a real challenge — five named partners before your own library.
   if (idx == 0) {                  // "Bolt": a blind dasher (easy first win)
     _oppName = "Bolt"; _ai = alwaysForwardProgram();
-  } else if (idx == 1) {           // "Vex": hunts and zaps (a Sumo-style aggressor)
+  } else if (idx == 1) {           // "Coil": hugs the LEFT wall (a real, beatable navigator)
+    _oppName = "Coil"; _ai = wallFollowerProgram();
+  } else if (idx == 2) {           // "Spin": hugs the RIGHT wall (a different route)
+    _oppName = "Spin"; _ai = wallFollowerRightProgram();
+  } else if (idx == 3) {           // "Vex": hunts and zaps (a Sumo-style aggressor)
     _oppName = "Vex"; _ai = hunterProgram();
-  } else if (idx == 2) {           // "Ace": a navigator that solves from its own start (hard)
+  } else if (idx == 4) {           // "Ace": a navigator that solves from its own start (hard)
     _oppName = "Ace";
     if (!solveMazeFrom(_maze, _s1, true, _ai)) {
       _ai.clear();

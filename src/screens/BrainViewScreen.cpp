@@ -12,11 +12,11 @@ using namespace gb;
 
 namespace screens {
 
-static const Rect R_TEACH = {6,   (int16_t)(BOTBAR_Y + 2), 60, 26};
-static const Rect R_RUN   = {70,  (int16_t)(BOTBAR_Y + 2), 48, 26};
-static const Rect R_MAP   = {122, (int16_t)(BOTBAR_Y + 2), 52, 26};
-static const Rect R_NEW   = {178, (int16_t)(BOTBAR_Y + 2), 48, 26};  // scramble to a fresh brain
-static const Rect R_BACK  = {230, (int16_t)(BOTBAR_Y + 2), 84, 26};
+static const Rect R_TEACH = {6,   (int16_t)(BOTBAR_Y + 2), 60, 32};
+static const Rect R_RUN   = {70,  (int16_t)(BOTBAR_Y + 2), 48, 32};
+static const Rect R_MAP   = {122, (int16_t)(BOTBAR_Y + 2), 52, 32};
+static const Rect R_NEW   = {178, (int16_t)(BOTBAR_Y + 2), 48, 32};  // scramble to a fresh brain
+static const Rect R_BACK  = {230, (int16_t)(BOTBAR_Y + 2), 84, 32};
 static const Rect R_TYPE  = {196, 1, 56, 20};   // ff/rnn toggle, top bar
 static const Rect R_SAVE  = {136, 1, 56, 20};   // save the brain to your library
 

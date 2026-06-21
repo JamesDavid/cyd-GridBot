@@ -19,6 +19,20 @@ inline Program wallFollowerProgram() {
   return p;
 }
 
+// Mirror of the wall-follower: hugs the RIGHT wall instead of the left, so it
+// takes a visibly different route through the same maze — a distinct sparring
+// partner alongside the left-hugger.
+inline Program wallFollowerRightProgram() {
+  Program p;
+  Node loop = Node::repeatUntil(AT_GOAL);
+  Node iff = Node::ifCond(WALL_AHEAD);
+  iff.body.push_back(Node::command(CMD_TURN_R));
+  loop.body.push_back(iff);
+  loop.body.push_back(Node::command(CMD_FWD));
+  p.main.push_back(loop);
+  return p;
+}
+
 // A dumb opponent for the arena: just walks forward (falls/bonks quickly).
 inline Program alwaysForwardProgram() {
   Program p;
