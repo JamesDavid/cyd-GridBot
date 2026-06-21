@@ -20,6 +20,8 @@ class BrainViewScreen : public app::IScreen {
  private:
   enum Mode { M_IDLE, M_LEARN, M_RUN };
   void draw();
+  void drawMaze();   // the maze corner only (no full-screen clear)
+  void drawWeb();    // the network + status strip only (lines redrawn in place -> no flicker)
   void loadMaze();          // (re)generate the demo maze + capture the solver's teacher episode
   void resetBrains();       // fresh untrained ff + rnn for the current maze
   void trainChunk();        // one animated step of backprop

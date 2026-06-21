@@ -124,7 +124,22 @@ void BrainViewScreen::draw() {
   label(g, 6, 3, "Brain Cam", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
   button(g, R_TYPE, _useRnn ? "rnn >" : "plain >", _useRnn ? C_ACCENT : C_INK, C_PANEL);
 
-  // small maze (top-left) so you see WHAT it senses
+  drawMaze();
+  drawWeb();
+
+  g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
+  button(g, R_TEACH, _mode == M_LEARN ? "..." : "Teach", C_GO, C_PANEL);
+  button(g, R_RUN, _mode == M_RUN ? "stop" : "Run", C_GO, C_PANEL);
+  char mp[10]; snprintf(mp, sizeof(mp), "Map%d>", _level);
+  button(g, R_MAP, mp, C_FUNC, C_PANEL);      // next map, KEEP the brain (transfer learning)
+  button(g, R_NEW, "New", C_ACCENT, C_PANEL); // scramble to a fresh untrained brain
+  button(g, R_BACK, "Back", C_INK, C_PANEL);
+}
+
+// the small maze + robot (top-left). Clears just its own corner.
+void BrainViewScreen::drawMaze() {
+  auto& g = hal::display.gfx();
+  g.fillRect(0, BAND_Y, 50, 52, C_BG);
   int mtile = 46 / _maze.cols(); if (40 / _maze.rows() < mtile) mtile = 40 / _maze.rows();
   if (mtile < 4) mtile = 4;
   int mox = 4, moy = BAND_Y + 4;
@@ -139,7 +154,12 @@ void BrainViewScreen::draw() {
     }
   assets::drawCharacter(g, mox + _pose.col * mtile + mtile / 2, moy + _pose.row * mtile + mtile / 2,
                         mtile, 0, _pose.facing);
+}
 
+// the network: connections (redrawn in place over the last frame -> no full clear, no flicker)
+// + nodes + the status/zoom strip (only that small strip is cleared each frame).
+void BrainViewScreen::drawWeb() {
+  auto& g = hal::display.gfx();
   int selLayer = _sel < 0 ? -1 : _sel / 100, selIdx = _sel < 0 ? -1 : _sel % 100;
 
   // ---- connections coloured by WEIGHT (recolour live as backprop runs) ----
@@ -186,8 +206,9 @@ void BrainViewScreen::draw() {
     label(g, OX + 12, oy(k) - 3, OUTLBL[k], k == _action ? ui::rgb(120, 230, 245) : C_DIM);
   }
 
-  // ---- status / zoom strip (just above the toolbar) ----
+  // ---- status / zoom strip (just above the toolbar) — clear only this strip each frame ----
   int sy = BOTBAR_Y - 16;
+  g.fillRect(0, sy - 16, SCREEN_W, 32, C_BG);
   if (_mode == M_LEARN) {
     char m[28]; snprintf(m, sizeof(m), "learning  epoch %d", _epoch);
     label(g, 6, sy, m, C_ACCENT);
@@ -215,19 +236,15 @@ void BrainViewScreen::draw() {
     label(g, 6, sy, v, ui::rgb(120, 230, 245));
     label(g, 150, sy, _epoch ? "tap a neuron to zoom" : "tap Teach to train", C_DIM);
   }
-
-  g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
-  button(g, R_TEACH, _mode == M_LEARN ? "..." : "Teach", C_GO, C_PANEL);
-  button(g, R_RUN, _mode == M_RUN ? "stop" : "Run", C_GO, C_PANEL);
-  char mp[10]; snprintf(mp, sizeof(mp), "Map%d>", _level);
-  button(g, R_MAP, mp, C_FUNC, C_PANEL);      // next map, KEEP the brain (transfer learning)
-  button(g, R_NEW, "New", C_ACCENT, C_PANEL); // scramble to a fresh untrained brain
-  button(g, R_BACK, "Back", C_INK, C_PANEL);
 }
 
 app::Signal BrainViewScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
-  if (_mode == M_LEARN && now - _last >= 70) { _last = now; trainChunk(); draw(); }
-  else if (_mode == M_RUN && !_done && now - _last >= 550) { _last = now; stepRun(); draw(); if (_done) _mode = M_IDLE; }
+  // Animate WITHOUT a full-screen clear (that was the flicker): training redraws only the
+  // network web (lines in place) + the status strip; running also refreshes the maze corner.
+  if (_mode == M_LEARN && now - _last >= 70) { _last = now; trainChunk();
+    if (_mode == M_LEARN) drawWeb(); else draw(); }
+  else if (_mode == M_RUN && !_done && now - _last >= 550) { _last = now; stepRun();
+    drawMaze(); drawWeb(); if (_done) { _mode = M_IDLE; draw(); } }
 
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
