@@ -287,8 +287,8 @@ void NeuroTrainScreen::drawNeuronWidget(uint32_t now) {
   auto& g = hal::display.gfx();
   g.fillRect(156, 1, 70, 20, C_PANEL);  // clear our slice of the top bar (right of the title)
   const uint16_t cyan = ui::rgb(120, 230, 245);
-  bool hot = now < _pulseUntil;
-  int phase = (int)((now / (hot ? 90u : 240u)) % 3);   // 0=inputs, 1=hidden, 2=outputs lit
+  bool hot = now < _pulseUntil;                        // only animate just AFTER a train tap
+  int phase = hot ? (int)((now / 90u) % 3) : -1;       // -1 = static (idle: NOT training)
   const int ix = 164, hx = 188, ox = 212;
   const int iy[2] = {7, 15}, hy[3] = {4, 11, 18}, oy[2] = {7, 15};
   for (int a = 0; a < 2; a++) for (int b = 0; b < 3; b++) g.drawLine(ix, iy[a], hx, hy[b], C_LOCK);
@@ -300,7 +300,11 @@ void NeuroTrainScreen::drawNeuronWidget(uint32_t now) {
 }
 
 app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
-  if (!_drawMode && now - _widgetAt >= 90) { _widgetAt = now; drawNeuronWidget(now); }  // keep the net "alive"
+  // animate the neuron widget ONLY during the post-train pulse (so idle != "training forever")
+  if (!_drawMode) {
+    if (now < _pulseUntil) { if (now - _widgetAt >= 90) { _widgetAt = now; drawNeuronWidget(now); } }
+    else if (_widgetAt != 0) { _widgetAt = 0; drawNeuronWidget(now); }  // settle to static once
+  }
 
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
