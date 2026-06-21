@@ -185,7 +185,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![NeuroLab](docs/img/neurolab-hub.png) |
 |:--|
-| **NeuroLab** — eight lessons, each small enough to *watch*: one neuron, many actions, a hidden layer, **your robot's brain** (a tour of its real senses), Q-learning, evolution, **transfer learning**, and **Brain Cam**. |
+| **NeuroLab** — ten lessons, each small enough to *watch*: one neuron, many actions, a hidden layer, **your robot's brain** (a tour of its real senses), Q-learning, evolution, **transfer learning**, **Brain Cam**, **Pilot** (plan + steer), and **Memory** (a recurrent brain). |
 
 | ![Watch a neuron learn](docs/img/neuro-neuron.gif) |
 |:--|
@@ -223,6 +223,14 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 |:--|
 | **Brain Cam — watch a trained brain *think*.** Step a distilled brain through a maze and see it live: which of the **10 inputs** light up (**SEES**), the **hidden layer** firing (**THINKS**), and the **5 outputs** with the winner ringed (**DOES**) — plus a *"decides: turnR"* verdict. The clearest answer to "what is the network actually doing?" |
 
+| ![Pilot — plan + steer](docs/img/neuro-pilot.gif) |
+|:--|
+| **Pilot — plan + steer (the self-driving split).** A brain only senses what's *nearby*, so on a twisty maze it gets stuck. Add a **route planner**: it lays down **waypoints** (the dots) and the same brain just steers dot-to-dot — and now it solves it. The **planner decides *where*, the brain decides *how*** — exactly how a self-driving stack splits a *map route* from the *neural net that handles the road*. A pilot-trained brain clears the whole campaign that a bare reactive brain can't. |
+
+| ![Memory — a recurrent brain](docs/img/neuro-rnn.gif) |
+|:--|
+| **Memory — the brain that remembers (an RNN).** Pilot gave the brain an *outside* planner; this gives it its *own* memory. A plain brain picks `action = f(senses **now**)`, so in a dead-end it forgets it's been there and **loops** (red). A **recurrent** brain picks `action = f(senses now **+ memory**)` — it remembers its trail, **backs out, and solves it** (green). Same maze, same teacher; only the one with memory gets through. Trained on-device by **backprop-through-time**. |
+
 | ![Train a fighter for the Arena](docs/img/neuro-arena-train.png) |
 |:--|
 | **Train a fighter for the Arena.** A **"Train a fighter"** mode off the Computer branch: **Teach** or **Evolve** a brain to **win real arena matches**. A **"spar vs"** chip cycles your sparring partner easy→hard (so a first Teach reliably reads *"taught WINS!"*). **Save** it and it joins your roster as **your bot** — and it **fine-tunes to each new battle board** at match start, so a trained fighter actually wins instead of over-fitting. |
@@ -232,9 +240,11 @@ gradient-descent **backprop**; **multi-class** outputs (argmax picks the action)
 **hidden layer** is needed (it cracks **XOR**); **reinforcement learning** (tabular Q, reward,
 explore-vs-exploit); **neuroevolution** (fitness, selection, breeding); **imitation learning /
 distillation** (copy an expert solver); **transfer learning & fine-tuning**; a **shared
-feature representation** (one network for two jobs); and **generalization / over-fitting**
+feature representation** (one network for two jobs); **generalization / over-fitting**
 (a brain trained on one board that flounders on another — visible as the step counter marches
-to the cap, and fixed by fine-tuning).
+to the cap, and fixed by fine-tuning); **planning vs. control** (a route planner feeds the
+brain waypoints — the self-driving split); and **memory / recurrence** (an RNN that escapes
+dead-ends a memoryless brain loops in).
 
 ---
 
@@ -323,9 +333,10 @@ first-time hints, locked-block tooltips) · ✅ **program carry-over** across le
 solver, keep winning) · ✅ a **zap block** (the robot icon) so code bots fight Sumo · ✅ a
 kid-friendly **Arena** (opponent-first menu, beatable AI, "Play again" rematch, trained
 fighters that adapt to each board) · ✅ the full **NeuroBot** mode (backprop / Q-learning /
-evolution / transfer lessons, Brain Cam, a trainable brain block with versioned saves) ·
+evolution / transfer / **Pilot** (plan + steer) / **Memory** (an RNN) lessons, Brain Cam, a
+trainable brain block with versioned saves) ·
 ✅ **CodeLab** lessons in the real editor style · ✅ coin & gem collectibles + a shop ·
-✅ five **biomes**, a 16-badge gallery, jump-arc animation + a live step counter ·
+✅ five **biomes**, a 17-badge gallery, jump-arc animation + a live step counter ·
 ✅ a one-click **online flasher**.
 
 Still on deck (full list in **[BACKLOG.md](BACKLOG.md)**):
