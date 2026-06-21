@@ -1,7 +1,9 @@
 #include "screens/NeuroTrainScreen.h"
+#include "screens/BrainGraph.h"
 #include "hal/Audio.h"
 #include "assets/Assets.h"
 #include "game/Interpreter.h"
+#include "game/Sensors.h"
 #include "game/Distill.h"
 #include "game/Gauntlet.h"
 #include "game/Pilot.h"
@@ -136,6 +138,17 @@ void NeuroTrainScreen::tracePath() {
     if (it.finished()) { _won = (it.lastOutcome() == OUT_WIN); break; }
     it.step();
   }
+  inferBrain();   // refresh the network-graph activations after any (re)train
+}
+
+// activations of the working brain at the maze start (for the Brain-Cam graph view)
+void NeuroTrainScreen::inferBrain() {
+  gb::Pose p = _maze->startPose();
+  senseEgo(*_maze, p, nullptr, _in);
+  if (_rnnMode) { _rbrain.resetState(); _rbrain.step(_in, _out); for (int j = 0; j < _rbrain.nHid; j++) _hid[j] = _rbrain.h[j]; }
+  else          { _brain.forward(_in, _out, _hid); }
+  _action = 0;
+  for (int k = 1; k < 5; k++) if (_out[k] > _out[_action]) _action = k;
 }
 
 void NeuroTrainScreen::mazeGeom(int& tile, int& ox, int& oy) const {
@@ -180,14 +193,39 @@ void NeuroTrainScreen::draw() {
       label(g, SCREEN_W - 6, 6, hd, _won ? C_GO : C_DIM, textdatum_t::top_right);
     }
 
-    // transfer-learning chips: pick a base brain to fine-tune, save a versioned copy
-    char base[40]; snprintf(base, sizeof(base), "base: %s >", _baseName.c_str());
-    button(g, R_BASE, base, ui::rgb(120, 230, 245), C_PANEL);
-    button(g, R_GAUNT, "Generalize", C_ACCENT, C_PANEL);  // train+test for the Generalist prize
-    char sv[20];
-    if (_savedCopy) snprintf(sv, sizeof(sv), "saved!");
-    else            snprintf(sv, sizeof(sv), "save v%d >", nextVersion());
-    button(g, R_SAVEV, sv, _savedCopy ? C_DIM : C_ACCENT, C_PANEL);
+    // transfer-learning chips (hidden in the brain-graph view, where they'd overlap)
+    if (!_brainView) {
+      char base[40]; snprintf(base, sizeof(base), "base: %s >", _baseName.c_str());
+      button(g, R_BASE, base, ui::rgb(120, 230, 245), C_PANEL);
+      button(g, R_GAUNT, "Generalize", C_ACCENT, C_PANEL);  // train+test for the Generalist prize
+      char sv[20];
+      if (_savedCopy) snprintf(sv, sizeof(sv), "saved!");
+      else            snprintf(sv, sizeof(sv), "save v%d >", nextVersion());
+      button(g, R_SAVEV, sv, _savedCopy ? C_DIM : C_ACCENT, C_PANEL);
+    }
+  }
+
+  if (_brainView && !_drawMode) {  // the full Brain-Cam network graph of THIS brain
+    drawBrainGraph(g, &_brain, &_rbrain, _rnnMode, _in, _hid, _out, _action, -1);
+    char v[28]; snprintf(v, sizeof(v), "decides: %s", BRAIN_OUTLBL[_action]);
+    label(g, 6, BOTBAR_Y - 14, v, ui::rgb(120, 230, 245));
+    label(g, 150, BOTBAR_Y - 14, "tap the dots to fold up", C_DIM);
+    g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
+    if (_rnnMode) {
+      button(g, R_RTEACH, "Teach mem", C_GO, C_PANEL);
+      button(g, R_RPILOT, "Pilot", _pilotMode ? C_GO : ui::rgb(255, 170, 60), C_PANEL);
+      button(g, R_RUSE, _saved ? "saved!" : "Use it", _saved ? C_DIM : ui::rgb(120, 230, 245), C_PANEL);
+      button(g, R_RBACK, "Back", C_INK, C_PANEL);
+    } else {
+      button(g, R_TEACH, "Teach", C_GO, C_PANEL);
+      button(g, R_DRAW, "Draw", C_ACCENT, C_PANEL);
+      button(g, R_TRAIN, "Evolve", C_FUNC, C_PANEL);
+      button(g, R_PILOT, "Pilot", _pilotMode ? C_GO : ui::rgb(255, 170, 60), C_PANEL);
+      button(g, R_USE, _saved ? "saved!" : "Use it", _saved ? C_DIM : ui::rgb(120, 230, 245), C_PANEL);
+      button(g, R_BACK, "Back", C_INK, C_PANEL);
+    }
+    drawNeuronWidget(_widgetAt);  // the widget stays as the fold-up toggle
+    return;
   }
 
   int tile, ox, oy; mazeGeom(tile, ox, oy);
@@ -308,6 +346,11 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
 
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
+
+  // tap the neuron widget (top bar) to expand/fold the full network graph of this brain
+  if (!_drawMode && ui::Rect{156, 1, 70, 20}.contains(tx, ty)) {
+    _brainView = !_brainView; inferBrain(); hal::audio.blip(); draw(); return app::Signal::NONE;
+  }
 
   if (_drawMode) {
     if (R_LEARN.contains(tx, ty)) {                 // distill the brain to copy the drawn path

@@ -239,6 +239,7 @@ void App::tick(uint32_t now) {
     }
     case State::CREATE: {
       Signal s = _create.tick(now, tp);
+      if (s == Signal::BACK) { gotoSelect(); break; }   // cancel new/edit -> profile select
       if (s == Signal::CREATED) {
         if (_create.isEdit()) {
           // tweak name/avatar in place — keep all stats/progress

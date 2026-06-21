@@ -60,6 +60,13 @@ class NeuroTrainScreen : public app::IScreen {
   uint32_t _widgetAt = 0;      // last widget-frame time (throttle)
   uint32_t _pulseUntil = 0;    // pulse brightly/faster until this time (set on a train action)
   void drawNeuronWidget(uint32_t now);
+  // tap the widget to expand the full Brain-Cam network graph of THIS brain (and back)
+  bool _brainView = false;
+  float _in[gb::SENSOR_COUNT_FOR_BRAIN] = {0};
+  float _hid[gb::NET_MAX_HID] = {0};
+  float _out[gb::NET_MAX_OUT] = {0};
+  int   _action = 0;
+  void inferBrain();           // activations of the working brain at the maze start
   app::TapDetector _tap;
 };
 

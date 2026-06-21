@@ -51,6 +51,7 @@ void ProfileCreateScreen::draw() {
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, SCREEN_W / 2, 3, _edit ? "Edit Player" : "New Player", C_ACCENT, textdatum_t::top_center, 2);
+  button(g, {4, 1, 60, 20}, "Cancel", C_INK, C_PANEL);   // bail without creating
 
   drawNameField();
 
@@ -78,6 +79,8 @@ void ProfileCreateScreen::draw() {
 app::Signal ProfileCreateScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
+
+  if (ui::Rect{4, 1, 60, 20}.contains(tx, ty)) return app::Signal::BACK;  // Cancel
 
   for (int i = 0; i < assets::ROSTER_SIZE; i++) {
     if (avatarRect(i).contains(tx, ty)) { _avatar = i; draw(); return app::Signal::NONE; }

@@ -1,4 +1,5 @@
 #include "screens/BrainViewScreen.h"
+#include "screens/BrainGraph.h"
 #include "hal/Audio.h"
 #include "assets/Assets.h"
 #include "game/MazeGen.h"
@@ -19,35 +20,12 @@ static const Rect R_BACK  = {230, (int16_t)(BOTBAR_Y + 2), 84, 26};
 static const Rect R_TYPE  = {196, 1, 56, 20};   // ff/rnn toggle, top bar
 static const Rect R_SAVE  = {136, 1, 56, 20};   // save the brain to your library
 
-static const char* INLBL[SENSOR_COUNT_FOR_BRAIN] =
-  {"wallF","wallL","wallR","pitF","goalF","goalR","goalD","foeF","foeR","foeD"};
-static const char* OUTLBL[5] = {"fwd","turnL","turnR","jump","zap"};
-
-// network geometry (absolute screen coords)
-static const int IX = 92, HX = 178, OX = 252;
-static int iy(int i) { return 30 + i * 15; }
-static int hy(int j) { return 34 + j * 18; }
-static int oy(int k) { return 40 + k * 26; }
-
-// activation -> node colour (green fires, red negative, dim ~0)
-static uint16_t actCol(float a) {
-  if (a > 0.05f) { int i = (int)(a * 200); if (i > 200) i = 200; return ui::rgb(20, 55 + i, 50); }
-  if (a < -0.05f) { int i = (int)(-a * 180); if (i > 180) i = 180; return ui::rgb(60 + i, 28, 28); }
-  return C_PANEL_HI;
-}
-// weight -> connection colour (the thing that visibly changes as backprop runs)
+// weight bar colour for the zoom strip (reuse the graph's forward-weight scale)
 static uint16_t wtCol(float w) {
   float m = w < 0 ? -w : w; if (m > 1.5f) m = 1.5f; int s = (int)(m * 150);
   if (w > 0.03f) return ui::rgb(10, 40 + s, 30);
   if (w < -0.03f) return ui::rgb(40 + s, 18, 18);
   return ui::rgb(30, 30, 38);
-}
-// recurrent (memory) weight -> a cyan/purple scale so it reads apart from the green/red forward web
-static uint16_t recCol(float w) {
-  float m = w < 0 ? -w : w; if (m > 1.5f) m = 1.5f; int s = (int)(m * 130);
-  if (w > 0.03f) return ui::rgb(20, 70 + s / 2, 110 + s);   // positive: cyan
-  if (w < -0.03f) return ui::rgb(70 + s, 25, 110 + s);      // negative: purple
-  return ui::rgb(24, 28, 44);
 }
 
 // ---- accessors (branch on the active brain type) --------------------------
@@ -143,11 +121,8 @@ void BrainViewScreen::trainChunk() {
   if (_epoch >= (_useRnn ? 240 : 150)) { _mode = M_IDLE; resetRun(); }  // trained -> ready to run
 }
 
-static int iabs(int v) { return v < 0 ? -v : v; }
 bool BrainViewScreen::nodeAt(int x, int y, int& layer, int& idx) const {
-  for (int j = 0; j < nHid(); j++) if (iabs(x - HX) < 10 && iabs(y - hy(j)) < 9) { layer = 1; idx = j; return true; }
-  for (int k = 0; k < 5; k++) if (iabs(x - OX) < 12 && iabs(y - oy(k)) < 12) { layer = 2; idx = k; return true; }
-  return false;
+  return brainGraphNodeAt(x, y, nHid(), layer, idx);
 }
 
 void BrainViewScreen::draw() {
@@ -199,49 +174,7 @@ void BrainViewScreen::drawWeb() {
   auto& g = hal::display.gfx();
   int selLayer = _sel < 0 ? -1 : _sel / 100, selIdx = _sel < 0 ? -1 : _sel % 100;
 
-  // ---- connections coloured by WEIGHT (recolour live as backprop runs) ----
-  for (int i = 0; i < SENSOR_COUNT_FOR_BRAIN; i++)
-    for (int j = 0; j < nHid(); j++) {
-      bool hot = (selLayer == 1 && selIdx == j);
-      g.drawLine(IX, iy(i), HX, hy(j), hot ? wtCol(wIn(i, j) * 2) : wtCol(wIn(i, j)));
-    }
-  for (int j = 0; j < nHid(); j++)
-    for (int k = 0; k < 5; k++) {
-      bool hot = (selLayer == 2 && selIdx == k);
-      g.drawLine(HX, hy(j), OX, oy(k), hot ? wtCol(wOut(j, k) * 2) : wtCol(wOut(j, k)));
-    }
-  if (_useRnn) {
-    // recurrent feedback = the FULL hidden->hidden matrix. Every hidden neuron feeds back to
-    // every hidden neuron (cross arcs bulging right) AND to itself (a small self-loop).
-    int n = nHid();
-    for (int a = 0; a < n; a++)
-      for (int b = 0; b < n; b++) {
-        if (a == b) continue;
-        bool hot = (selLayer == 1 && (selIdx == a || selIdx == b));
-        uint16_t col = recCol(wRec(a, b) * (hot ? 2 : 1));
-        int mx = HX + 12 + iabs(a - b) * 4;       // bulge right; farther pairs bulge more
-        int my = (hy(a) + hy(b)) / 2;
-        g.drawLine(HX, hy(a), mx, my, col);
-        g.drawLine(mx, my, HX, hy(b), col);
-      }
-    for (int a = 0; a < n; a++) g.drawCircle(HX + 7, hy(a), 4, recCol(wRec(a, a)));  // self-loop
-  }
-
-  // ---- nodes (fill = activation) ----
-  for (int i = 0; i < SENSOR_COUNT_FOR_BRAIN; i++) {
-    label(g, IX - 8, iy(i) - 3, INLBL[i], C_DIM, textdatum_t::top_right);  // sense name, left of the dot
-    g.fillCircle(IX, iy(i), 3, actCol(_in[i]));
-  }
-  for (int j = 0; j < nHid(); j++) {
-    g.fillCircle(HX, hy(j), 5, actCol(_hid[j]));
-    if (selLayer == 1 && selIdx == j) g.drawCircle(HX, hy(j), 7, C_ACCENT);
-  }
-  for (int k = 0; k < 5; k++) {
-    g.fillCircle(OX, oy(k), 7, actCol(_out[k] * 2 - 1));
-    if (k == _action) g.drawCircle(OX, oy(k), 9, ui::rgb(120, 230, 245));
-    if (selLayer == 2 && selIdx == k) g.drawCircle(OX, oy(k), 9, C_ACCENT);
-    label(g, OX + 12, oy(k) - 3, OUTLBL[k], k == _action ? ui::rgb(120, 230, 245) : C_DIM);
-  }
+  drawBrainGraph(g, &ff(), &rnn(), _useRnn, _in, _hid, _out, _action, _sel);  // the shared network graph
 
   // ---- status / zoom strip (just above the toolbar) — clear only this strip each frame ----
   int sy = BOTBAR_Y - 16;
@@ -269,7 +202,7 @@ void BrainViewScreen::drawWeb() {
       g.fillRect(cx - bw / 2 + 1, sy - 8 - (h > 0 ? h : 0), bw - 2, h > 0 ? h : -h, wtCol(w * 3));
     }
   } else {
-    char v[28]; snprintf(v, sizeof(v), "decides: %s", OUTLBL[_action]);
+    char v[28]; snprintf(v, sizeof(v), "decides: %s", BRAIN_OUTLBL[_action]);
     label(g, 6, sy, v, ui::rgb(120, 230, 245));
     label(g, 150, sy, _epoch ? "tap a neuron to zoom" : "tap Teach to train", C_DIM);
   }
