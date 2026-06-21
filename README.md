@@ -74,7 +74,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![A built program](docs/img/code-program.png) |
 |:--|
-| **A real program.** Snap blocks together and they stack up — each colour-coded with its glyph and **hierarchically numbered** (`1, 2, 3 …`, nested steps as `4a, 4b`). Tap a block to edit it: a `repeat` cycles its count **2→3→4→5**, an `if`/`until` cycles its condition (wall → pit → **wall/pit** → goal), a `call` switches **F1↔F2**, a `brain` cycles its mode (plain → pilot → rnn). **Reorder** any line with the **Up/Dn** buttons — so you can drop a block in, then slide it exactly where it belongs — and the top button reads **Menu** (back to the hub) or **< Code** (back to the editor while a run plays). |
+| **A real program.** Snap blocks together and they stack up — each colour-coded with its glyph and **hierarchically numbered** (`1, 2, 3 …`, nested steps as `4a, 4b`). Tap a block to edit it: a `repeat` cycles its count **2→3→4→5**, an `if`/`until` cycles its condition (wall → pit → **wall/pit** → goal), a `call` switches **F1↔F2**, a `brain` cycles its mode (plain → **+pilot** → **rnn** → **rnn+pilot**). **Reorder** any line with the **Up/Dn** buttons — so you can drop a block in, then slide it exactly where it belongs — and the top button reads **Menu** (back to the hub) or **< Code** (back to the editor while a run plays). |
 
 | ![Study the maze](docs/img/maze-preview.png) |
 |:--|
@@ -217,7 +217,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![Train the brain](docs/img/neuro-train.png) |
 |:--|
-| **The neuro interface — with transfer learning.** Open it from the **`train brain >`** line. **Teach** it (distil the optimal solver by backprop — reliable) or **Evolve** it, watch its path solve the maze, then **Use it**. Pick a **base** to fine-tune from — start fresh or **load a saved brain** and build on what it knows — and **save a copy as an incremented version** (`Brain v1 → v2 → …`), so you can grow a *lineage*. The trained brain saves *with* your program, so it persists and **trades & battles over the radio**. |
+| **The neuro interface — with transfer learning.** Open it from the **`train brain >`** line. **Teach** it (distil the optimal solver by backprop — reliable) or **Evolve** it, watch its path solve the maze, then **Use it**. Pick a **base** to fine-tune from — start fresh or **load a saved brain** and build on what it knows — and **save a copy as an incremented version** (`Brain v1 → v2 → …`), so you can grow a *lineage*. The trained brain saves *with* your program, so it persists and **trades & battles over the radio**. Tap the **neuron widget** in the top bar and the trainer unfolds the very same **Brain Cam network graph** for *your* program's brain — inputs → hidden → outputs, weights recolouring as you Teach — then folds back to the maze. |
 
 | ![Transfer learning](docs/img/neuro-transfer.png) |
 |:--|
@@ -225,7 +225,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![Brain Cam](docs/img/brain-cam.png) |
 |:--|
-| **Brain Cam — watch a brain *learn* and *think*.** A live inspector for the network. Tap **Teach** and watch **backprop animate**: the connection lines are coloured by weight (green +, red −) and **recolour as it learns**, with an epoch counter and a loss bar that fills as the loss falls. Then **Run** it and the **10 inputs** (SEES), **hidden layer** (THINKS), and **5 outputs** (DOES, winner ringed) light up step-by-step. **Tap any neuron** to zoom in on its **bias and incoming weights** as they update. Flip **plain ↔ rnn** to see a recurrent brain's memory loop, and cycle **Map N** to watch it learn a different real maze. The clearest possible answer to "what is the network actually doing?" |
+| **Brain Cam — watch a brain *learn* and *think*.** A live inspector for the network. Tap **Teach** and watch **backprop animate**: the connection lines are coloured by weight (green +, red −) and **recolour as it learns**, with an epoch counter and a loss bar that fills as the loss falls. Then **Run** it and the **10 inputs** (SEES), **hidden layer** (THINKS), and **5 outputs** (DOES, winner ringed) light up step-by-step. **Tap any neuron** to zoom in on its **bias and incoming weights** as they update. Flip **plain ↔ rnn** to see a recurrent brain's memory loop (every hidden neuron's feedback to itself *and* every other — drawn as real arcs), and cycle **Map N** to watch the *same* brain **transfer** onto a different real maze. **Save** what you train straight to your **library**, so a brain you grew here can graduate into an Arena fighter. The clearest possible answer to "what is the network actually doing?" |
 
 | ![Pilot — plan + steer](docs/img/neuro-pilot.gif) |
 |:--|
