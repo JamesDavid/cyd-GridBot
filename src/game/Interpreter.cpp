@@ -153,7 +153,9 @@ Outcome Interpreter::step() {
         uint8_t f = n.func;
         fr.ip++;
         const NodeList* body = (f == 1) ? &_prog->f1 : &_prog->f2;
-        if (!body->empty()) push(F_SEQ, body);
+        // Skip the call once nesting gets pathological (recursive F1/F2) so the
+        // stack can't blow the heap; the step cap then ends the run cleanly.
+        if (!body->empty() && (int)_stack.size() < MAX_FRAME_DEPTH) push(F_SEQ, body);
         continue;
       }
       case N_NEURO: {

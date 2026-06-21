@@ -29,6 +29,9 @@ class NeuroTrainScreen : public app::IScreen {
   void rebuildBrainLibs();  // library indices that carry a brain (loadable bases)
   void applyBase();         // load base _baseIdx into _brain and seed evolution
   int  nextVersion() const; // smallest free "Brain vN" number
+  void seedDrawStart();     // begin a drawn path at the robot's start tile
+  bool tileAtPixel(int x, int y, int& r, int& c) const;  // maze hit-test
+  void handleDrawTap(int r, int c);  // append/undo a tile on the drawn path
 
   gb::Profile* _profile = nullptr;
   gb::Program* _prog = nullptr;
@@ -43,6 +46,9 @@ class NeuroTrainScreen : public app::IScreen {
   std::string _baseName;       // display name of the current base
   std::vector<int> _brainLibs; // library indices that contain a brain
   bool _won = false, _saved = false, _savedCopy = false;
+  bool _drawMode = false;      // kid is hand-drawing the path to learn from
+  uint8_t _drawPath[64];       // ordered tile indices of the drawn route
+  int _drawLen = 0;
   app::TapDetector _tap;
 };
 

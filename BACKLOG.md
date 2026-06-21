@@ -91,11 +91,20 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [x] Hotseat (2 kids, 1 device) lock-in / handoff screen (Arena + Puzzle Race).
 
 ## NeuroBot / on-device ML
-- [ ] **Draw-the-path training** (imitation learning by demonstration). On the "Train
-      the brain" page, let the kid tap tiles to lay down the path they want the robot to
-      take, then distill the brain to follow *that* path (it's the same `distillSolver`
-      machinery, just imitating a hand-drawn route instead of the BFS solver). A great,
-      tangible "teach by showing" mode alongside Teach (solver) / Evolve (score).
+- [x] **Draw-the-path training** (imitation learning by demonstration). DONE: the "Train
+      the brain" page now has a **Draw** button beside Teach/Evolve. The kid taps tiles to
+      lay a forward/jump route from the start, then **Learn it** distills the brain to copy
+      *that* path (`distillPath` / `pathToProgram` reuse the distill backprop loop). Because
+      it trains the working brain in place, picking a saved base first = **fine-tune the old
+      net on the newly drawn path** for a level it struggled with.
+- [x] **Enemy senses exposed in maze mode** — the campaign `if/until` cycler now offers
+      `enemy`/`near` too (no-op without a foe), so a kid can author & test arena-bot logic
+      while playing the campaign.
+- [ ] **"Generalist" prize badge** (DEFERRED, agreed bar = first **50** levels). Award a
+      badge for training ONE frozen brain that clears campaign levels 1–50 with no edits.
+      Needs: a challenge trigger that runs the saved brain across the 50 deterministic mazes,
+      counts wins, and grants the badge only on a clean sweep. (A second 100-level tier was
+      considered but we settled on 50 for now.)
 - [ ] More ML topics the same engine could host (from the lessons discussion):
       regularization/overfitting, batching, reward shaping, exploration-vs-exploitation
       sliders, and a tiny recurrent/memory cell.

@@ -11,10 +11,16 @@ namespace screens {
 
 static const Rect R_BASE  = {6,   (int16_t)(BAND_Y + 2), 176, 18};  // load a brain to fine-tune
 static const Rect R_SAVEV = {186, (int16_t)(BAND_Y + 2), 128, 18};  // save a versioned copy
-static const Rect R_TEACH = {6,   (int16_t)(BOTBAR_Y + 2), 72, 26};
-static const Rect R_TRAIN = {82,  (int16_t)(BOTBAR_Y + 2), 80, 26};
-static const Rect R_USE   = {166, (int16_t)(BOTBAR_Y + 2), 80, 26};
-static const Rect R_BACK  = {250, (int16_t)(BOTBAR_Y + 2), 64, 26};
+// normal toolbar (5 buttons): distill solver / draw a path / neuroevolve / save to block / leave
+static const Rect R_TEACH = {6,   (int16_t)(BOTBAR_Y + 2), 54, 26};
+static const Rect R_DRAW  = {64,  (int16_t)(BOTBAR_Y + 2), 52, 26};
+static const Rect R_TRAIN = {120, (int16_t)(BOTBAR_Y + 2), 56, 26};
+static const Rect R_USE   = {180, (int16_t)(BOTBAR_Y + 2), 60, 26};
+static const Rect R_BACK  = {244, (int16_t)(BOTBAR_Y + 2), 70, 26};
+// draw-mode toolbar: learn from the drawn path / clear it / leave draw mode
+static const Rect R_LEARN  = {6,   (int16_t)(BOTBAR_Y + 2), 110, 26};
+static const Rect R_DCLEAR = {122, (int16_t)(BOTBAR_Y + 2), 90, 26};
+static const Rect R_DCANCEL= {218, (int16_t)(BOTBAR_Y + 2), 96, 26};
 
 void NeuroTrainScreen::rebuildBrainLibs() {
   _brainLibs.clear();
@@ -91,19 +97,26 @@ void NeuroTrainScreen::draw() {
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
-  label(g, 6, 3, "Train the brain", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
-  char hd[28];
-  if (_taught) snprintf(hd, sizeof(hd), "taught  %s", _won ? "solves!" : "...");
-  else snprintf(hd, sizeof(hd), "gen %d  %s", _evo.gen, _won ? "solves!" : "...");
-  label(g, SCREEN_W - 6, 6, hd, _won ? C_GO : C_DIM, textdatum_t::top_right);
 
-  // transfer-learning chips: pick a base brain to fine-tune, save a versioned copy
-  char base[40]; snprintf(base, sizeof(base), "base: %s  >", _baseName.c_str());
-  button(g, R_BASE, base, ui::rgb(120, 230, 245), C_PANEL);
-  char sv[20];
-  if (_savedCopy) snprintf(sv, sizeof(sv), "saved!");
-  else            snprintf(sv, sizeof(sv), "save v%d  >", nextVersion());
-  button(g, R_SAVEV, sv, _savedCopy ? C_DIM : C_ACCENT, C_PANEL);
+  if (_drawMode) {
+    label(g, 6, 3, "Draw the path", C_ACCENT, textdatum_t::top_left, 2);
+    label(g, SCREEN_W - 6, 6, "tap start->goal", C_DIM, textdatum_t::top_right);
+    label(g, 6, BAND_Y + 4, "tap tiles to walk/jump; tap last to undo", C_DIM);
+  } else {
+    label(g, 6, 3, "Train the brain", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
+    char hd[28];
+    if (_taught) snprintf(hd, sizeof(hd), "taught  %s", _won ? "solves!" : "...");
+    else snprintf(hd, sizeof(hd), "gen %d  %s", _evo.gen, _won ? "solves!" : "...");
+    label(g, SCREEN_W - 6, 6, hd, _won ? C_GO : C_DIM, textdatum_t::top_right);
+
+    // transfer-learning chips: pick a base brain to fine-tune, save a versioned copy
+    char base[40]; snprintf(base, sizeof(base), "base: %s  >", _baseName.c_str());
+    button(g, R_BASE, base, ui::rgb(120, 230, 245), C_PANEL);
+    char sv[20];
+    if (_savedCopy) snprintf(sv, sizeof(sv), "saved!");
+    else            snprintf(sv, sizeof(sv), "save v%d  >", nextVersion());
+    button(g, R_SAVEV, sv, _savedCopy ? C_DIM : C_ACCENT, C_PANEL);
+  }
 
   int tile, ox, oy; mazeGeom(tile, ox, oy);
   for (int r = 0; r < _maze->rows(); r++)
@@ -115,22 +128,100 @@ void NeuroTrainScreen::draw() {
       g.fillRect(x, y, tile - 1, tile - 1, col);
       if (_maze->isGoal(r, c)) assets::drawGoalToken(g, x + tile / 2, y + tile / 2, tile, 0);
     }
-  for (int i = 0; i < _pathLen; i++) {
-    int r = _path[i] / _maze->cols(), c = _path[i] % _maze->cols();
-    g.fillCircle(ox + c * tile + tile / 2, oy + r * tile + tile / 2, tile / 6 + 1,
-                 _won ? C_GO : C_MOVE);
+
+  if (_drawMode) {
+    // the hand-drawn route: connected squares, numbered, start tile brightest
+    for (int i = 0; i < _drawLen; i++) {
+      int r = _drawPath[i] / _maze->cols(), c = _drawPath[i] % _maze->cols();
+      int x = ox + c * tile, y = oy + r * tile;
+      uint16_t col = (i == 0) ? C_GO : C_ACCENT;
+      g.fillRoundRect(x + 2, y + 2, tile - 5, tile - 5, 3, col);
+      if (i > 0 && tile >= 16) {
+        char num[4]; snprintf(num, sizeof(num), "%d", i);
+        label(g, x + tile / 2, y + tile / 2, num, C_BG, textdatum_t::middle_center);
+      }
+    }
+  } else {
+    for (int i = 0; i < _pathLen; i++) {
+      int r = _path[i] / _maze->cols(), c = _path[i] % _maze->cols();
+      g.fillCircle(ox + c * tile + tile / 2, oy + r * tile + tile / 2, tile / 6 + 1,
+                   _won ? C_GO : C_MOVE);
+    }
   }
 
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
-  button(g, R_TEACH, "Teach", C_GO, C_PANEL);       // distill the solver (reliable)
-  button(g, R_TRAIN, "Evolve", C_FUNC, C_PANEL);    // neuroevolution (no teacher)
-  button(g, R_USE, _saved ? "saved!" : "Use it", _saved ? C_DIM : ui::rgb(120, 230, 245), C_PANEL);
-  button(g, R_BACK, "Back", C_INK, C_PANEL);
+  if (_drawMode) {
+    button(g, R_LEARN, "Learn it", C_GO, C_PANEL);       // distill from the drawn path
+    button(g, R_DCLEAR, "Clear", C_ACCENT, C_PANEL);
+    button(g, R_DCANCEL, "Cancel", C_INK, C_PANEL);
+  } else {
+    button(g, R_TEACH, "Teach", C_GO, C_PANEL);          // distill the solver (reliable)
+    button(g, R_DRAW, "Draw", C_ACCENT, C_PANEL);        // imitation learning from a drawn path
+    button(g, R_TRAIN, "Evolve", C_FUNC, C_PANEL);       // neuroevolution (no teacher)
+    button(g, R_USE, _saved ? "saved!" : "Use it", _saved ? C_DIM : ui::rgb(120, 230, 245), C_PANEL);
+    button(g, R_BACK, "Back", C_INK, C_PANEL);
+  }
+}
+
+void NeuroTrainScreen::seedDrawStart() {
+  Pose p = _maze->startPose();
+  _drawLen = 0;
+  _drawPath[_drawLen++] = (uint8_t)(p.row * _maze->cols() + p.col);
+}
+
+bool NeuroTrainScreen::tileAtPixel(int x, int y, int& r, int& c) const {
+  int tile, ox, oy; mazeGeom(tile, ox, oy);
+  if (x < ox || y < oy) return false;
+  c = (x - ox) / tile; r = (y - oy) / tile;
+  return r >= 0 && r < _maze->rows() && c >= 0 && c < _maze->cols();
+}
+
+void NeuroTrainScreen::handleDrawTap(int r, int c) {
+  int t = r * _maze->cols() + c;
+  if (_drawLen == 0) { seedDrawStart(); }
+  if (_drawPath[_drawLen - 1] == t) {           // tap the tip again to undo (keep the start)
+    if (_drawLen > 1) { _drawLen--; hal::audio.blip(); draw(); }
+    return;
+  }
+  int last = _drawPath[_drawLen - 1];
+  int lr = last / _maze->cols(), lc = last % _maze->cols();
+  int dr = r - lr, dc = c - lc;
+  if (dr != 0 && dc != 0) { hal::audio.fail(); return; }     // no diagonals
+  int dist = (dr ? (dr < 0 ? -dr : dr) : (dc < 0 ? -dc : dc));
+  Tile dest = _maze->at(r, c);
+  bool ok = false;
+  if (dist == 1) {
+    ok = (dest != WALL && dest != PIT);                       // step onto safe ground
+  } else if (dist == 2) {
+    Tile mid = _maze->at(lr + dr / 2, lc + dc / 2);
+    ok = (mid != WALL && dest != WALL && dest != PIT);        // jump: clear wall, land safe
+  }
+  if (!ok) { hal::audio.fail(); return; }
+  if (_drawLen < (int)sizeof(_drawPath)) { _drawPath[_drawLen++] = (uint8_t)t; hal::audio.blip(); draw(); }
 }
 
 app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
+
+  if (_drawMode) {
+    if (R_LEARN.contains(tx, ty)) {                 // distill the brain to copy the drawn path
+      if (distillPath(_brain, *_maze, _drawPath, _drawLen, 700)) {
+        _taught = true; _saved = false; _savedCopy = false;
+        _drawMode = false; tracePath(); hal::audio.badge();
+      } else { hal::audio.fail(); }
+      draw();
+    } else if (R_DCLEAR.contains(tx, ty)) {
+      seedDrawStart(); hal::audio.blip(); draw();
+    } else if (R_DCANCEL.contains(tx, ty)) {
+      _drawMode = false; hal::audio.blip(); draw();
+    } else {
+      int r, c;
+      if (tileAtPixel(tx, ty, r, c)) handleDrawTap(r, c);
+    }
+    return app::Signal::NONE;
+  }
+
   if (R_BASE.contains(tx, ty)) {  // cycle the transfer base: block brain -> saved brains
     _baseIdx = (_baseIdx + 1) % (1 + (int)_brainLibs.size());
     applyBase(); hal::audio.blip(); draw();
@@ -149,6 +240,8 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     distillSolver(_brain, *_maze, true, 700);
     _taught = true; _saved = false; _savedCopy = false;
     tracePath(); hal::audio.blip(); draw();
+  } else if (R_DRAW.contains(tx, ty)) {   // hand-draw a path to learn from (imitation learning)
+    _drawMode = true; seedDrawStart(); hal::audio.blip(); draw();
   } else if (R_TRAIN.contains(tx, ty)) {
     for (int gg = 0; gg < 5; gg++) { _evo.breed(); _evo.evaluate(*_maze, nullptr, 110); }
     _brain = _evo.best(); _taught = false; _saved = false; _savedCopy = false;

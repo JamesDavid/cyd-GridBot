@@ -151,9 +151,63 @@ void test_distill_brain_navigates() {
   TEST_ASSERT_TRUE(o == OUT_WIN || endDist <= 1);  // imitates the solver -> reaches (near) goal
 }
 
+// A drawn tile path becomes a runnable teacher program that reaches the goal, including
+// when it must turn to face the route.
+void test_path_to_program_walks_and_turns() {
+  Maze m; m.reset(1, 3); m.fill(FLOOR);
+  Pose s; s.row = 0; s.col = 0; s.facing = NORTH;  // facing away from the route
+  m.setStart(s); m.set(0, 0, START); m.setGoal(0, 2);
+  uint8_t tiles[3] = {0, 1, 2};                    // walk east along row 0
+  Program prog;
+  TEST_ASSERT_TRUE(pathToProgram(m, tiles, 3, prog));
+  Interpreter it; it.load(&prog, &m, m.startPose());
+  TEST_ASSERT_EQUAL(OUT_WIN, it.runToEnd());       // turns to face east, then walks to goal
+}
+
+// A jump-of-two over a pit is a legal path segment.
+void test_path_to_program_jumps_pit() {
+  Maze m; m.reset(1, 3); m.fill(FLOOR);
+  Pose s; s.row = 0; s.col = 0; s.facing = EAST;
+  m.setStart(s); m.set(0, 0, START); m.set(0, 1, PIT); m.setGoal(0, 2);
+  uint8_t tiles[2] = {0, 2};                        // (0,0) -> (0,2): a jump over the pit
+  Program prog;
+  TEST_ASSERT_TRUE(pathToProgram(m, tiles, 2, prog));
+  Interpreter it; it.load(&prog, &m, m.startPose());
+  TEST_ASSERT_EQUAL(OUT_WIN, it.runToEnd());
+}
+
+// A diagonal hop isn't a legal move, so conversion fails (the UI rejects such taps).
+void test_path_to_program_rejects_diagonal() {
+  Maze m; m.reset(2, 2); m.fill(FLOOR);
+  Pose s; s.row = 0; s.col = 0; s.facing = EAST;
+  m.setStart(s); m.set(0, 0, START); m.setGoal(1, 1);
+  uint8_t tiles[2] = {0, 3};                        // (0,0) -> (1,1), cols=2 -> diagonal
+  Program prog;
+  TEST_ASSERT_FALSE(pathToProgram(m, tiles, 2, prog));
+}
+
+// Imitation learning: a brain distilled from a drawn path follows it to the goal.
+void test_distill_path_navigates() {
+  Maze m; m.reset(1, 5); m.fill(FLOOR);
+  Pose s; s.row = 0; s.col = 0; s.facing = EAST;
+  m.setStart(s); m.set(0, 0, START); m.setGoal(0, 4);
+  uint8_t tiles[5] = {0, 1, 2, 3, 4};
+  Net brain; brain.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
+  TEST_ASSERT_TRUE(distillPath(brain, m, tiles, 5, 500));
+  Program prog; prog.brains.push_back(brain);
+  Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(0)); prog.main.push_back(loop);
+  Interpreter it; it.load(&prog, &m, m.startPose(), 500);
+  Outcome o = it.runToEnd();
+  TEST_ASSERT_TRUE(o == OUT_WIN || distanceToGoal(m, it.pose().row, it.pose().col) <= 1);
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_distill_brain_navigates);
+  RUN_TEST(test_path_to_program_walks_and_turns);
+  RUN_TEST(test_path_to_program_jumps_pit);
+  RUN_TEST(test_path_to_program_rejects_diagonal);
+  RUN_TEST(test_distill_path_navigates);
   RUN_TEST(test_learns_turn_if_wall);
   RUN_TEST(test_learns_or);
   RUN_TEST(test_xor_is_unlearnable_by_one_neuron);

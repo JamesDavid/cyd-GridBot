@@ -10,6 +10,7 @@
 namespace gb {
 
 constexpr int DEFAULT_STEP_CAP = 500;  // SPEC §8.3: bounds REPEAT_UNTIL spins
+constexpr int MAX_FRAME_DEPTH  = 64;   // bounds call-stack growth (recursive F1/F2) — guards heap
 
 // Optional view of an opponent, for arena ENEMY_* conditions (SPEC §18.3). In the
 // campaign this is null and ENEMY_* always read false.

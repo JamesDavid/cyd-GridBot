@@ -130,6 +130,43 @@ void test_function_call() {
   TEST_ASSERT_EQUAL(4, it.primCount());
 }
 
+// MAIN calls F1 then F2 — both function bodies must execute (regression: F2 used to
+// be unreachable because the editor couldn't aim a call at it).
+void test_call_f1_and_f2() {
+  Maze m;
+  m.reset(1, 5);
+  m.fill(FLOOR);
+  Pose s; s.row = 0; s.col = 0; s.facing = EAST;
+  m.setStart(s); m.set(0, 0, START); m.setGoal(0, 4);
+  Program p;
+  p.f1.push_back(Node::command(CMD_FWD));
+  p.f1.push_back(Node::command(CMD_FWD));
+  p.f2.push_back(Node::command(CMD_FWD));
+  p.f2.push_back(Node::command(CMD_FWD));
+  p.main.push_back(Node::call(1));
+  p.main.push_back(Node::call(2));
+  Interpreter it;
+  it.load(&p, &m, m.startPose());
+  TEST_ASSERT_EQUAL(OUT_WIN, it.runToEnd());
+  TEST_ASSERT_EQUAL(4, it.primCount());
+}
+
+// Recursive function (F1 calls F1) must terminate cleanly without exhausting the heap:
+// the frame-depth cap stops the runaway and the step cap ends the run.
+void test_recursive_call_is_bounded() {
+  Maze m;
+  m.reset(1, 3);
+  m.fill(FLOOR);
+  Pose s; s.row = 0; s.col = 0; s.facing = EAST;
+  m.setStart(s); m.set(0, 0, START); m.setGoal(0, 2);
+  Program p;
+  p.f1.push_back(Node::call(1));  // F1 calls itself forever
+  p.main.push_back(Node::call(1));
+  Interpreter it;
+  it.load(&p, &m, m.startPose(), 50);
+  TEST_ASSERT_EQUAL(OUT_DONE_NO_WIN, it.runToEnd());  // no crash, no win
+}
+
 // JUMP over a single pit gap onto the goal.
 void test_jump_over_pit() {
   Maze m;
@@ -200,6 +237,8 @@ int main(int, char**) {
   RUN_TEST(test_step_is_one_primitive);
   RUN_TEST(test_repeat_loop_moves_count_times);
   RUN_TEST(test_function_call);
+  RUN_TEST(test_call_f1_and_f2);
+  RUN_TEST(test_recursive_call_is_bounded);
   RUN_TEST(test_jump_over_pit);
   RUN_TEST(test_repeat_until_goal);
   RUN_TEST(test_repeat_until_step_cap);

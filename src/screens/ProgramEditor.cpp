@@ -23,6 +23,7 @@ static constexpr int LIST_X = 166, LIST_W = 320 - 166;
 static constexpr int ROW_Y0 = BAND_Y + 22, ROW_H = 24;
 static inline Rect repCycleRect(int y) { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 80, (int16_t)(ROW_H - 2)}; }
 static inline Rect condRect(int y)     { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 80, (int16_t)(ROW_H - 2)}; }
+static inline Rect callCycleRect(int y){ return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 80, (int16_t)(ROW_H - 2)}; }
 
 static bool spriteHasPixels(const std::vector<uint8_t>& v) {
   if (v.size() != (size_t)gb::PIX_CELLS) return false;
@@ -318,6 +319,10 @@ void ProgramEditor::drawProgramList() {
     } else if (sel && (nd->type == N_IF || nd->type == N_REPEAT_UNTIL)) {
       label(g, gx + 18, y + 6, nd->type == N_IF ? "if" : "until", C_SENSE);
       button(g, condRect(y), condName(nd->cond), C_SENSE, C_PANEL_HI);
+    } else if (sel && nd->type == N_CALL) {
+      char cl[8]; snprintf(cl, sizeof(cl), "F%d", nd->func);
+      label(g, gx + 18, y + 6, "call", C_FUNC);
+      button(g, callCycleRect(y), cl, C_FUNC, C_PANEL_HI);
     } else {
       label(g, gx + 18, y + 6, lab, C_INK);
     }
@@ -395,8 +400,18 @@ ProgramEditor::Action ProgramEditor::handleListTap(int x, int y) {
           }
         } else if (sn->type == N_IF || sn->type == N_REPEAT_UNTIL) {
           if (condRect(yy).contains(x, y)) {
+            // wall -> pit -> goal -> enemy -> near -> wall. The two enemy senses are
+            // arena conditions, but we expose them in maze mode too so a kid can write
+            // and test their battle-bot's logic here (they simply read false with no foe).
             sn->cond = (sn->cond == WALL_AHEAD) ? PIT_AHEAD
-                     : (sn->cond == PIT_AHEAD) ? AT_GOAL : WALL_AHEAD;
+                     : (sn->cond == PIT_AHEAD) ? AT_GOAL
+                     : (sn->cond == AT_GOAL) ? ENEMY_AHEAD
+                     : (sn->cond == ENEMY_AHEAD) ? ENEMY_NEAR : WALL_AHEAD;
+            hal::audio.blip(); drawProgramList(); return Action::NONE;
+          }
+        } else if (sn->type == N_CALL) {
+          if (callCycleRect(yy).contains(x, y)) {
+            sn->func = (sn->func == 1) ? 2 : 1;
             hal::audio.blip(); drawProgramList(); return Action::NONE;
           }
         }
