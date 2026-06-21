@@ -87,19 +87,28 @@ void BrainViewScreen::infer() {
 }
 
 void BrainViewScreen::resetRun() {
-  _pose = _maze.startPose(); _done = false; _won = false;
+  _pose = _maze.startPose(); _done = false; _won = false; _steps = 0;
   if (_useRnn) rnn().resetState();
   infer();
 }
 
 void BrainViewScreen::stepRun() {
   if (_done) return;
-  Cmd c = (_action == 1) ? CMD_TURN_L : (_action == 2) ? CMD_TURN_R
-        : (_action == 3) ? CMD_JUMP : (_action == 4) ? CMD_FIRE : CMD_FWD;
-  Outcome o = reactiveApply(_maze, _pose, c);
-  if (o == OUT_WIN) { _won = true; _done = true; }
-  else if (o == OUT_BONK || o == OUT_FELL) { _done = true; }
-  if (_maze.isGoal(_pose.row, _pose.col)) { _won = true; _done = true; }
+  if (++_steps > 140) { _done = true; return; }   // gave up (a reactive brain can spin forever)
+  static const Cmd kAct[4] = {CMD_FWD, CMD_TURN_L, CMD_TURN_R, CMD_JUMP};  // (zap isn't a maze move)
+  // try the brain's actions strongest-first, do the first one that's actually LEGAL — so an
+  // impossible "jump" doesn't kill the run, it falls back to the next idea (turn, forward...).
+  int rank[4] = {0, 1, 2, 3};
+  for (int a = 0; a < 4; a++) for (int b = a + 1; b < 4; b++)
+    if (_out[rank[b]] > _out[rank[a]]) { int t = rank[a]; rank[a] = rank[b]; rank[b] = t; }
+  for (int r = 0; r < 4; r++) {
+    Pose test = _pose;
+    Outcome o = reactiveApply(_maze, test, kAct[rank[r]]);
+    if (o == OUT_BONK || o == OUT_FELL) continue;   // illegal here -> try the next-best action
+    _action = rank[r]; _pose = test;
+    if (o == OUT_WIN || _maze.isGoal(_pose.row, _pose.col)) { _won = true; _done = true; }
+    break;
+  }
   if (!_done) infer();
 }
 

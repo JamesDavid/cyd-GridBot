@@ -53,6 +53,7 @@ class BrainViewScreen : public app::IScreen {
   // run state (interpreter-free so we control the rnn memory exactly)
   gb::Pose _pose;
   bool _done = false, _won = false;
+  int _steps = 0;          // step counter (caps a spinning reactive brain's run)
 
   // activations for the display
   float _in[gb::SENSOR_COUNT_FOR_BRAIN] = {0};
