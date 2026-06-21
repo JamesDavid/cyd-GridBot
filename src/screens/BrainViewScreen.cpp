@@ -41,6 +41,13 @@ static uint16_t wtCol(float w) {
   if (w < -0.03f) return ui::rgb(40 + s, 18, 18);
   return ui::rgb(30, 30, 38);
 }
+// recurrent (memory) weight -> a cyan/purple scale so it reads apart from the green/red forward web
+static uint16_t recCol(float w) {
+  float m = w < 0 ? -w : w; if (m > 1.5f) m = 1.5f; int s = (int)(m * 130);
+  if (w > 0.03f) return ui::rgb(20, 70 + s / 2, 110 + s);   // positive: cyan
+  if (w < -0.03f) return ui::rgb(70 + s, 25, 110 + s);      // negative: purple
+  return ui::rgb(24, 28, 44);
+}
 
 // ---- accessors (branch on the active brain type) --------------------------
 float BrainViewScreen::wIn(int i, int j) const { return _useRnn ? rnn().wih[j][i] : ff().w1[j][i]; }
@@ -146,13 +153,21 @@ void BrainViewScreen::draw() {
       bool hot = (selLayer == 2 && selIdx == k);
       g.drawLine(HX, hy(j), OX, oy(k), hot ? wtCol(wOut(j, k) * 2) : wtCol(wOut(j, k)));
     }
-  if (_useRnn) {  // recurrent feedback: a bundle arc showing the hidden layer loops on itself
-    const uint16_t cy = ui::rgb(120, 230, 245);
-    for (int s = 0; s < 2; s++) {
-      int b = 16 + s * 7;
-      g.drawLine(HX, hy(0), HX - b, (hy(0) + hy(nHid() - 1)) / 2, cy);
-      g.drawLine(HX - b, (hy(0) + hy(nHid() - 1)) / 2, HX, hy(nHid() - 1), cy);
-    }
+  if (_useRnn) {
+    // recurrent feedback = the FULL hidden->hidden matrix. Every hidden neuron feeds back to
+    // every hidden neuron (cross arcs bulging right) AND to itself (a small self-loop).
+    int n = nHid();
+    for (int a = 0; a < n; a++)
+      for (int b = 0; b < n; b++) {
+        if (a == b) continue;
+        bool hot = (selLayer == 1 && (selIdx == a || selIdx == b));
+        uint16_t col = recCol(wRec(a, b) * (hot ? 2 : 1));
+        int mx = HX + 12 + iabs(a - b) * 4;       // bulge right; farther pairs bulge more
+        int my = (hy(a) + hy(b)) / 2;
+        g.drawLine(HX, hy(a), mx, my, col);
+        g.drawLine(mx, my, HX, hy(b), col);
+      }
+    for (int a = 0; a < n; a++) g.drawCircle(HX + 7, hy(a), 4, recCol(wRec(a, a)));  // self-loop
   }
 
   // ---- nodes (fill = activation) ----
