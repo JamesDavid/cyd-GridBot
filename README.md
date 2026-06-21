@@ -225,7 +225,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![Brain Cam](docs/img/brain-cam.png) |
 |:--|
-| **Brain Cam — watch a trained brain *think*.** Step a distilled brain through a maze and see it live: which of the **10 inputs** light up (**SEES**), the **hidden layer** firing (**THINKS**), and the **5 outputs** with the winner ringed (**DOES**) — plus a *"decides: turnR"* verdict. The clearest answer to "what is the network actually doing?" |
+| **Brain Cam — watch a brain *learn* and *think*.** A live inspector for the network. Tap **Teach** and watch **backprop animate**: the connection lines are coloured by weight (green +, red −) and **recolour as it learns**, with an epoch counter and a loss bar that fills as the loss falls. Then **Run** it and the **10 inputs** (SEES), **hidden layer** (THINKS), and **5 outputs** (DOES, winner ringed) light up step-by-step. **Tap any neuron** to zoom in on its **bias and incoming weights** as they update. Flip **plain ↔ rnn** to see a recurrent brain's memory loop, and cycle **Map N** to watch it learn a different real maze. The clearest possible answer to "what is the network actually doing?" |
 
 | ![Pilot — plan + steer](docs/img/neuro-pilot.gif) |
 |:--|
