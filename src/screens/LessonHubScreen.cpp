@@ -6,7 +6,7 @@ using namespace ui;
 namespace screens {
 
 struct LessonInfo { const char* title; const char* sub; uint16_t col; };
-static const int N_LESSONS = 12;
+static const int N_LESSONS = 13;
 static const int PER_PAGE = 5;
 static const int N_PAGES = (N_LESSONS + PER_PAGE - 1) / PER_PAGE;
 static const LessonInfo LESSONS[N_LESSONS] = {
@@ -22,6 +22,7 @@ static const LessonInfo LESSONS[N_LESSONS] = {
   {"10. Memory", "an RNN remembers", C_ACCENT},
   {"11. Perception", "raw squares -> meaning", C_MOVE},
   {"12. Data", "learn from examples", C_SENSE},
+  {"13. Backprop", "learn one step at a time", C_MOVE},
 };
 
 // Roomy rows now that there are only 5 per page.

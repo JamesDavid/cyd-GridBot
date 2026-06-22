@@ -426,6 +426,7 @@ void App::tick(uint32_t now) {
           case 9: _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; break;
           case 10: _perceptionLesson.begin(); _perceptionLesson.enter(); _state = State::PERCEPTION_LESSON; break;
           case 11: _transferLesson.begin(1); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;  // Data (mode 1)
+          case 12: _backpropLesson.begin(); _backpropLesson.enter(); _state = State::BACKPROP_LESSON; break;
         }
       }
       break;
@@ -460,6 +461,10 @@ void App::tick(uint32_t now) {
     }
     case State::PERCEPTION_LESSON: {
       if (_perceptionLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      break;
+    }
+    case State::BACKPROP_LESSON: {
+      if (_backpropLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
       break;
     }
     case State::BRAIN_MAP: {

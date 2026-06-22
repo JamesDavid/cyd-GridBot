@@ -29,6 +29,7 @@
 #include "screens/PilotLessonScreen.h"
 #include "screens/RnnLessonScreen.h"
 #include "screens/PerceptionLessonScreen.h"
+#include "screens/BackpropLessonScreen.h"
 #include "screens/LibraryScreen.h"
 #include "screens/BrainViewScreen.h"
 #include "screens/BrainMapScreen.h"
@@ -51,7 +52,7 @@ class App {
   enum class State : uint8_t { SELECT, CREATE, HOME, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE,
                                NEURO_HUB, NEURO_LESSON, Q_LESSON, EVO_LESSON, NEURO_TRAIN, ARENA_TRAIN,
                                LESSONS_MENU, CODE_LAB, CODE_LESSON, TRANSFER_LESSON, BRAIN_VIEW, BRAIN_MAP,
-                               PILOT_LESSON, RNN_LESSON, PERCEPTION_LESSON, LIBRARY };
+                               PILOT_LESSON, RNN_LESSON, PERCEPTION_LESSON, BACKPROP_LESSON, LIBRARY };
 
   void gotoSelect();
   void gotoHome();
@@ -94,6 +95,7 @@ class App {
   screens::PilotLessonScreen _pilotLesson;
   screens::RnnLessonScreen _rnnLesson;
   screens::PerceptionLessonScreen _perceptionLesson;
+  screens::BackpropLessonScreen _backpropLesson;
   screens::LibraryScreen _library;
   int _renameLibIdx = -1;   // library entry being renamed via the keyboard (-1 = none)
   screens::BrainViewScreen _brainView;

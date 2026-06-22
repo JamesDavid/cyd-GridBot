@@ -212,6 +212,10 @@ Condensed pages. Same shape as the sample: **Big idea · On screen · Ask · Wat
 - **On screen:** the robot's-eye view (raw squares ahead/left/right) feeding a little net that lights up the answer; tap **Next view** to try more.
 - **Ask:** "The robot just sees coloured squares. How does it get from *squares* to the word *'wall'*?" **Watch for:** in a self-driving car this is the hard 90% — cameras give pixels, a net turns them into "car / lane / person." **Words:** *perception, raw input, feature.*
 
+**13 · Backprop, step by step** — *learn one nudge at a time.*
+- **Big idea:** training isn't magic — it's a tiny loop: **LOOK** (the neuron guesses) → **SCORE** (how wrong) → **BLAME** (which weights to nudge, and why an OFF input *doesn't* change) → **NUDGE** (apply it; the guess gets closer). One example per "Next step", training a real neuron by hand.
+- **Ask:** "Why didn't *that* weight change?" *(its input was OFF — only inputs that were ON get the blame.)* "Did the guess get closer or further after the nudge?" **Watch for:** this is the *mechanism* under every "Teach"/Train button in the game. **Words:** *gradient, nudge, learning rate.* (Companion to CodeLab's *Debug* — same do-one-thing-and-look rhythm.)
+
 **12 · Data & labels** — *learn from examples.*
 - **Big idea:** **Teach** doesn't invent the right move — it **copies an expert**. Each example = *what it saw* + *the right move* (a **label**). The loop: run → find where it **failed** → add examples there → train again. More and better examples = a smarter brain. **The data is the real work.**
 - **On screen:** an example counter ticks up as it learns; a new maze exposes situations it never saw; adding examples there fixes it.
