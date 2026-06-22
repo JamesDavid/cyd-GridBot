@@ -79,25 +79,27 @@ void StatsScreen::draw() {
   // command histogram — locked commands greyed out with their unlock level
   label(g, 10, y + 1, "Commands used", C_DIM);
   y += 14;
-  const CmdStat order[6] = {CS_FWD, CS_TURN, CS_JUMP, CS_REPEAT, CS_CALL, CS_SENSE};
-  const char* nm[6] = {"Fwd", "Turn", "Jump", "Loop", "Func", "Sense"};
-  const int lvl[6] = {1, 1, 6, 10, 20, 15};
+  // Eight commands in TWO columns so they fit above the toolbar (incl. Zap + Brain).
+  const CmdStat order[8] = {CS_FWD, CS_TURN, CS_JUMP, CS_REPEAT, CS_CALL, CS_SENSE, CS_ZAP, CS_NEURO};
+  const char* nm[8] = {"Fwd", "Turn", "Jump", "Loop", "Func", "Sense", "Zap", "Brain"};
+  const int lvl[8] = {1, 1, 6, 10, 20, 15, 15, 28};
   const gb::Unlocks& u = _p->unlocks;
-  const bool unl[6] = {true, true, u.jump, u.repeat, u.func, u.sense};
+  const bool unl[8] = {true, true, u.jump, u.repeat, u.func, u.sense, u.sense, u.neuro};
   uint16_t maxv = 1;
-  for (int i = 0; i < 6; i++) if (s.commandsUsed[order[i]] > maxv) maxv = s.commandsUsed[order[i]];
-  int bx = 60, bw = 196;
-  for (int i = 0; i < 6; i++) {
-    int yy = y + i * 11;
-    label(g, 10, yy, nm[i], unl[i] ? C_INK : C_LOCK);
+  for (int i = 0; i < 8; i++) if (s.commandsUsed[order[i]] > maxv) maxv = s.commandsUsed[order[i]];
+  const int bw = 78;  // per-column bar width
+  for (int i = 0; i < 8; i++) {
+    int col = i / 4, row = i % 4;
+    int lx = col ? 166 : 10, bx = col ? 208 : 52;
+    int yy = y + row * 11;
+    label(g, lx, yy, nm[i], unl[i] ? C_INK : C_LOCK);
+    g.fillRect(bx, yy, bw, 8, C_PANEL);
     if (unl[i]) {
       int w = (int)((uint32_t)s.commandsUsed[order[i]] * bw / maxv);
-      g.fillRect(bx, yy, bw, 8, C_PANEL);
       g.fillRect(bx, yy, w, 8, C_MOVE);
     } else {
-      g.fillRect(bx, yy, bw, 8, C_PANEL);
-      char lk[16]; snprintf(lk, sizeof(lk), "unlock Lv %d", lvl[i]);
-      label(g, bx + 6, yy, lk, C_LOCK);
+      char lk[10]; snprintf(lk, sizeof(lk), "Lv%d", lvl[i]);
+      label(g, bx + 3, yy, lk, C_LOCK);
     }
   }
 

@@ -674,6 +674,7 @@ void GameScreen::appendCommand(Cmd c) {
   if (_profile) {  // command histogram (SPEC §9)
     if (c == CMD_FWD) _profile->stats.commandsUsed[CS_FWD]++;
     else if (c == CMD_JUMP) _profile->stats.commandsUsed[CS_JUMP]++;
+    else if (c == CMD_FIRE) _profile->stats.commandsUsed[CS_ZAP]++;
     else _profile->stats.commandsUsed[CS_TURN]++;
   }
   appendNodeToTarget(Node::command(c));
@@ -694,6 +695,7 @@ void GameScreen::handlePadTap(int x, int y) {
       gb::Node loop = gb::Node::repeatUntil(gb::AT_GOAL);
       loop.body.push_back(gb::Node::neuro(idx));
       appendNodeToTarget(loop);
+      _profile->stats.commandsUsed[CS_NEURO]++;
     } else {
       toast("NeuroBot unlocks at Lv 28", C_ACCENT);  // consistent with the corner padlocks
     }

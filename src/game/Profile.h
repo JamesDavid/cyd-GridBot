@@ -10,7 +10,7 @@
 namespace gb {
 
 // Command histogram buckets for stats (SPEC §9). (Backward was removed from the game.)
-enum CmdStat : uint8_t { CS_FWD, CS_TURN, CS_JUMP, CS_REPEAT, CS_CALL, CS_SENSE, CS_COUNT };
+enum CmdStat : uint8_t { CS_FWD, CS_TURN, CS_JUMP, CS_REPEAT, CS_CALL, CS_SENSE, CS_ZAP, CS_NEURO, CS_COUNT };
 
 struct Unlocks {
   bool jump = false;

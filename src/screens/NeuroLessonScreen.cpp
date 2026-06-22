@@ -140,7 +140,7 @@ void NeuroLessonScreen::draw() {
     label(g, ex0 + 134, y, ok ? "ok" : "X", ok ? C_GO : C_BAD);
   }
 
-  int ly = TOPBAR_H + 18 + N_EX * 42 - 6;
+  int ly = BOTBAR_Y - 14;  // anchored just above the toolbar (was pushed under it by the taller bar)
   char lb[20]; snprintf(lb, sizeof(lb), "loss %.3f", _loss);  // "loss" = how wrong it still is
   label(g, 6, ly, lb, _loss < 0.02f ? C_GO : C_INK);
   int barW = 120; g.drawRect(80, ly, barW, 8, C_PANEL_HI);
