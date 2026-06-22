@@ -15,7 +15,8 @@ using namespace gb;
 
 namespace screens {
 
-static const Rect R_OPP   = {6, (int16_t)(BAND_Y + 2), 200, 18};  // tap to change sparring partner
+static const Rect R_OPP   = {6,   (int16_t)(BAND_Y + 2), 120, 18}; // tap to change sparring partner
+static const Rect R_MODE  = {130, (int16_t)(BAND_Y + 2), 76,  18}; // Race <-> Sumo
 static const Rect R_VIEW  = {212, (int16_t)(BAND_Y + 2), 102, 18}; // toggle arena <-> brain view
 static const Rect R_TEACH = {6,   (int16_t)(BOTBAR_Y + 2), 70, 32};
 static const Rect R_EVO   = {80,  (int16_t)(BOTBAR_Y + 2), 78, 32};
@@ -65,11 +66,28 @@ void ArenaTrainScreen::buildOpponent(int idx) {
   }
 }
 
+void ArenaTrainScreen::setupBoard() {
+  MazeGen::generateArena(_maze, _profile ? _profile->seedBase + 31u : 31u, _s0, _s1);
+  _maze.setStart(_s0);  // the brain is bot 0, starting at s0
+  if (_matchType == MatchType::SUMO) _maze.clearGoal();  // Sumo = last bot standing, no goal
+}
+
 void ArenaTrainScreen::begin(Profile* profile) {
   _profile = profile;
-  MazeGen::generateArena(_maze, profile ? profile->seedBase + 31u : 31u, _s0, _s1);
-  _maze.setStart(_s0);  // the brain is bot 0, starting at s0
+  _matchType = MatchType::RACE;
+  setupBoard();
   _oppIdx = 0;
+  buildOpponent(_oppIdx);
+  _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
+  _taught = false; _saved = false; _savedIdx = -1;
+  evaluateAndTrace();
+}
+
+// Switch Race <-> Sumo: different board (Sumo has no goal), different fitness, fresh training.
+void ArenaTrainScreen::setMode(MatchType t) {
+  _matchType = t;
+  _animating = false;
+  setupBoard();
   buildOpponent(_oppIdx);
   _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
   _taught = false; _saved = false; _savedIdx = -1;
@@ -79,33 +97,43 @@ void ArenaTrainScreen::begin(Profile* profile) {
 void ArenaTrainScreen::enter() { draw(); }
 
 void ArenaTrainScreen::evaluateAndTrace() {
-  if (!_taught) { _evo.evaluateArena(_maze, _s0, _s1, _ai, 200); _brain = _evo.best(); }
-  // trace the brain's solo path
+  if (!_taught) { _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType); _brain = _evo.best(); }
   Program bp; bp.brains.push_back(_brain);
   Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(0)); bp.main.push_back(loop);
-  Interpreter it; it.load(&bp, &_maze, _s0, 64);
-  _pathLen = 0;
-  for (int s = 0; s < 64; s++) {
-    Pose p = it.pose();
-    if (_pathLen < 64) _path[_pathLen++] = (uint8_t)(p.row * _maze.cols() + p.col);
-    if (it.finished()) break;
-    it.step();
+  int cols = _maze.cols();
+
+  if (_matchType == MatchType::SUMO) {
+    // Trace the REAL fight: step both bots so you see them hunt and shove (not solo wandering).
+    Arena ar; ar.setup(&_maze, &bp, &_ai, _s0, _s1, MatchType::SUMO, 80);
+    _pathLen = 0; _oppLen = 0;
+    for (int s = 0; s < 80; s++) {
+      Pose a = ar.pose(0), b = ar.pose(1);
+      if (_pathLen < 64) _path[_pathLen++] = (uint8_t)(a.row * cols + a.col);
+      if (_oppLen  < 64) _oppPath[_oppLen++] = (uint8_t)(b.row * cols + b.col);
+      if (ar.tick() != ArenaOutcome::RUNNING) break;
+    }
+    _beatsAI = (ar.outcome() == ArenaOutcome::BOT0);
+  } else {
+    // RACE: the brain's solo run to the goal + the opponent's solo run, then a verdict match.
+    Interpreter it; it.load(&bp, &_maze, _s0, 64);
+    _pathLen = 0;
+    for (int s = 0; s < 64; s++) {
+      Pose p = it.pose();
+      if (_pathLen < 64) _path[_pathLen++] = (uint8_t)(p.row * cols + p.col);
+      if (it.finished()) break;
+      it.step();
+    }
+    Interpreter oit; oit.load(&_ai, &_maze, _s1, 64);
+    _oppLen = 0;
+    for (int s = 0; s < 64; s++) {
+      Pose p = oit.pose();
+      if (_oppLen < 64) _oppPath[_oppLen++] = (uint8_t)(p.row * cols + p.col);
+      if (oit.finished()) break;
+      oit.step();
+    }
+    Arena ar; ar.setup(&_maze, &bp, &_ai, _s0, _s1, MatchType::RACE); ar.run();
+    _beatsAI = (ar.outcome() == ArenaOutcome::BOT0);
   }
-  // trace the OPPONENT's route when it runs its own code, from its own start, so the kid
-  // sees training happen in the context of the other bot (not solo).
-  Interpreter oit; oit.load(&_ai, &_maze, _s1, 64);
-  _oppLen = 0;
-  for (int s = 0; s < 64; s++) {
-    Pose p = oit.pose();
-    if (_oppLen < 64) _oppPath[_oppLen++] = (uint8_t)(p.row * _maze.cols() + p.col);
-    if (oit.finished()) break;
-    oit.step();
-  }
-  // a real match vs the AI for the verdict
-  Program bp2; bp2.brains.push_back(_brain);
-  Node l2 = Node::repeatUntil(AT_GOAL); l2.body.push_back(Node::neuro(0)); bp2.main.push_back(l2);
-  Arena ar; ar.setup(&_maze, &bp2, &_ai, _s0, _s1, MatchType::RACE); ar.run();
-  _beatsAI = (ar.outcome() == ArenaOutcome::BOT0);
   inferBrain();   // refresh the network-graph activations to match the (re)trained brain
 }
 
@@ -138,9 +166,10 @@ void ArenaTrainScreen::draw() {
 
   // tappable sparring-partner chip (arena view only — the mini-map takes that space in net view)
   if (!_netView) {
-    char chip[40]; snprintf(chip, sizeof(chip), "spar vs: %s  >", _oppName.c_str());
+    char chip[32]; snprintf(chip, sizeof(chip), "vs %s >", _oppName.c_str());
     button(g, R_OPP, chip, ui::rgb(120, 230, 245), C_PANEL);
   }
+  button(g, R_MODE, _matchType == MatchType::SUMO ? "Sumo >" : "Race >", C_FUNC, C_PANEL);
   button(g, R_VIEW, _netView ? "show arena >" : "show brain >", C_ACCENT, C_PANEL);
 
   if (_netView) {
@@ -173,7 +202,7 @@ void ArenaTrainScreen::draw() {
   }
 
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
-  button(g, R_TEACH, "Teach", C_GO, C_PANEL);
+  button(g, R_TEACH, "Teach", _matchType == MatchType::SUMO ? C_DIM : C_GO, C_PANEL);  // race-only
   button(g, R_EVO, _animating ? "..." : "Evolve", C_FUNC, C_PANEL);
   button(g, R_SAVE, _saved ? "saved!" : "Save fighter", _saved ? C_DIM : C_ACCENT, C_PANEL);
   button(g, R_BACK, "Back", C_INK, C_PANEL);
@@ -211,9 +240,11 @@ void ArenaTrainScreen::drawNet() {
 
   // status strip just above the toolbar
   g.fillRect(0, BOTBAR_Y - 14, SCREEN_W, 12, C_BG);
-  char st[44];
-  if (_animating) snprintf(st, sizeof(st), "learning... gen %d  (you=green vs %s=red)", _evo.gen, _oppName.c_str());
-  else snprintf(st, sizeof(st), "you(green) vs %s(red): %s", _oppName.c_str(), _beatsAI ? "WINS!" : "racing");
+  char st[48];
+  const char* verb = _matchType == MatchType::SUMO ? (_beatsAI ? "K.O.!" : "hunting")
+                                                   : (_beatsAI ? "WINS!" : "racing");
+  if (_animating) snprintf(st, sizeof(st), "learning... gen %d  (you green vs %s red)", _evo.gen, _oppName.c_str());
+  else snprintf(st, sizeof(st), "you(green) vs %s(red): %s", _oppName.c_str(), verb);
   label(g, 6, BOTBAR_Y - 13, st, _beatsAI ? C_GO : C_DIM);
 }
 
@@ -222,7 +253,7 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   // against the opponent live (especially clear in the brain view).
   if (_animating && now - _animAt >= 130) {
     _animAt = now;
-    _evo.breed(); _evo.evaluateArena(_maze, _s0, _s1, _ai, 200); _brain = _evo.best();
+    _evo.breed(); _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType); _brain = _evo.best();
     _taught = false; _saved = false; evaluateAndTrace();
     if (--_animLeft <= 0) _animating = false;
     draw();
@@ -231,14 +262,20 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
   if (R_VIEW.contains(tx, ty)) {
     _netView = !_netView; hal::audio.blip(); draw();
+  } else if (R_MODE.contains(tx, ty)) {  // Race <-> Sumo
+    setMode(_matchType == MatchType::RACE ? MatchType::SUMO : MatchType::RACE);
+    hal::audio.blip(); draw();
   } else if (!_netView && R_OPP.contains(tx, ty)) {
     _oppIdx = (_oppIdx + 1) % oppCount();  // next sparring partner
     buildOpponent(_oppIdx);
     _saved = false; evaluateAndTrace(); hal::audio.blip(); draw();
   } else if (R_TEACH.contains(tx, ty)) {
-    _animating = false;
-    distillSolver(_brain, _maze, true, 700);  // a strong racer beats most AIs
-    _taught = true; _saved = false; evaluateAndTrace(); hal::audio.blip(); draw();
+    if (_matchType == MatchType::SUMO) { hal::audio.fail(); }  // no race teacher for combat; Evolve
+    else {
+      _animating = false;
+      distillSolver(_brain, _maze, true, 700);  // a strong racer beats most AIs
+      _taught = true; _saved = false; evaluateAndTrace(); hal::audio.blip(); draw();
+    }
   } else if (R_EVO.contains(tx, ty)) {
     _animating = true; _animLeft = 16; _animAt = now;  // watch it learn, gen by gen
     hal::audio.blip();

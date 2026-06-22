@@ -25,6 +25,8 @@ class ArenaTrainScreen : public app::IScreen {
   void evaluateAndTrace();
   int  oppCount() const;        // sparring roster size (house bots + your library)
   void buildOpponent(int idx);  // load opponent `idx` into _ai (+ name into _oppName)
+  void setupBoard();            // (re)generate the arena; Sumo clears the goal (last-standing)
+  void setMode(gb::MatchType t);// switch Race<->Sumo: reboard, rebuild opponent, restart evo
 
   gb::Profile* _profile = nullptr;
   gb::Maze _maze;
@@ -36,6 +38,7 @@ class ArenaTrainScreen : public app::IScreen {
   int _pathLen = 0;
   uint8_t _oppPath[64];      // the opponent's route when it runs ITS code (shown in red)
   int _oppLen = 0;
+  gb::MatchType _matchType = gb::MatchType::RACE;  // Race (to goal) or Sumo (last bot standing)
   int _oppIdx = 0;            // which roster opponent we spar against
   std::string _oppName;      // its display name
   bool _beatsAI = false, _taught = false, _saved = false;

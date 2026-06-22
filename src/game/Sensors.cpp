@@ -34,7 +34,8 @@ void senseEgoTo(const Maze& m, const Pose& p, const EnemyView* enemy,
   out[2] = !m.isWalkable(p.row + rdr, p.col + rdc) ? 1.0f : 0.0f;        // wall right
   out[3] = (m.at(ar, ac) == PIT) ? 1.0f : 0.0f;                         // pit ahead
 
-  projectEgo(m, p, tr, tc, out[4], out[5], out[6]);                     // target ego
+  if (tr < 0 || tc < 0) { out[4] = 0.0f; out[5] = 0.0f; out[6] = 1.0f; }  // no goal (e.g. Sumo)
+  else projectEgo(m, p, tr, tc, out[4], out[5], out[6]);                  // target ego
 
   if (enemy && enemy->pose) {
     projectEgo(m, p, enemy->pose->row, enemy->pose->col, out[7], out[8], out[9]);
