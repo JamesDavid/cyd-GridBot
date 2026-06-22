@@ -138,15 +138,20 @@ void ArenaScreen::drawPick(int player) {
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
-  char t[28]; snprintf(t, sizeof(t), "Player %d: pick a bot", player + 1);
+  // vs-Computer picks only YOUR bot (the computer brings its own); Hotseat picks P1 then P2.
+  char t[28];
+  if (_hotseat) snprintf(t, sizeof(t), "Player %d: pick a bot", player + 1);
+  else          snprintf(t, sizeof(t), "Pick YOUR bot");
   label(g, 6, 3, t, C_ACCENT, textdatum_t::top_left, 2);
+  if (!_hotseat) label(g, SCREEN_W - 6, 6, "vs Computer", C_DIM, textdatum_t::top_right);
   int n = (int)_cands.size(), vis = pickVisible();
   if (_pickScroll > n - vis) _pickScroll = (n > vis) ? n - vis : 0;
   if (_pickScroll < 0) _pickScroll = 0;
   for (int i = _pickScroll; i < n && i < _pickScroll + vis; i++) {
     Rect r = pickRowRect(i);
     const Candidate& c = _cands[i];
-    g.fillRoundRect(r.x, r.y, r.w, r.h, 4, c.house ? C_PANEL : C_PANEL_HI);
+    g.fillRoundRect(r.x, r.y, r.w, r.h, 4, C_PANEL_HI);  // all rows equally pickable (none greyed)
+    g.drawRoundRect(r.x, r.y, r.w, r.h, 4, c.house ? C_PANEL_HI : C_GO);  // your bots outlined green
     assets::drawCharacter(g, r.x + 13, r.cy(), 17, c.avatar, gb::SOUTH);
     label(g, r.x + 30, r.y + 2, c.name.c_str(), c.neuro ? ui::rgb(120, 230, 245) : c.house ? C_INK : C_GO);
     label(g, r.x + 110, r.y + 5, c.style.c_str(), C_DIM);
