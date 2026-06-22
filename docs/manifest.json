@@ -1,6 +1,6 @@
 {
   "name": "GridBot",
-  "version": "4.9",
+  "version": "5.0",
   "new_install_prompt_erase": true,
   "builds": [
     {
