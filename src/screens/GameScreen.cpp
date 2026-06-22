@@ -782,11 +782,15 @@ void GameScreen::handleListTap(int x, int y) {
             hal::audio.blip(); drawProgramList(); return;
           }
         } else if (sn->type == N_NEURO) {
-          if (condRect(yy).contains(x, y)) {       // plain -> pilot -> rnn -> rnn+pilot
-            if (!sn->pilot && !sn->rnn)      sn->pilot = true;
-            else if (sn->pilot && !sn->rnn)  { sn->pilot = false; sn->rnn = true; }
-            else if (!sn->pilot && sn->rnn)  sn->pilot = true;
-            else                             { sn->pilot = false; sn->rnn = false; }
+          if (condRect(yy).contains(x, y)) {       // plain -> pilot -> rnn -> rnn+pilot (skip locked)
+            bool uP = !_profile || _profile->unlocks.nPilot;   // pilot tool unlocked (Lv 37)
+            bool uR = !_profile || _profile->unlocks.nRnn;     // memory brain unlocked (Lv 40)
+            int s = (sn->rnn ? 2 : 0) + (sn->pilot ? 1 : 0);   // 0 plain,1 pilot,2 rnn,3 both
+            for (int k = 1; k <= 4; k++) {
+              int n = (s + k) % 4; bool wantP = n & 1, wantR = n & 2;
+              if ((wantP && !uP) || (wantR && !uR)) continue;
+              sn->pilot = wantP; sn->rnn = wantR; break;
+            }
             hal::audio.blip(); drawProgramList(); return;
           }
         }

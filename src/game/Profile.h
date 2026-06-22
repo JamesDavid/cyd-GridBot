@@ -18,7 +18,12 @@ struct Unlocks {
   bool repeat = false;
   bool func = false;
   bool sense = false;
-  bool neuro = false;     // NeuroBot: train a brain and drop it in your program
+  bool neuro = false;     // NeuroBot: train a brain (Teach) and drop it in your program
+  // NeuroBot training tools unlock progressively after the brain (paced like the blocks):
+  bool nDraw = false;     // tag a path (Draw) and train to it
+  bool nEvolve = false;   // neuroevolution
+  bool nPilot = false;    // planner + follower (brain mode + trainer)
+  bool nRnn = false;      // recurrent memory brain
 };
 
 struct Settings {
@@ -103,7 +108,11 @@ inline Unlocks computeUnlocks(uint32_t level) {
   u.repeat   = level >= 10;
   u.sense    = level >= 15;  // if / repeat-until: the wall-follower payoff, taught first
   u.func     = level >= 20;  // functions come AFTER sensing, so you can wrap if-logic in one
-  u.neuro    = level >= 28;  // graduation: train a brain, a few levels after sensing/if logic
+  u.neuro    = level >= 28;  // graduation: train a brain (Teach), a few levels after sensing
+  u.nDraw    = level >= 31;  // then the training tools arrive one at a time, with a lesson each
+  u.nEvolve  = level >= 34;
+  u.nPilot   = level >= 37;
+  u.nRnn     = level >= 40;
   return u;
 }
 

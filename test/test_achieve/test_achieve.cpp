@@ -77,12 +77,42 @@ void test_count() {
   TEST_ASSERT_EQUAL(17, ACH_COUNT);
 }
 
+// The NeuroBot training tools unlock progressively AFTER the brain, one at a time,
+// each paced a few levels apart (so the L28 graduation isn't a firehose).
+void test_neuro_tool_progression() {
+  using namespace gb;
+  // before the brain: nothing neural
+  Unlocks before = computeUnlocks(27);
+  TEST_ASSERT_FALSE(before.neuro);
+  TEST_ASSERT_FALSE(before.nDraw);
+  TEST_ASSERT_FALSE(before.nEvolve);
+  TEST_ASSERT_FALSE(before.nPilot);
+  TEST_ASSERT_FALSE(before.nRnn);
+  // brain (Teach) arrives at 28, but the other tools are still locked
+  Unlocks u28 = computeUnlocks(28);
+  TEST_ASSERT_TRUE(u28.neuro);
+  TEST_ASSERT_FALSE(u28.nDraw);
+  TEST_ASSERT_FALSE(u28.nPilot);
+  // then one tool at a time
+  TEST_ASSERT_TRUE(computeUnlocks(31).nDraw);
+  TEST_ASSERT_FALSE(computeUnlocks(31).nEvolve);
+  TEST_ASSERT_TRUE(computeUnlocks(34).nEvolve);
+  TEST_ASSERT_FALSE(computeUnlocks(34).nPilot);
+  TEST_ASSERT_TRUE(computeUnlocks(37).nPilot);
+  TEST_ASSERT_FALSE(computeUnlocks(37).nRnn);
+  TEST_ASSERT_TRUE(computeUnlocks(40).nRnn);
+  // sticky: everything stays unlocked at higher levels
+  Unlocks late = computeUnlocks(99);
+  TEST_ASSERT_TRUE(late.neuro && late.nDraw && late.nEvolve && late.nPilot && late.nRnn);
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_first_win_and_levels);
   RUN_TEST(test_command_badges);
   RUN_TEST(test_arena_artist_stars_streak);
   RUN_TEST(test_neurobot_badges);
+  RUN_TEST(test_neuro_tool_progression);
   RUN_TEST(test_count);
   return UNITY_END();
 }

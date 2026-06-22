@@ -268,15 +268,19 @@ void NeuroTrainScreen::draw() {
     button(g, R_DCLEAR, "Clear", C_ACCENT, C_PANEL);
     button(g, R_DCANCEL, "Cancel", C_INK, C_PANEL);
   } else if (_rnnMode) {                                  // recurrent brain: BPTT + pilot + use
+    bool uPilot = _profile && _profile->unlocks.nPilot;
     button(g, R_RTEACH, "Teach mem", C_GO, C_PANEL);     // BPTT-train the memory brain (tap to improve)
-    button(g, R_RPILOT, "Pilot", _pilotMode ? C_GO : ui::rgb(255, 170, 60), C_PANEL);
+    button(g, R_RPILOT, "Pilot", !uPilot ? C_LOCK : (_pilotMode ? C_GO : ui::rgb(255, 170, 60)), C_PANEL);
     button(g, R_RUSE, _saved ? "saved!" : "Use it", _saved ? C_DIM : ui::rgb(120, 230, 245), C_PANEL);
     button(g, R_RBACK, "Back", C_INK, C_PANEL);
   } else {
-    button(g, R_TEACH, "Teach", C_GO, C_PANEL);          // distill the solver (reliable)
-    button(g, R_DRAW, "Draw", C_ACCENT, C_PANEL);        // imitation learning from a drawn path
-    button(g, R_TRAIN, "Evolve", C_FUNC, C_PANEL);       // neuroevolution (no teacher)
-    button(g, R_PILOT, "Pilot", _pilotMode ? C_GO : ui::rgb(255, 170, 60), C_PANEL);  // planner + follower
+    bool uDraw = _profile && _profile->unlocks.nDraw;     // tools unlock one at a time (Lv 31/34/37)
+    bool uEvo  = _profile && _profile->unlocks.nEvolve;
+    bool uPilot = _profile && _profile->unlocks.nPilot;
+    button(g, R_TEACH, "Teach", C_GO, C_PANEL);          // distill the solver (reliable) — the base tool
+    button(g, R_DRAW, "Draw", uDraw ? C_ACCENT : C_LOCK, C_PANEL);   // imitation from a drawn path
+    button(g, R_TRAIN, "Evolve", uEvo ? C_FUNC : C_LOCK, C_PANEL);   // neuroevolution (no teacher)
+    button(g, R_PILOT, "Pilot", !uPilot ? C_LOCK : (_pilotMode ? C_GO : ui::rgb(255, 170, 60)), C_PANEL);
     button(g, R_USE, _saved ? "saved!" : "Use it", _saved ? C_DIM : ui::rgb(120, 230, 245), C_PANEL);
     button(g, R_BACK, "Back", C_INK, C_PANEL);
   }
@@ -377,6 +381,7 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       rnnTrainGeneral(_rbrain, _profile ? _profile->seedBase : 0u, 16, 40);
       _taught = true; _saved = false; _pulseUntil = now + 1500; tracePath(); hal::audio.blip(); draw();
     } else if (R_RPILOT.contains(tx, ty)) {        // pilot works for an rnn brain too
+      if (_profile && !_profile->unlocks.nPilot) { hal::audio.fail(); return app::Signal::NONE; }
       _pilotMode = !_pilotMode; setNodePilot(_pilotMode);
       _saved = false; tracePath(); hal::audio.blip(); draw();
     } else if (R_RUSE.contains(tx, ty)) {          // store the memory brain into the block
@@ -423,13 +428,16 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     _pilotMode = false; setNodePilot(false); _pulseUntil = now + 1500;
     tracePath(); hal::audio.blip(); draw();
   } else if (R_DRAW.contains(tx, ty)) {   // hand-draw a path to learn from (imitation learning)
+    if (_profile && !_profile->unlocks.nDraw) { hal::audio.fail(); return app::Signal::NONE; }
     _drawMode = true; seedDrawStart(); hal::audio.blip(); draw();
   } else if (R_PILOT.contains(tx, ty)) {  // planner + follower: learn to steer to waypoints
+    if (_profile && !_profile->unlocks.nPilot) { hal::audio.fail(); return app::Signal::NONE; }
     pilotTrain(_brain, _profile ? _profile->seedBase : 0u, 14, 18);
     setNodePilot(true);                   // the program's brain block becomes a pilot
     _pilotMode = true; _taught = false; _saved = false; _savedCopy = false; _gauntletScore = -1;
     tracePath(); hal::audio.blip(); draw();
   } else if (R_TRAIN.contains(tx, ty)) {
+    if (_profile && !_profile->unlocks.nEvolve) { hal::audio.fail(); return app::Signal::NONE; }
     for (int gg = 0; gg < 5; gg++) { _evo.breed(); _evo.evaluate(*_maze, nullptr, 110); }
     _brain = _evo.best(); _taught = false; _saved = false; _savedCopy = false; _gauntletScore = -1;
     _pilotMode = false; setNodePilot(false); _pulseUntil = now + 1500;

@@ -100,6 +100,11 @@ void App::drawIntro() {
   else if (now.sense && !prev.sense)  { newText = "New: Sensing!";      _introLesson = 3; }
   else if (now.func && !prev.func)    { newText = "New: Functions!";    _introLesson = 4; }
   else if (now.neuro && !prev.neuro)  { newText = "New: NeuroBot!";     _introLesson = 100; } // NeuroLab hub
+  // the training tools arrive one at a time after the brain, each pointing at its lesson:
+  else if (now.nDraw && !prev.nDraw)    { newText = "New: Draw & tag!";   _introLesson = 101; } // Data lesson
+  else if (now.nEvolve && !prev.nEvolve){ newText = "New: Evolve!";       _introLesson = 102; } // Evolution
+  else if (now.nPilot && !prev.nPilot)  { newText = "New: Pilot!";        _introLesson = 103; } // Pilot
+  else if (now.nRnn && !prev.nRnn)      { newText = "New: Memory brain!"; _introLesson = 104; } // RNN
   if (newText) label(g, SCREEN_W / 2, y + 50, newText, C_GO, textdatum_t::middle_center);
   if (_newBadge) {
     char b[40]; snprintf(b, sizeof(b), "Badge: %s!", _newBadge);
@@ -290,6 +295,10 @@ void App::tick(uint32_t now) {
         if (_introLesson >= 0 && _learnBtn.contains(x, y)) {  // learn the new power right now
           _fromIntro = true;
           if (_introLesson == 100) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+          else if (_introLesson == 101) { _transferLesson.begin(1); _transferLesson.enter(); _state = State::TRANSFER_LESSON; }  // Data & labels
+          else if (_introLesson == 102) { _evoLesson.begin(); _evoLesson.enter(); _state = State::EVO_LESSON; }                 // Evolution
+          else if (_introLesson == 103) { _pilotLesson.begin(); _pilotLesson.enter(); _state = State::PILOT_LESSON; }           // Pilot
+          else if (_introLesson == 104) { _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; }                 // Memory
           else { _codeLesson.begin(_introLesson); _codeLesson.enter(); _state = State::CODE_LESSON; }
         } else if (_backBtn.contains(x, y)) gotoHome();  // back to the hub
         else gotoGame();                                  // tap the card to start the level
@@ -462,11 +471,17 @@ void App::tick(uint32_t now) {
       break;
     }
     case State::EVO_LESSON: {
-      if (_evoLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      if (_evoLesson.tick(now, tp) == Signal::BACK) {
+        if (_fromIntro) { _fromIntro = false; gotoIntro(_introLevel); }
+        else { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      }
       break;
     }
     case State::TRANSFER_LESSON: {
-      if (_transferLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      if (_transferLesson.tick(now, tp) == Signal::BACK) {
+        if (_fromIntro) { _fromIntro = false; gotoIntro(_introLevel); }
+        else { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      }
       break;
     }
     case State::BRAIN_VIEW: {
@@ -474,11 +489,17 @@ void App::tick(uint32_t now) {
       break;
     }
     case State::PILOT_LESSON: {
-      if (_pilotLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      if (_pilotLesson.tick(now, tp) == Signal::BACK) {
+        if (_fromIntro) { _fromIntro = false; gotoIntro(_introLevel); }
+        else { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      }
       break;
     }
     case State::RNN_LESSON: {
-      if (_rnnLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      if (_rnnLesson.tick(now, tp) == Signal::BACK) {
+        if (_fromIntro) { _fromIntro = false; gotoIntro(_introLevel); }
+        else { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      }
       break;
     }
     case State::PERCEPTION_LESSON: {
