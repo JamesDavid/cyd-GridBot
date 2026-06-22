@@ -16,15 +16,19 @@ BANDY0, BANDY1, W = 22, 204, 320
 
 def void(p): return abs(p[0]-24)<20 and abs(p[1]-26)<20 and abs(p[2]-34)<22
 
-def runs_centers(prof):
-    mx=max(prof); thr=mx*0.55; out=[]; s=None
-    for i,v in enumerate(prof):
-        if v<thr and s is None: s=i
-        elif v>=thr and s is not None:
-            if i-s>=12: out.append((s,i-1))
-            s=None
-    if s is not None and len(prof)-s>=12: out.append((s,len(prof)-1))
-    return [(a+b)//2 for a,b in out], out
+def boundaries(grad):
+    # cell boundaries = strong color-step peaks (biome-independent: the floor checker,
+    # walls, pits all contrast with neighbours). Returns merged boundary x/y positions.
+    mx=max(grad); thr=mx*0.33; bs=[]
+    for i,v in enumerate(grad):
+        if v>thr and (not bs or i-bs[-1]>10): bs.append(i)
+        elif v>thr and bs and grad[bs[-1]]<v: bs[-1]=i   # keep the taller peak in a run
+    return bs
+
+def centers_from_grad(grad):
+    bs=boundaries(grad)
+    if len(bs)<2: return []
+    return [(bs[i]+bs[i+1])//2 for i in range(len(bs)-1)]
 
 def main():
     a=sys.argv; img=a[1]; facing=a[2] if len(a)>2 else 'N'
@@ -32,12 +36,35 @@ def main():
     if '--robot' in a: i=a.index('--robot'); rob_ov=(int(a[i+1]),int(a[i+2]))
     if '--goal'  in a: i=a.index('--goal');  goal_ov=(int(a[i+1]),int(a[i+2]))
     im=Image.open(img).convert('RGB'); px=im.load()
-    colprof=[sum(1 for y in range(BANDY0,BANDY1) if void(px[x,y])) for x in range(W)]
-    cxs,cxr=runs_centers(colprof)
-    x0,x1=cxr[0][0],cxr[-1][1]
-    rowprof=[sum(1 for x in range(x0,x1+1) if void(px[x,y])) for y in range(BANDY0,BANDY1)]
-    cyr0,_=runs_centers(rowprof); cys=[y+BANDY0 for y in cyr0]
-    cols,rows=len(cxs),len(cys)
+    def bright(x,y): p=px[x,y]; return p[0]+p[1]+p[2]
+    # 1) maze bbox from the void margins (C_BG is C_BG in every biome).
+    # pick the WIDEST contiguous content run so left/right UI slivers don't extend it.
+    def widest_run(prof, thr, gap=8):
+        # widest cluster of content, tolerating small (seam-sized) internal gaps but
+        # not the large void gap between the maze and any side UI sliver.
+        on=[i for i,v in enumerate(prof) if v>thr]
+        if not on: return 0,len(prof)-1
+        runs=[[on[0],on[0]]]
+        for i in on[1:]:
+            if i-runs[-1][1]<=gap: runs[-1][1]=i
+            else: runs.append([i,i])
+        b=max(runs,key=lambda r:r[1]-r[0]); return b[0],b[1]
+    nvx=[sum(1 for y in range(BANDY0,BANDY1) if not void(px[x,y])) for x in range(W)]
+    x0,x1=widest_run(nvx, max(nvx)*0.25)
+    nvy=[sum(1 for x in range(x0,x1+1) if not void(px[x,y])) if BANDY0<=y<BANDY1 else 0 for y in range(240)]
+    y0,y1=widest_run(nvy, max(nvy)*0.25)
+    # 2) cells are square: find the one tile size that divides BOTH bbox dims to integers
+    bw,bh=x1-x0+1, y1-y0+1
+    best=None
+    for t in range(24,65):
+        cc,rr=round(bw/t),round(bh/t)
+        if cc<1 or rr<1: continue
+        err=abs(bw-t*cc)+abs(bh-t*rr)
+        if best is None or err<best[0]: best=(err,cc,rr)
+    cols,rows=best[1],best[2]
+    tilex=bw/cols; tiley=bh/rows
+    cxs=[int(x0+tilex*(i+0.5)) for i in range(cols)]
+    cys=[int(y0+tiley*(i+0.5)) for i in range(rows)]
     def cellpx(cx,cy):
         out=[]
         rad=max(4,(x1-x0)//cols//3)
@@ -49,11 +76,13 @@ def main():
     for r,cy in enumerate(cys):
         for c,cx in enumerate(cxs):
             pp=cellpx(cx,cy)
+            voidfrac=sum(1 for p in pp if void(p))/len(pp)
             blue=sum(1 for p in pp if p[2]>110 and p[2]>p[0]+25 and p[2]>p[1]+10)
             yellow=sum(1 for p in pp if p[0]>185 and p[1]>150 and p[2]<110)
             avg=tuple(sum(p[i] for p in pp)//len(pp) for i in range(3))
             sums[(r,c)]=sum(avg); grid[(r,c)]='?'
-            if blue>6: bluecells.append((blue,(r,c))); grid[(r,c)]='b'
+            if voidfrac>0.4: grid[(r,c)]='.'   # pit: mostly void (robust to overlaid text)
+            elif blue>6: bluecells.append((blue,(r,c))); grid[(r,c)]='b'
             elif yellow>4: grid[(r,c)]='c'
     # robot = most-blue cell; the goal battery is the other blue-ish cell
     bluecells.sort(reverse=True)
