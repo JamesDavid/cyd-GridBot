@@ -14,7 +14,7 @@ from PIL import Image
 
 BANDY0, BANDY1, W = 22, 204, 320
 
-def void(p): return abs(p[0]-24)<20 and abs(p[1]-26)<20 and abs(p[2]-34)<22
+def void(p): return abs(p[0]-24)<13 and abs(p[1]-25)<13 and abs(p[2]-33)<14
 
 def boundaries(grad):
     # cell boundaries = strong color-step peaks (biome-independent: the floor checker,
@@ -67,9 +67,9 @@ def main():
     cys=[int(y0+tiley*(i+0.5)) for i in range(rows)]
     def cellpx(cx,cy):
         out=[]
-        rad=max(4,(x1-x0)//cols//3)
-        for x in range(cx-rad,cx+rad+1):
-            for y in range(cy-rad,cy+rad+1):
+        rad=max(3,min(tilex,tiley)//5)   # tight center window: avoid bleeding into neighbours
+        for x in range(cx-int(rad),cx+int(rad)+1):
+            for y in range(cy-int(rad),cy+int(rad)+1):
                 if 0<=x<W and 0<=y<240: out.append(px[x,y])
         return out
     grid={}; sums={}; rob=goal=None; bluecells=[]
@@ -77,30 +77,36 @@ def main():
         for c,cx in enumerate(cxs):
             pp=cellpx(cx,cy)
             voidfrac=sum(1 for p in pp if void(p))/len(pp)
-            blue=sum(1 for p in pp if p[2]>110 and p[2]>p[0]+25 and p[2]>p[1]+10)
-            yellow=sum(1 for p in pp if p[0]>185 and p[1]>150 and p[2]<110)
             avg=tuple(sum(p[i] for p in pp)//len(pp) for i in range(3))
-            sums[(r,c)]=sum(avg); grid[(r,c)]='?'
-            if voidfrac>0.4: grid[(r,c)]='.'   # pit: mostly void (robust to overlaid text)
-            elif blue>6: bluecells.append((blue,(r,c))); grid[(r,c)]='b'
-            elif yellow>4: grid[(r,c)]='c'
-    # robot = most-blue cell; the goal battery is the other blue-ish cell
+            sums[(r,c)]=sum(avg); grid[(r,c)]='.' if voidfrac>0.4 else '?'
+            # saturated-blue pixel count, only used to GUESS the robot in warm biomes
+            blue=sum(1 for p in pp if p[2]>120 and p[2]>p[0]+60 and p[2]>p[1]+50)
+            if grid[(r,c)]=='?' and blue>6: bluecells.append((blue,(r,c)))
+    # wall vs floor by the FRACTION of bright pixels: a wall is uniformly bright, while a
+    # coin/goal is a bright dot on dark floor. (Avg alone mis-reads coins as walls.)
+    nonpit=sorted(s for rc,s in sums.items() if grid[rc]=='?')
+    floor_med=nonpit[int(len(nonpit)*0.4)] if nonpit else 0
+    pthr=floor_med*1.3/3*1.0   # per-pixel bright threshold (sum) ~ 1.3x floor level
+    for r,cy in enumerate(cys):
+        for c,cx in enumerate(cxs):
+            if grid[(r,c)]!='?': continue
+            pp=cellpx(cx,cy)
+            bf=sum(1 for p in pp if sum(p) > floor_med*1.3)/len(pp)
+            grid[(r,c)]='#' if bf>0.5 else ' '
+    # robot/goal: explicit override wins; else best-effort auto (warm biomes)
     bluecells.sort(reverse=True)
-    if bluecells: rob=bluecells[0][1]; grid[rob]='R'
-    if len(bluecells)>1: goal=bluecells[1][1]; grid[goal]='G'
-    for bl,rc in bluecells:
-        if rc!=rob and rc!=goal: grid[rc]='c'   # stray blue -> treat as passable
-    # wall/floor/pit among '?' cells
-    qs=[(rc,sums[rc],) for rc,k in grid.items() if k=='?']
-    nonpit=[s for rc,s in qs if not (s<100)]
-    floor_lo=min(nonpit) if nonpit else 0
-    for rc,s in qs:
-        r,g,b=tuple(sum(px[cxs[rc[1]]+dx,cys[rc[0]]+dy][i] for dx in(-2,0,2) for dy in(-2,0,2))//9 for i in range(3))
-        if s<100 and b>=r-6: grid[rc]='.'                       # pit/void
-        elif s >= floor_lo+85: grid[rc]='#'                     # wall (clearly brighter)
-        else: grid[rc]=' '
+    if not rob_ov and bluecells: rob=bluecells[0][1]
+    if not goal_ov and len(bluecells)>1: goal=bluecells[1][1]
     if rob_ov: rob=rob_ov
     if goal_ov: goal=goal_ov
+    if rob: grid[rob]='R'
+    if goal: grid[goal]='G'
+    # manual wall overrides for low-contrast cells the brightness test can't resolve:
+    #   --wall r c r c ...   (any number of pairs)
+    if '--wall' in a:
+        i=a.index('--wall')+1
+        while i+1<len(a) and a[i].lstrip('-').isdigit():
+            grid[(int(a[i]),int(a[i+1]))]='#'; i+=2
     print(f"{rows}x{cols}  robot={rob} goal={goal}")
     for r in range(rows):
         print(''.join('R' if (r,c)==rob else 'G' if (r,c)==goal else grid[(r,c)] for c in range(cols)))
