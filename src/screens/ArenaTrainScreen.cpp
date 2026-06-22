@@ -29,6 +29,14 @@ int ArenaTrainScreen::oppCount() const {
   return N_HOUSE_OPP + (_profile ? (int)_profile->library.size() : 0);
 }
 
+std::string ArenaTrainScreen::nextFighterName() const {
+  int hi = 0;
+  if (_profile)
+    for (auto& e : _profile->library) { int v = 0; if (sscanf(e.name.c_str(), "Fighter v%d", &v) == 1 && v > hi) hi = v; }
+  char nm[16]; snprintf(nm, sizeof(nm), "Fighter v%d", hi + 1);
+  return nm;
+}
+
 void ArenaTrainScreen::buildOpponent(int idx) {
   _ai.clear();
   // Ordered EASY -> HARD so a kid's first Teach reliably beats the default (Bolt), for the
@@ -64,7 +72,7 @@ void ArenaTrainScreen::begin(Profile* profile) {
   _oppIdx = 0;
   buildOpponent(_oppIdx);
   _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
-  _taught = false; _saved = false;
+  _taught = false; _saved = false; _savedIdx = -1;
   evaluateAndTrace();
 }
 
@@ -235,13 +243,20 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     _animating = true; _animLeft = 16; _animAt = now;  // watch it learn, gen by gen
     hal::audio.blip();
   } else if (R_SAVE.contains(tx, ty)) {
-    if (_profile && _profile->library.size() < (size_t)LIBRARY_MAX) {
-      LibEntry e; e.name = "Brainy";
-      e.program.brains.push_back(_brain);
-      Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(0)); e.program.main.push_back(loop);
-      _profile->library.push_back(e);
-      _saved = true; hal::audio.badge(); draw();
-    } else { hal::audio.fail(); }
+    if (!_profile) { hal::audio.fail(); }
+    else {
+      Program prog; prog.brains.push_back(_brain);
+      Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(0)); prog.main.push_back(loop);
+      if (_savedIdx >= 0 && _savedIdx < (int)_profile->library.size()) {
+        _profile->library[_savedIdx].program = prog;   // update this session's fighter (no dupe)
+        _saved = true; hal::audio.badge(); draw();
+      } else if (_profile->library.size() < (size_t)LIBRARY_MAX) {
+        LibEntry e; e.name = nextFighterName(); e.program = prog;
+        _profile->library.push_back(e);
+        _savedIdx = (int)_profile->library.size() - 1;
+        _saved = true; hal::audio.badge(); draw();
+      } else { hal::audio.fail(); }
+    }
   } else if (R_BACK.contains(tx, ty)) {
     return app::Signal::BACK;
   }
