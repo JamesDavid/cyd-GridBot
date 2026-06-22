@@ -17,6 +17,11 @@ all on the same $10 board.
 > toolchain. (Powered by ESP Web Tools; see the [flasher page](docs/index.html).)
 > **Need the board?** [Grab a CYD (ESP32-2432S028R) on Amazon](https://a.co/d/05H98aWQ) (~$10–15).
 
+> ### 👩‍🏫 Parent or teacher? [**The Grown-Up Guide →**](docs/HANDBOOK.md)
+> A handbook to sit beside the game: the big idea + questions to ask for every lesson, a
+> classroom track (with the radio for student/teacher interaction), an "is this *really* how
+> AI works?" honesty appendix, and a standards map. No coding or AI background needed.
+
 ---
 
 ## Why GridBot exists — *a robot you can hold, not one more app*
