@@ -168,55 +168,55 @@ Condensed pages. Same shape as the sample: **Big idea · On screen · Ask · Wat
 
 ### NeuroLab (train the rules)
 
-**1 · One neuron** — fully worked in **§5**.
+**1 · One neuron** — *watch it learn.* Fully worked in **§5**.
 
-**2 · Many actions** — *go / turn / jump.*
-- **Big idea:** real choices aren't yes/no — the brain has **several outputs** and **picks the strongest** (that's *argmax*).
-- **Ask:** "Three outputs light up a bit. How does it decide which one to actually do?" **Words:** *multi-class, output, argmax.*
+**2 · Backprop, step by step** — *learn one nudge at a time.*
+- **Big idea:** training isn't magic — it's a tiny loop: **LOOK** (the neuron guesses) → **SCORE** (how wrong) → **BLAME** (which weights to nudge, and why an OFF input *doesn't* change) → **NUDGE** (apply it; the guess gets closer). One example per "Next step", training a real neuron by hand.
+- **Ask:** "Why didn't *that* weight change?" *(its input was OFF — only inputs that were ON get the blame.)* "Did the guess get closer or further after the nudge?" **Watch for:** this is the *mechanism* under every "Teach"/Train button in the game. **Words:** *gradient, nudge, learning rate.* (Companion to CodeLab's *Debug* — same do-one-thing-and-look rhythm.)
 
 **3 · Hidden layer** — *what one neuron can't.*
 - **Big idea:** some rules are impossible for a single neuron — you need a **hidden layer** in between. The lesson uses a real one: **"turn at a corner" — turn when *exactly one* side (left **or** right) is open**, but go straight in a corridor (both walls) *or* a junction (both open). One neuron can't learn that; a hidden layer can. *(This is the classic **XOR** problem — the same shape — but framed as something the bot actually does.)*
 - **Ask:** "It literally can't learn this with one neuron, no matter how long. Why might 'more layers' help?" **Watch for:** this is *the* reason deep learning is "deep." **Words:** *hidden layer, non-linear, deep.*
 > **For the classroom:** the most rigorous lesson — it *proves* a limitation, then *removes* it. AI4K12 *Learning / Representation*.
 
-**4 · Robot brain** — *meet its senses.*
+**4 · Many actions** — *go / turn / jump.*
+- **Big idea:** real choices aren't yes/no — the brain has **several outputs** and **picks the strongest** (that's *argmax*).
+- **Ask:** "Three outputs light up a bit. How does it decide which one to actually do?" **Words:** *multi-class, output, argmax.*
+
+**5 · Robot brain** — *meet its senses.*
 - **Big idea:** a tour of the *actual* brain every NeuroBot uses: **10 senses → 8 hidden → 5 actions**, and the senses are **relative to the robot** (ahead/right are signed: minus = behind/left).
 - **Ask:** "Why does it sense 'goal to my *right*' instead of 'goal in the north-east'?" *(everything is from the robot's point of view — like a driver, not a map.)* **Watch for:** the same `10→8→5` brain solves mazes **and** fights in the Arena — one brain, many jobs. **Words:** *input, hidden, output, egocentric.*
 
-**5 · Q-learning** — *learn from reward.*
+**6 · Q-learning** — *learn from reward.*
 - **Big idea:** no teacher, no code — the robot **tries the maze over and over** and value spreads back from the goal until it has a map of "good moves." It **explores** (tries things) then **exploits** (keeps the best).
 - **Ask:** "Notice the colours spread *backwards* from the battery. Why would the tile next to the goal become 'good' first?" **Words:** *reward, reinforcement learning, explore vs exploit, policy.*
 
-**6 · Evolution** — *breed the best.*
+**7 · Evolution** — *breed the best.*
 - **Big idea:** start with a crowd of random brains; the ones that get furthest **breed**; repeat. No teacher, no gradient — just survival.
 - **Ask:** "Nothing is being 'taught' here. How does it still get better?" **Words:** *evolution, fitness, selection, mutation.*
 
-**7 · Transfer** — *reuse skills, new maze.*
+**8 · Transfer** — *reuse skills, new maze.*
 - **Big idea:** train on maze A, then on a **brand-new maze B it already does okay** — it learned *general* skills, not that one maze. A quick fine-tune masters B. (And it watches for the opposite failure — **over-fitting**, memorising one maze.)
 - **Ask:** "How can it be partway through a maze it has *never seen*?" **Words:** *transfer, fine-tune, generalise, over-fit.*
 
-**8 · Brain Cam** — *watch a brain think.*
+**9 · Brain Cam** — *watch a brain think.*
 - **Big idea:** an X-ray of a live network. Tap **Teach** and watch **backprop animate** — the weight-lines recolour as it learns, the loss bar falls. Tap any **neuron to zoom** into its weights. Flip **plain ↔ rnn**, change the **map** (it transfers), and **Save** a trained brain to your library.
 - **Ask:** "Tap a neuron. What do those numbers mean? Watch them change while it learns." **Words:** *backprop, activation, weight.* The clearest answer to "what is it actually doing?"
 
-**9 · Pilot** — *plan + steer (the self-driving split).*
+**10 · Pilot** — *plan + steer (the self-driving split).*
 - **Big idea:** a reactive brain only senses what's nearby, so it gets stuck. Add a **route planner** that lays down waypoints; now the brain just **steers dot-to-dot** and solves it. **The planner decides *where*; the brain decides *how*** — exactly how a self-driving stack splits the *map route* from the *neural net that handles the road*.
 - **Ask:** "Which job is the map doing? Which job is the brain doing? Why can't either do it alone?" **Words:** *planner, controller, waypoint, hierarchy.*
 
-**10 · Memory (RNN)** — *a brain that remembers.*
+**11 · Memory (RNN)** — *a brain that remembers.*
 - **Big idea:** a plain brain decides from *senses now*, so in a dead-end it forgets it's been there and **loops**. A **recurrent** brain feeds its hidden layer **back into itself** (memory), so it remembers its trail and **backs out**. The only change is one feedback path.
 - **Ask:** "Same maze, same teacher — why does only the one with memory escape?" **Words:** *memory, recurrent, state.* (Pilot added an *outside* planner; the RNN grows memory *inside* the brain.)
 
-**11 · Perception** — *raw squares → meaning.*
+**12 · Perception** — *raw squares → meaning.*
 - **Big idea:** every other lesson **hands** the brain clean senses ("wall ahead = 1"). But where do those come from? A **perception net looks at the raw squares** the robot can see and *decides* "wall ahead? yes/no." Turning raw input into meaning is the part real robots spend the most effort on.
 - **On screen:** the robot's-eye view (raw squares ahead/left/right) feeding a little net that lights up the answer; tap **Next view** to try more.
 - **Ask:** "The robot just sees coloured squares. How does it get from *squares* to the word *'wall'*?" **Watch for:** in a self-driving car this is the hard 90% — cameras give pixels, a net turns them into "car / lane / person." **Words:** *perception, raw input, feature.*
 
-**13 · Backprop, step by step** — *learn one nudge at a time.*
-- **Big idea:** training isn't magic — it's a tiny loop: **LOOK** (the neuron guesses) → **SCORE** (how wrong) → **BLAME** (which weights to nudge, and why an OFF input *doesn't* change) → **NUDGE** (apply it; the guess gets closer). One example per "Next step", training a real neuron by hand.
-- **Ask:** "Why didn't *that* weight change?" *(its input was OFF — only inputs that were ON get the blame.)* "Did the guess get closer or further after the nudge?" **Watch for:** this is the *mechanism* under every "Teach"/Train button in the game. **Words:** *gradient, nudge, learning rate.* (Companion to CodeLab's *Debug* — same do-one-thing-and-look rhythm.)
-
-**12 · Data & labels** — *learn from examples.*
+**13 · Data & labels** — *learn from examples.*
 - **Big idea:** **Teach** doesn't invent the right move — it **copies an expert**. Each example = *what it saw* + *the right move* (a **label**). The loop: run → find where it **failed** → add examples there → train again. More and better examples = a smarter brain. **The data is the real work.**
 - **On screen:** an example counter ticks up as it learns; a new maze exposes situations it never saw; adding examples there fixes it.
 - **Ask:** "Where did the 'right answers' come from? What happens if the examples are bad or unfair?" **Watch for:** this is *imitation learning* and the *data engine* — and the doorway to a values conversation about biased data. **Words:** *data, label, example, imitation.*
