@@ -15,18 +15,27 @@ static const Rect R_NEXT = {6,   (int16_t)(BOTBAR_Y + 2), 170, 26};
 static const Rect R_RST  = {182, (int16_t)(BOTBAR_Y + 2), 64, 26};
 static const Rect R_BACK = {252, (int16_t)(BOTBAR_Y + 2), 62, 26};
 
-static const char* STATUS[4] = {
-  "this brain knows nothing yet.",
-  "learned maze A! now try a NEW maze.",
-  "new maze B: it already gets part way - it GENERALIZES!",
-  "fine-tuned: kept A's skills + mastered B (no over-fit).",
+// mode 0 = Transfer, mode 1 = Data & labels (same 4 phases, different framing).
+static const char* STATUS[2][4] = {
+  { "this brain knows nothing yet.",
+    "learned maze A! now try a NEW maze.",
+    "new maze B: it already gets part way - it GENERALIZES!",
+    "fine-tuned: kept A's skills + mastered B (no over-fit)." },
+  { "Teach copies an EXPERT. No examples yet.",
+    "learned from examples (each = saw + right move)!",
+    "new maze: spots it never saw - it stumbles.",
+    "added examples where it failed -> fixed (the data loop)!" },
 };
-static const char* BTN[4] = {"Learn maze A >", "New maze B! >", "Fine-tune on B >", "Reset"};
+static const char* BTN[2][4] = {
+  { "Learn maze A >", "New maze B! >", "Fine-tune on B >", "Reset" },
+  { "Show it the examples >", "Try a NEW maze >", "Add examples there >", "Reset" },
+};
 
-void TransferLessonScreen::begin() {
+void TransferLessonScreen::begin(int mode) {
+  _mode = mode;
   MazeGen::generate(_maze, 4u, 5);            // maze A
   _brain.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 7);
-  _phase = 0;
+  _phase = 0; _examples = 0;
   trace();
 }
 
@@ -56,8 +65,13 @@ void TransferLessonScreen::draw() {
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
-  label(g, 6, 3, "Transfer learning", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
-  label(g, 6, TOPBAR_H + 4, STATUS[_phase], _won ? C_GO : C_INK);
+  label(g, 6, 3, _mode == 1 ? "Data & labels" : "Transfer learning",
+        ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
+  if (_mode == 1) {
+    char ex[20]; snprintf(ex, sizeof(ex), "examples: %d", _examples);
+    label(g, SCREEN_W - 6, 6, ex, _examples > 0 ? C_GO : C_DIM, textdatum_t::top_right);
+  }
+  label(g, 6, TOPBAR_H + 4, STATUS[_mode][_phase], _won ? C_GO : C_INK);
 
   int tile, ox, oy; mazeGeom(tile, ox, oy);
   for (int r = 0; r < _maze.rows(); r++)
@@ -75,7 +89,7 @@ void TransferLessonScreen::draw() {
   }
 
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
-  button(g, R_NEXT, BTN[_phase], C_GO, C_PANEL);
+  button(g, R_NEXT, BTN[_mode][_phase], C_GO, C_PANEL);
   button(g, R_RST, "Reset", C_ACCENT, C_PANEL);
   button(g, R_BACK, "Back", C_INK, C_PANEL);
 }
@@ -84,18 +98,20 @@ app::Signal TransferLessonScreen::tick(uint32_t now, const hal::TouchPoint& tp) 
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
   if (R_NEXT.contains(tx, ty)) {
-    if (_phase == 0) {                       // learn maze A
+    if (_phase == 0) {                       // learn maze A / learn from the expert's examples
       distillSolver(_brain, _maze, false, 500); _phase = 1;
-    } else if (_phase == 1) {                // swap to a NEW maze, same brain (transfer)
+    } else if (_phase == 1) {                // swap to a NEW maze, same brain
       MazeGen::generate(_maze, 19u, 5); _phase = 2;
-    } else if (_phase == 2) {                // fine-tune on B
+    } else if (_phase == 2) {                // fine-tune / add examples where it failed
       distillSolver(_brain, _maze, false, 500); _phase = 3;
     } else {                                 // reset
-      begin(); draw(); return app::Signal::NONE;
+      begin(_mode); draw(); return app::Signal::NONE;
     }
-    trace(); hal::audio.blip(); draw();
+    trace();
+    if (_mode == 1 && (_phase == 1 || _phase == 3)) _examples += _won ? _pathLen : 8;
+    hal::audio.blip(); draw();
   } else if (R_RST.contains(tx, ty)) {
-    begin(); draw();
+    begin(_mode); draw();
   } else if (R_BACK.contains(tx, ty)) {
     return app::Signal::BACK;
   }
