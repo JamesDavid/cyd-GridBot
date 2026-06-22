@@ -18,9 +18,9 @@ static const View VIEWS[4] = {
 static const int NUM_VIEWS = 4;
 
 static const char* STATUS[3] = {
-  "The brain is HANDED 'wall ahead = 1'. But what LOOKS at the world?",
-  "A perception net reads the raw squares -> decides: wall ahead?",
-  "PERCEPTION = raw squares into meaning. The hard part of real robots.",
+  "Handed clean senses like 'wall ahead=1'. From what?",
+  "A net reads the raw squares -> wall ahead? yes/no.",
+  "PERCEPTION: raw squares into meaning. The hard 90%.",
 };
 
 static const Rect R_NEXT = {6,   (int16_t)(BOTBAR_Y + 2), 150, 26};

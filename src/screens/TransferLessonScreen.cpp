@@ -19,12 +19,12 @@ static const Rect R_BACK = {252, (int16_t)(BOTBAR_Y + 2), 62, 26};
 static const char* STATUS[2][4] = {
   { "this brain knows nothing yet.",
     "learned maze A! now try a NEW maze.",
-    "new maze B: it already gets part way - it GENERALIZES!",
-    "fine-tuned: kept A's skills + mastered B (no over-fit)." },
+    "new maze B: gets part way already - it GENERALIZES!",
+    "fine-tuned: kept A + mastered B (no over-fitting)." },
   { "Teach copies an EXPERT. No examples yet.",
-    "learned from examples (each = saw + right move)!",
+    "learned from examples (saw + the right move)!",
     "new maze: spots it never saw - it stumbles.",
-    "added examples where it failed -> fixed (the data loop)!" },
+    "added examples where it failed -> fixed! (data loop)" },
 };
 static const char* BTN[2][4] = {
   { "Learn maze A >", "New maze B! >", "Fine-tune on B >", "Reset" },

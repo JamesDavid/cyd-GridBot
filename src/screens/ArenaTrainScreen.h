@@ -34,9 +34,24 @@ class ArenaTrainScreen : public app::IScreen {
   gb::Net _brain;
   uint8_t _path[64];
   int _pathLen = 0;
+  uint8_t _oppPath[64];      // the opponent's route when it runs ITS code (shown in red)
+  int _oppLen = 0;
   int _oppIdx = 0;            // which roster opponent we spar against
   std::string _oppName;      // its display name
   bool _beatsAI = false, _taught = false, _saved = false;
+
+  // "watch it learn" view: the Brain-Cam network graph + an arena mini-map (you vs the
+  // opponent), so a kid sees the opponent, their path, AND the network all update together.
+  bool _netView = false;
+  bool _animating = false;    // Evolve animates generation-by-generation
+  int  _animLeft = 0;         // generations left in the current animation
+  uint32_t _animAt = 0;       // last animation-step time (throttle)
+  float _in[gb::SENSOR_COUNT_FOR_BRAIN] = {0};
+  float _hid[gb::NET_MAX_HID] = {0};
+  float _out[gb::NET_MAX_OUT] = {0};
+  int   _action = 0;
+  void inferBrain();          // activations of the working brain at its start pose
+  void drawNet();             // network graph + arena mini-map + status
   app::TapDetector _tap;
 };
 
