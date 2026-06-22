@@ -34,7 +34,9 @@ static constexpr int ROW_Y0 = BAND_Y + 22, ROW_H = 24;
 // One BIG button per block control (the old +/- were too small to tap): the repeat
 // button cycles the count 2->3->4->5->2; the cond button cycles the sense condition.
 static inline Rect repCycleRect(int y) { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 80, (int16_t)(ROW_H - 2)}; }
-static inline Rect condRect(int y)     { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 80, (int16_t)(ROW_H - 2)}; }
+// A sense block shows two tappable chips: the keyword (if<->until) then the condition.
+static inline Rect kwRect(int y)   { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 34, (int16_t)(ROW_H - 2)}; }  // 228..262
+static inline Rect condRect(int y) { return {(int16_t)(LIST_X + LIST_W - 56), (int16_t)(y + 1), 44, (int16_t)(ROW_H - 2)}; }  // 264..308
 static const Rect R_PAUSE = {238, 0, 82, 22};   // big back button in the status bar
 static const Rect R_TOGGLE = {6, (int16_t)(BOTBAR_Y + 2), 156, 26};  // right edge aligns with the RUN/pad above
 static const Rect R_RUNBAR = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
@@ -616,7 +618,7 @@ void GameScreen::drawProgramList() {
       char rl[14]; snprintf(rl, sizeof(rl), "repeat %d", nd->count);
       button(g, repCycleRect(y), rl, C_LOOP, C_PANEL_HI);  // one big tap: cycles 2-5
     } else if (sel && (nd->type == N_IF || nd->type == N_REPEAT_UNTIL)) {
-      label(g, gx + 18, y + 6, nd->type == N_IF ? "if" : "until", C_SENSE);
+      button(g, kwRect(y), nd->type == N_IF ? "if" : "until", C_SENSE, C_PANEL_HI);
       button(g, condRect(y), condName(nd->cond), C_SENSE, C_PANEL_HI);
     } else if (sel && nd->type == N_CALL) {
       char cl[6]; snprintf(cl, sizeof(cl), "F%d", nd->func);
@@ -762,6 +764,10 @@ void GameScreen::handleListTap(int x, int y) {
             hal::audio.blip(); drawProgramList(); return;
           }
         } else if (sn->type == N_IF || sn->type == N_REPEAT_UNTIL) {
+          if (kwRect(yy).contains(x, y)) {         // toggle keyword: until (loop) <-> if (once)
+            sn->type = (sn->type == N_REPEAT_UNTIL) ? N_IF : N_REPEAT_UNTIL;
+            hal::audio.blip(); drawProgramList(); return;
+          }
           if (condRect(yy).contains(x, y)) {       // wall -> pit -> wall/pit -> goal -> wall
             sn->cond = (sn->cond == WALL_AHEAD) ? PIT_AHEAD
                      : (sn->cond == PIT_AHEAD) ? BLOCKED_AHEAD
