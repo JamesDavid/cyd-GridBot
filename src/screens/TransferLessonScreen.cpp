@@ -87,6 +87,9 @@ void TransferLessonScreen::draw() {
     int r = _path[i] / _maze.cols(), c = _path[i] % _maze.cols();
     g.fillCircle(ox + c * tile + tile / 2, oy + r * tile + tile / 2, tile / 6 + 1, _won ? C_GO : C_MOVE);
   }
+  if (_mode == 1)  // you can be the labeller: tag your own examples and train to them
+    label(g, SCREEN_W / 2, BOTBAR_Y - 9, "tag your own: 'train brain' -> Draw the path",
+          C_DIM, textdatum_t::bottom_center);
 
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_NEXT, BTN[_mode][_phase], C_GO, C_PANEL);

@@ -137,12 +137,13 @@ void RnnLessonScreen::draw() {
     int y = BAND_Y + 26;
     label(g, 14, y, "FEEDFORWARD brain", C_MOVE); y += 18;
     label(g, 22, y, "action = f(senses NOW)", C_DIM); y += 16;
-    label(g, 22, y, "same view -> same move -> it can loop", C_DIM); y += 26;
+    label(g, 22, y, "same view -> same move -> it can loop", C_DIM); y += 22;
     label(g, 14, y, "RECURRENT brain (RNN)", C_ACCENT); y += 18;
     label(g, 22, y, "action = f(senses NOW + memory)", C_DIM); y += 16;
-    label(g, 22, y, "remembers its trail -> escapes dead-ends", C_DIM); y += 26;
+    label(g, 22, y, "remembers its trail -> escapes dead-ends", C_DIM); y += 22;
     label(g, 14, y, "Pilot used an OUTSIDE planner; the RNN", C_INK); y += 16;
-    label(g, 14, y, "grows the memory INSIDE the brain.", C_GO);
+    label(g, 14, y, "grows the memory INSIDE the brain.", C_GO); y += 18;
+    label(g, 14, y, "real AIs: LSTM & Transformers (chatbots).", C_DIM);
   } else {
     int tile, ox, oy; mazeGeom(tile, ox, oy);
     for (int r = 0; r < _maze.rows(); r++)
