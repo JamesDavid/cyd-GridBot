@@ -99,16 +99,17 @@ void BackpropLessonScreen::draw() {
   // ---------- narration (changes per sub-step) ----------
   int ny = 134;
   g.fillRoundRect(4, ny - 2, SCREEN_W - 8, 42, 5, C_PANEL);
-  char l1[44] = "", l2[44] = "";
+  char l1[52] = "", l2[52] = "";
+  bool low = err > 0;  // guessed too low -> output must go UP (and vice-versa)
   switch (_step) {
     case 0:  snprintf(l1, sizeof(l1), "LOOK: with wall=%d pit=%d, it guesses %.2f.", x0, x1, pred);
              snprintf(l2, sizeof(l2), "(we want %d.)", t); break;
     case 1:  snprintf(l1, sizeof(l1), "SCORE: wanted %d, guessed %.2f.", t, pred);
-             snprintf(l2, sizeof(l2), "So it is wrong by %+.2f.", err); break;
-    case 2:  snprintf(l1, sizeof(l1), "BLAME ON inputs (OFF inputs: no change):");
+             snprintf(l2, sizeof(l2), "wrong by %+.2f  (guessed too %s).", err, low ? "low" : "high"); break;
+    case 2:  snprintf(l1, sizeof(l1), "BLAME: too %s -> %s the ON inputs' weights:", low ? "low" : "high", low ? "RAISE" : "LOWER");
              snprintf(l2, sizeof(l2), "w0 %+.2f   w1 %+.2f   bias %+.2f", dw0, dw1, db); break;
-    default: snprintf(l1, sizeof(l1), "NUDGE: new guess = %.2f (closer to %d!).", pred, t);
-             snprintf(l2, sizeof(l2), "Watch the error bar shrink as it learns."); break;
+    default: snprintf(l1, sizeof(l1), "NUDGE: moved each that way (a little) -> %.2f.", pred);
+             snprintf(l2, sizeof(l2), "closer to %d! small steps so it won't overshoot.", t); break;
   }
   label(g, 12, ny + 4, l1, C_INK);
   label(g, 12, ny + 22, l2, _step == 3 ? C_GO : C_ACCENT);
@@ -130,6 +131,7 @@ app::Signal BackpropLessonScreen::tick(uint32_t now, const hal::TouchPoint& tp) 
         float xin[2] = {(float)EX[_ex][0], (float)EX[_ex][1]};
         _p.trainStep(xin, (float)EX[_ex][2]);
         if (_errN < 48) _err[_errN++] = meanErr();
+        else { for (int i = 1; i < 48; i++) _err[i - 1] = _err[i]; _err[47] = meanErr(); }  // scroll
       }
     } else {
       _step = 0; _ex = (_ex + 1) % 4;
