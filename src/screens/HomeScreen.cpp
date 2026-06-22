@@ -12,7 +12,8 @@ static Rect tileRect(int i) {
   int col = i % 2, row = i / 2;
   return {(int16_t)(8 + col * 156), (int16_t)(44 + row * 52), 148, 48};
 }
-static const Rect R_PLAYERS = {6,   (int16_t)(BOTBAR_Y + 2), 130, 26};
+static const Rect R_PLAYERS = {6,   (int16_t)(BOTBAR_Y + 2), 96, 26};
+static const Rect R_MYBOTS  = {106, (int16_t)(BOTBAR_Y + 2), 104, 26};
 static const Rect R_STATS   = {214, (int16_t)(BOTBAR_Y + 2), 100, 26};
 
 void HomeScreen::enter() { draw(); }
@@ -59,6 +60,7 @@ void HomeScreen::draw() {
 
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_PLAYERS, "< Players", C_INK, C_PANEL);
+  button(g, R_MYBOTS, "My Bots", ui::rgb(120, 230, 245), C_PANEL);
   button(g, R_STATS, "Stats >", C_INK, C_PANEL);
 }
 
@@ -76,6 +78,7 @@ app::Signal HomeScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   if (tileRect(4).contains(tx, ty)) { hal::audio.blip(); return app::Signal::GOTO_BADGES; }
   if (tileRect(5).contains(tx, ty)) { hal::audio.blip(); return app::Signal::GOTO_SHOP; }
   if (R_PLAYERS.contains(tx, ty)) return app::Signal::BACK;        // -> profile select
+  if (R_MYBOTS.contains(tx, ty)) { hal::audio.blip(); return app::Signal::GOTO_MYBOTS; }
   if (R_STATS.contains(tx, ty)) return app::Signal::GOTO_STATS;
   return app::Signal::NONE;
 }

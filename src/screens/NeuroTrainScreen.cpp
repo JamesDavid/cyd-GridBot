@@ -412,6 +412,7 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       e.name = nm;
       e.program.brains.push_back(_brain);
       Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(0)); e.program.main.push_back(loop);
+      e.source = LIB_NEURO; e.srcLevel = (uint16_t)_profile->level;
       _profile->library.push_back(e);
       rebuildBrainLibs();  // the new copy is now loadable as a base
       _savedCopy = true; hal::audio.badge(); draw();

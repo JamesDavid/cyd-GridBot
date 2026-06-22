@@ -92,6 +92,8 @@ static void profileToJson(const gb::Profile& p, JsonObject o) {
     for (const auto& e : p.library) {
       JsonObject le = lib.add<JsonObject>();
       le["name"] = e.name;
+      le["src"] = (int)e.source;
+      if (e.srcLevel) le["lvl"] = (int)e.srcLevel;
       gb::programToJson(e.program, le["program"].to<JsonObject>());
     }
   }
@@ -150,6 +152,8 @@ static void profileFromJson(JsonObjectConst o, gb::Profile& p) {
     for (JsonObjectConst le : o["library"].as<JsonArrayConst>()) {
       gb::LibEntry e;
       e.name = (const char*)(le["name"] | "");
+      e.source = (uint8_t)(int)(le["src"] | 0);
+      e.srcLevel = (uint16_t)(int)(le["lvl"] | 0);
       if (le["program"].is<JsonObjectConst>())
         gb::programFromJson(le["program"].as<JsonObjectConst>(), e.program);
       p.library.push_back(e);

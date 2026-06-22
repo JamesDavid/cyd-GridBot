@@ -232,14 +232,35 @@ void App::tick(uint32_t now) {
       else if (s == Signal::GOTO_BADGES) { _subFromHome = true; _badges.begin(&_profile); _badges.enter(); _state = State::BADGES; }
       else if (s == Signal::GOTO_SHOP) { _subFromHome = true; _shop.begin(&_profile); _shop.enter(); _state = State::SHOP; }
       else if (s == Signal::GOTO_STATS) { _stats.begin(&_profile); _stats.enter(); _state = State::STATS; }
+      else if (s == Signal::GOTO_MYBOTS) { _library.begin(&_profile); _library.enter(); _state = State::LIBRARY; }
       else if (s == Signal::BACK) { saveProfile(); gotoSelect(); }
+      break;
+    }
+    case State::LIBRARY: {
+      Signal s = _library.tick(now, tp);
+      if (s == Signal::BACK) { saveProfile(); gotoHome(); }
+      else if (s == Signal::RENAME_LIB) {
+        _renameLibIdx = _library.renameIdx();
+        if (_renameLibIdx >= 0 && _renameLibIdx < (int)_profile.library.size()) {
+          _create.beginRename(_profile.library[_renameLibIdx].name);
+          _create.enter(); _state = State::CREATE;
+        }
+      }
       break;
     }
     case State::CREATE: {
       Signal s = _create.tick(now, tp);
-      if (s == Signal::BACK) { gotoSelect(); break; }   // cancel new/edit -> profile select
+      if (s == Signal::BACK) {  // cancel
+        if (_renameLibIdx >= 0) { _renameLibIdx = -1; _library.begin(&_profile); _library.enter(); _state = State::LIBRARY; }
+        else gotoSelect();
+        break;
+      }
       if (s == Signal::CREATED) {
-        if (_create.isEdit()) {
+        if (_renameLibIdx >= 0) {  // renaming a library bot, not a profile
+          if (_renameLibIdx < (int)_profile.library.size()) _profile.library[_renameLibIdx].name = _create.name();
+          _renameLibIdx = -1; saveProfile();
+          _library.begin(&_profile); _library.enter(); _state = State::LIBRARY;
+        } else if (_create.isEdit()) {
           // tweak name/avatar in place — keep all stats/progress
           _profile.name = _create.name();
           _profile.avatar = _create.avatar();

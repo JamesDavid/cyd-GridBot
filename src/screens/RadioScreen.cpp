@@ -98,6 +98,7 @@ void RadioScreen::onReady() {
       gb::LibEntry e;
       e.name = std::string(tc.name.c_str()) + "'s bot";
       e.program = _theirs;
+      e.source = gb::LIB_RADIO;
       _profile->library.push_back(e);
     }
     _phase = Phase::TRADED;

@@ -45,9 +45,14 @@ struct Stats {
   uint8_t  gauntletBest = 0;    // most consecutive campaign levels a frozen brain cleared
 };
 
+// Where a saved bot came from (shown in the library / "My Bots" manager).
+enum LibSource : uint8_t { LIB_UNKNOWN, LIB_CODE, LIB_NEURO, LIB_BRAINCAM, LIB_ARENA, LIB_RADIO };
+
 struct LibEntry {
   std::string name;
   Program program;
+  uint8_t source = LIB_UNKNOWN;  // code editor / neuro trainer / Brain Cam / arena / radio
+  uint16_t srcLevel = 0;         // campaign level it was saved from (code editor); 0 = n/a
 };
 
 struct Profile {

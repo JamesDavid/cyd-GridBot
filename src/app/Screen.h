@@ -26,6 +26,8 @@ enum class Signal : uint8_t {
   GOTO_ARENA,      // open the Arena (from the Home hub)
   GOTO_LEARN,      // open the Lessons menu / learning area (from the Home hub)
   GOTO_PLAY,       // play the campaign at the current level (from the Home hub)
+  GOTO_MYBOTS,     // open the library manager ("My Bots") from the Home hub
+  RENAME_LIB,      // rename a library entry (My Bots -> keyboard -> back)
 };
 
 class IScreen {

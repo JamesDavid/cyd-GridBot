@@ -73,6 +73,7 @@ void BrainViewScreen::saveToLibrary() {
   if (_useRnn) { e.program.rbrains[idx] = rnn(); nb = Node::rnnBrain(idx); }  // the trained memory brain
   else         { e.program.brains[idx]  = ff(); }                            // the trained feedforward brain
   Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(nb); e.program.main.push_back(loop);
+  e.source = LIB_BRAINCAM;
   _profile->library.push_back(e);
   if (_profile->stats.fightersSaved < 0xFFFF) _profile->stats.fightersSaved++;  // counts toward Battle-Ready
   _saved = true; hal::audio.badge();

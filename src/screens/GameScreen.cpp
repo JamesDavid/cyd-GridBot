@@ -942,6 +942,7 @@ void GameScreen::saveToLibrary() {
   snprintf(nm, sizeof(nm), "Lib %d", (int)_profile->library.size() + 1);
   e.name = nm;
   e.program = _prog;
+  e.source = gb::LIB_CODE; e.srcLevel = (uint16_t)_profile->level;
   _profile->library.push_back(e);
   drawProgramList();
   toast("saved to library", C_GO);
