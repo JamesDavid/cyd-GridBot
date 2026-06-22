@@ -16,7 +16,7 @@ static const Rect R_RST  = {162, (int16_t)(BOTBAR_Y + 2), 76,  26};
 static const Rect R_BACK = {244, (int16_t)(BOTBAR_Y + 2), 70,  26};
 
 void BackpropLessonScreen::begin() {
-  _p.nIn = 2; _p.lr = 0.6f; _p.reset(7);
+  _p.nIn = 2; _p.lr = 0.5f; _p.reset(7);   // step = 0.5 (clean numbers for the formula)
   _ex = -1; _step = 0; _errN = 0;   // start on the intro slide
 }
 void BackpropLessonScreen::enter() { draw(); }
@@ -59,9 +59,11 @@ void BackpropLessonScreen::draw() {
   int x0 = EX[_ex][0], x1 = EX[_ex][1], t = EX[_ex][2];
   float xin[2] = {(float)x0, (float)x1};
   float pred = _p.forward(xin);
-  float err = (float)t - pred;                          // friendly "off by"
-  float dz = (pred - (float)t) * pred * (1.0f - pred);  // same chain rule as trainStep
-  float dw0 = -_p.lr * dz * x0, dw1 = -_p.lr * dz * x1, db = -_p.lr * dz;
+  // The teachable rule: change = step x error x input. (OFF input -> x0 -> no change;
+  // the bias is an always-on input, x1.) We apply exactly this in tick(), so the numbers match.
+  float err = (float)t - pred;                          // error = want - guess
+  float dw0 = _p.lr * err * x0, dw1 = _p.lr * err * x1, db = _p.lr * err;
+  float sum = x0 * _p.w[0] + x1 * _p.w[1] + _p.b;        // forward: weighted sum, then squash
 
   // ---------- neuron diagram: inputs (name + value) -> output (guess + desired) ----------
   int IX = 54, IY0 = 42, IY1 = 72, OX = 182, OY = 54;
@@ -103,11 +105,11 @@ void BackpropLessonScreen::draw() {
   char l1[52] = "", l2[52] = "";
   bool low = err > 0;  // guessed too low -> output must go UP (and vice-versa)
   switch (_step) {
-    case 0:  snprintf(l1, sizeof(l1), "LOOK: with wall=%d pit=%d, it guesses %.2f.", x0, x1, pred);
-             snprintf(l2, sizeof(l2), "(we want %d.)", t); break;
+    case 0:  snprintf(l1, sizeof(l1), "LOOK: wall*w0 + pit*w1 + bias = %.2f", sum);
+             snprintf(l2, sizeof(l2), "squash to 0..1 -> guess %.2f  (want %d)", pred, t); break;
     case 1:  snprintf(l1, sizeof(l1), "SCORE: wanted %d, guessed %.2f.", t, pred);
-             snprintf(l2, sizeof(l2), "wrong by %+.2f  (guessed too %s).", err, low ? "low" : "high"); break;
-    case 2:  snprintf(l1, sizeof(l1), "BLAME: too %s -> %s the ON inputs' weights:", low ? "low" : "high", low ? "RAISE" : "LOWER");
+             snprintf(l2, sizeof(l2), "error = want - guess = %+.2f  (too %s).", err, low ? "low" : "high"); break;
+    case 2:  snprintf(l1, sizeof(l1), "BLAME: change = step(0.5) x error(%+.2f) x input", err);
              snprintf(l2, sizeof(l2), "w0 %+.2f   w1 %+.2f   bias %+.2f", dw0, dw1, db); break;
     default: snprintf(l1, sizeof(l1), "NUDGE: moved each that way (a little) -> %.2f.", pred);
              snprintf(l2, sizeof(l2), "closer to %d! small steps so it won't overshoot.", t); break;
@@ -128,9 +130,12 @@ app::Signal BackpropLessonScreen::tick(uint32_t now, const hal::TouchPoint& tp) 
     if (_ex < 0) { _ex = 0; _step = 0; }      // leave the intro slide
     else if (_step < 3) {
       _step++;
-      if (_step == 3) {  // entering NUDGE: apply this example's gradient step + log the error
+      if (_step == 3) {  // entering NUDGE: apply change = step x error x input, + log the error
         float xin[2] = {(float)EX[_ex][0], (float)EX[_ex][1]};
-        _p.trainStep(xin, (float)EX[_ex][2]);
+        float e = (float)EX[_ex][2] - _p.forward(xin);
+        _p.w[0] += _p.lr * e * xin[0];
+        _p.w[1] += _p.lr * e * xin[1];
+        _p.b    += _p.lr * e;
         if (_errN < 48) _err[_errN++] = meanErr();
         else { for (int i = 1; i < 48; i++) _err[i - 1] = _err[i]; _err[47] = meanErr(); }  // scroll
       }
