@@ -175,8 +175,8 @@ Condensed pages. Same shape as the sample: **Big idea · On screen · Ask · Wat
 - **Ask:** "Three outputs light up a bit. How does it decide which one to actually do?" **Words:** *multi-class, output, argmax.*
 
 **3 · Hidden layer** — *what one neuron can't.*
-- **Big idea:** some rules (the classic **XOR**: "on if *exactly one* of A, B") are impossible for a single neuron — you need a **hidden layer** in between. Watch one neuron fail and a network with a hidden layer succeed.
-- **Ask:** "It literally can't learn this with one neuron, no matter how long. Why might 'more layers' help?" **Watch for:** this is *the* reason deep learning is "deep." **Words:** *hidden layer, XOR, deep.*
+- **Big idea:** some rules are impossible for a single neuron — you need a **hidden layer** in between. The lesson uses a real one: **"turn at a corner" — turn when *exactly one* side (left **or** right) is open**, but go straight in a corridor (both walls) *or* a junction (both open). One neuron can't learn that; a hidden layer can. *(This is the classic **XOR** problem — the same shape — but framed as something the bot actually does.)*
+- **Ask:** "It literally can't learn this with one neuron, no matter how long. Why might 'more layers' help?" **Watch for:** this is *the* reason deep learning is "deep." **Words:** *hidden layer, non-linear, deep.*
 > **For the classroom:** the most rigorous lesson — it *proves* a limitation, then *removes* it. AI4K12 *Learning / Representation*.
 
 **4 · Robot brain** — *meet its senses.*

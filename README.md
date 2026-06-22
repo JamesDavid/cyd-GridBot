@@ -202,7 +202,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![Learning XOR with a hidden layer](docs/img/neuro-xor.png) |
 |:--|
-| **Why a hidden layer?** The same lesson has an **XOR** mode over two abstract inputs **A, B** — the classic problem a single neuron *provably* cannot learn (the classes aren't linearly separable). Add a hidden layer and watch the error finally collapse to zero: a hands-on proof of *why* deeper networks exist. |
+| **Why a hidden layer?** A real bot decision: **turn at a corner** — turn when *exactly one* side is open, but go straight in a corridor (both walls) or a junction (both open). A single neuron *provably* cannot learn this (it's the classic **XOR** — the classes aren't linearly separable); add a hidden layer and watch the loss finally collapse to zero. A hands-on proof of *why* deeper networks exist, framed as something the robot actually does. |
 
 | ![Meet your robot's brain](docs/img/robot-brain.png) |
 |:--|
