@@ -36,7 +36,74 @@ void TransferLessonScreen::begin(int mode) {
   MazeGen::generate(_maze, 4u, 5);            // maze A
   _brain.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 7);
   _phase = 0; _examples = 0;
-  trace();
+  _drawTrained = false; _pathLen = 0; _won = false;
+  if (_mode == 1) seedDrawStart();            // Data: start tagging from the robot
+  else trace();
+}
+
+void TransferLessonScreen::seedDrawStart() {
+  Pose p = _maze.startPose();
+  _drawLen = 0;
+  _drawPath[_drawLen++] = (uint8_t)(p.row * _maze.cols() + p.col);
+}
+
+bool TransferLessonScreen::tileAtPixel(int x, int y, int& r, int& c) const {
+  int tile, ox, oy; mazeGeom(tile, ox, oy);
+  if (x < ox || y < oy) return false;
+  c = (x - ox) / tile; r = (y - oy) / tile;
+  return r >= 0 && r < _maze.rows() && c >= 0 && c < _maze.cols();
+}
+
+void TransferLessonScreen::handleDrawTap(int r, int c) {   // append/undo a tagged tile (no diagonals)
+  int t = r * _maze.cols() + c;
+  if (_drawLen == 0) seedDrawStart();
+  if (_drawPath[_drawLen - 1] == t) { if (_drawLen > 1) { _drawLen--; hal::audio.blip(); draw(); } return; }
+  int last = _drawPath[_drawLen - 1], lr = last / _maze.cols(), lc = last % _maze.cols();
+  int dr = r - lr, dc = c - lc;
+  if (dr != 0 && dc != 0) { hal::audio.fail(); return; }
+  int dist = (dr ? (dr < 0 ? -dr : dr) : (dc < 0 ? -dc : dc));
+  Tile dest = _maze.at(r, c);
+  bool ok = false;
+  if (dist == 1) ok = (dest != WALL && dest != PIT);
+  else if (dist == 2) { Tile mid = _maze.at(lr + dr / 2, lc + dc / 2); ok = (mid != WALL && dest != WALL && dest != PIT); }
+  if (!ok) { hal::audio.fail(); return; }
+  if (_drawLen < (int)sizeof(_drawPath)) { _drawPath[_drawLen++] = (uint8_t)t; hal::audio.blip(); draw(); }
+}
+
+void TransferLessonScreen::drawData() {
+  auto& g = hal::display.gfx();
+  g.fillScreen(C_BG);
+  g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
+  label(g, 6, 3, "Data & labels", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
+  label(g, 6, TOPBAR_H + 4,
+        _drawTrained ? "Trained! the brain copied your tags (green)."
+                     : "Tag the path: tap tiles to the goal, then Train.",
+        _drawTrained ? C_GO : C_INK);
+
+  int tile, ox, oy; mazeGeom(tile, ox, oy);
+  for (int r = 0; r < _maze.rows(); r++)
+    for (int c = 0; c < _maze.cols(); c++) {
+      int x = ox + c * tile, y = oy + r * tile;
+      Tile t = _maze.at(r, c);
+      uint16_t col = ((r + c) & 1) ? C_FLOOR : C_FLOOR2;
+      if (t == WALL) col = C_WALL; else if (t == PIT) col = C_BG;
+      g.fillRect(x, y, tile - 1, tile - 1, col);
+      if (_maze.isGoal(r, c)) assets::drawGoalToken(g, x + tile / 2, y + tile / 2, tile, 0);
+    }
+  for (int i = 0; i < _drawLen; i++) {  // your tags (yellow)
+    int r = _drawPath[i] / _maze.cols(), c = _drawPath[i] % _maze.cols();
+    g.fillCircle(ox + c * tile + tile / 2, oy + r * tile + tile / 2, tile / 6 + 1, ui::rgb(255, 210, 60));
+  }
+  if (_drawTrained)
+    for (int i = 0; i < _pathLen; i++) {  // the brain's path after training (green)
+      int r = _path[i] / _maze.cols(), c = _path[i] % _maze.cols();
+      g.fillCircle(ox + c * tile + tile / 2, oy + r * tile + tile / 2, tile / 7, C_GO);
+    }
+
+  g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
+  button(g, R_NEXT, "Train to my tags >", C_GO, C_PANEL);
+  button(g, R_RST, "Clear", C_ACCENT, C_PANEL);
+  button(g, R_BACK, "Back", C_INK, C_PANEL);
 }
 
 void TransferLessonScreen::enter() { draw(); }
@@ -62,6 +129,7 @@ void TransferLessonScreen::mazeGeom(int& tile, int& ox, int& oy) const {
 }
 
 void TransferLessonScreen::draw() {
+  if (_mode == 1) { drawData(); return; }   // Data lesson = tag-a-path-and-train
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
@@ -87,10 +155,6 @@ void TransferLessonScreen::draw() {
     int r = _path[i] / _maze.cols(), c = _path[i] % _maze.cols();
     g.fillCircle(ox + c * tile + tile / 2, oy + r * tile + tile / 2, tile / 6 + 1, _won ? C_GO : C_MOVE);
   }
-  if (_mode == 1)  // you can be the labeller: tag your own examples and train to them
-    label(g, SCREEN_W / 2, BOTBAR_Y - 9, "tag your own: 'train brain' -> Draw the path",
-          C_DIM, textdatum_t::bottom_center);
-
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_NEXT, BTN[_mode][_phase], C_GO, C_PANEL);
   button(g, R_RST, "Reset", C_ACCENT, C_PANEL);
@@ -100,6 +164,21 @@ void TransferLessonScreen::draw() {
 app::Signal TransferLessonScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
+  if (_mode == 1) {  // Data lesson: tag a path, then train the brain to copy it
+    if (R_NEXT.contains(tx, ty)) {
+      if (_drawLen > 1) { distillPath(_brain, _maze, _drawPath, _drawLen, 700); trace(); _drawTrained = true; hal::audio.badge(); }
+      else hal::audio.fail();
+      draw();
+    } else if (R_RST.contains(tx, ty)) {
+      seedDrawStart(); _drawTrained = false; _pathLen = 0; hal::audio.blip(); draw();
+    } else if (R_BACK.contains(tx, ty)) {
+      return app::Signal::BACK;
+    } else {
+      int r, c;
+      if (!_drawTrained && tileAtPixel(tx, ty, r, c)) handleDrawTap(r, c);
+    }
+    return app::Signal::NONE;
+  }
   if (R_NEXT.contains(tx, ty)) {
     if (_phase == 0) {                       // learn maze A / learn from the expert's examples
       distillSolver(_brain, _maze, false, 500); _phase = 1;
