@@ -2,6 +2,7 @@
 #include "hal/Audio.h"
 #include "assets/Assets.h"
 #include "game/MazeGen.h"
+#include "game/Distill.h"
 #include "screens/ProgramEditor.h"
 
 using namespace ui;
@@ -18,6 +19,7 @@ static Pose pose(int r, int c, Facing f) { Pose p; p.row = (int8_t)r; p.col = (i
 
 void CodeLessonScreen::setup(int lesson) {
   _prog.clear();
+  _isDebug = (lesson == 6);
   switch (lesson) {
     case 0:  // Move
       _title = "Move"; _concept = "Forward steps the way the robot faces. Turn spins it.";
@@ -54,13 +56,48 @@ void CodeLessonScreen::setup(int lesson) {
       _prog.main.push_back(Node::command(CMD_JUMP));
       _prog.main.push_back(Node::command(CMD_FWD));
       break;
+    case 5:  // Brain — neurosymbolic: code for the easy rule, a trained brain for the rest
+      _title = "Brain"; _concept = "Mix both: a rule jumps the pit, a brain drives.";
+      _maze.reset(1, 6); _maze.fill(FLOOR); _maze.set(0, 3, PIT);
+      _maze.setStart(pose(0, 0, EAST)); _maze.setGoal(0, 5);
+      {
+        // Train a tiny brain on a clear (no-pit) corridor so it just learns to DRIVE; the
+        // code handles the pit with an explicit rule. Two kinds of "smarts" in one program.
+        Maze tm; tm.reset(1, 6); tm.fill(FLOOR);
+        tm.setStart(pose(0, 0, EAST)); tm.setGoal(0, 5);
+        Net brain; brain.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 7);
+        distillSolver(brain, tm, false, 700);
+        _prog.brains.push_back(brain);
+        Node loop = Node::repeatUntil(AT_GOAL);
+        Node iff = Node::ifCond(PIT_AHEAD); iff.body.push_back(Node::command(CMD_JUMP));
+        loop.body.push_back(iff);
+        loop.body.push_back(Node::neuro(0));
+        _prog.main.push_back(loop);
+      }
+      break;
+    case 6:  // Debug — a broken program + a one-tap fix; teaches read->hypothesize->fix-one
+      _maze.reset(3, 3); _maze.fill(FLOOR);
+      _maze.setStart(pose(2, 0, EAST)); _maze.setGoal(0, 2);
+      _title = "Debug";
+      _prog.main.push_back(Node::command(CMD_FWD));
+      _prog.main.push_back(Node::command(CMD_FWD));
+      if (!_fixed) {
+        _concept = "Bug: it turns the WRONG way, misses the goal. Tap Fix it.";
+        _prog.main.push_back(Node::command(CMD_TURN_R));   // the bug: should be a LEFT turn
+      } else {
+        _concept = "Fixed! One change: turn R -> L. Now tap Run.";
+        _prog.main.push_back(Node::command(CMD_TURN_L));
+      }
+      _prog.main.push_back(Node::command(CMD_FWD));
+      _prog.main.push_back(Node::command(CMD_FWD));
+      break;
   }
   _it.load(&_prog, &_maze, _maze.startPose());
   _drawn = _maze.startPose();
   _running = false; _done = false;
 }
 
-void CodeLessonScreen::begin(int lesson) { _lesson = lesson; setup(lesson); }
+void CodeLessonScreen::begin(int lesson) { _lesson = lesson; _fixed = false; setup(lesson); }
 void CodeLessonScreen::enter() { draw(); }
 
 void CodeLessonScreen::mazeGeom(int& tile, int& ox, int& oy) const {
@@ -111,7 +148,8 @@ void CodeLessonScreen::draw() {
 
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_RUN, _running ? "..." : "Run >", C_GO, C_PANEL);
-  button(g, R_RST, "Reset", C_ACCENT, C_PANEL);
+  if (_isDebug && !_fixed) button(g, R_RST, "Fix it >", ui::rgb(120, 230, 245), C_PANEL);
+  else                     button(g, R_RST, "Reset", C_ACCENT, C_PANEL);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
   if (_done) {
     bool won = _it.lastOutcome() == OUT_WIN;
@@ -136,8 +174,9 @@ app::Signal CodeLessonScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     _it.load(&_prog, &_maze, _maze.startPose());
     _running = true; _done = false; _last = now; draw();
   } else if (R_RST.contains(tx, ty)) {
-    _it.load(&_prog, &_maze, _maze.startPose());
-    _running = false; _done = false; draw();
+    if (_isDebug && !_fixed) { _fixed = true; setup(_lesson); }  // apply the one-line fix
+    else { _it.load(&_prog, &_maze, _maze.startPose()); _running = false; _done = false; }
+    draw();
   } else if (R_BACK.contains(tx, ty)) {
     return app::Signal::BACK;
   }

@@ -74,8 +74,9 @@ void QLessonScreen::draw() {
   button(g, R_LEARN, "Learn x50", C_GO, C_PANEL);
   button(g, R_RESET, "Reset", C_ACCENT, C_PANEL);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
-  if (_solved) label(g, SCREEN_W / 2, BOTBAR_Y - 10, "it learned the way!", C_GO,
-                     textdatum_t::bottom_center);
+  label(g, SCREEN_W / 2, BOTBAR_Y - 10,
+        _solved ? "it learned the way!" : "explore (try moves), then exploit (keep best)",
+        _solved ? C_GO : C_DIM, textdatum_t::bottom_center);
 }
 
 app::Signal QLessonScreen::tick(uint32_t now, const hal::TouchPoint& tp) {

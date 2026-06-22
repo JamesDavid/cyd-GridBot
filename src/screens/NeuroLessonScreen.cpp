@@ -141,7 +141,7 @@ void NeuroLessonScreen::draw() {
   }
 
   int ly = TOPBAR_H + 18 + N_EX * 42 - 6;
-  char lb[20]; snprintf(lb, sizeof(lb), "error %.3f", _loss);
+  char lb[20]; snprintf(lb, sizeof(lb), "loss %.3f", _loss);  // "loss" = how wrong it still is
   label(g, 6, ly, lb, _loss < 0.02f ? C_GO : C_INK);
   int barW = 120; g.drawRect(80, ly, barW, 8, C_PANEL_HI);
   int fill = (int)(barW * (_loss / 0.25f)); if (fill > barW) fill = barW;

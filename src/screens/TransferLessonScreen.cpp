@@ -18,8 +18,8 @@ static const Rect R_BACK = {252, (int16_t)(BOTBAR_Y + 2), 62, 26};
 static const char* STATUS[4] = {
   "this brain knows nothing yet.",
   "learned maze A! now try a NEW maze.",
-  "new maze B - it already gets part way (transfer!).",
-  "fine-tuned: kept maze A's skills + mastered B.",
+  "new maze B: it already gets part way - it GENERALIZES!",
+  "fine-tuned: kept A's skills + mastered B (no over-fit).",
 };
 static const char* BTN[4] = {"Learn maze A >", "New maze B! >", "Fine-tune on B >", "Reset"};
 
