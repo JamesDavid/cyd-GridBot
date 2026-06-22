@@ -200,6 +200,9 @@ void BrainViewScreen::drawWeb() {
       int cx = bx + q * bw + bw / 2;
       g.fillRect(cx - bw / 2 + 1, sy - 8 - (h > 0 ? h : 0), bw - 2, h > 0 ? h : -h, wtCol(w * 3));
     }
+  } else if (_saved && _profile && !_profile->library.empty()) {
+    char v[40]; snprintf(v, sizeof(v), "saved as \"%s\" -> My Bots", _profile->library.back().name.c_str());
+    label(g, 6, sy, v, C_GO);
   } else {
     char v[28]; snprintf(v, sizeof(v), "decides: %s", BRAIN_OUTLBL[_action]);
     label(g, 6, sy, v, ui::rgb(120, 230, 245));

@@ -198,7 +198,11 @@ void NeuroTrainScreen::draw() {
       char base[40]; snprintf(base, sizeof(base), "base: %s >", _baseName.c_str());
       button(g, R_BASE, base, ui::rgb(120, 230, 245), C_PANEL);
       button(g, R_GAUNT, "Generalize", C_ACCENT, C_PANEL);  // train+test for the Generalist prize
-      button(g, R_SAVEV, _savedCopy ? "saved!" : "save copy >", _savedCopy ? C_DIM : C_ACCENT, C_PANEL);
+      char sv[20];
+      if (_savedCopy && _profile && !_profile->library.empty())
+        snprintf(sv, sizeof(sv), "%s!", _profile->library.back().name.c_str());  // show the saved name
+      else snprintf(sv, sizeof(sv), "save copy >");
+      button(g, R_SAVEV, sv, _savedCopy ? C_DIM : C_ACCENT, C_PANEL);
     }
   }
 

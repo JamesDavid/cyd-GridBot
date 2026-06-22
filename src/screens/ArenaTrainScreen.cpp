@@ -197,8 +197,11 @@ void ArenaTrainScreen::draw() {
       g.fillCircle(ox + c * tile + tile / 2, oy + r * tile + tile / 2, tile / 6 + 1,
                    _beatsAI ? C_GO : C_MOVE);
     }
-    char leg[28]; snprintf(leg, sizeof(leg), "you  vs  %s", _oppName.c_str());
-    label(g, SCREEN_W / 2, BOTBAR_Y - 9, leg, C_DIM, textdatum_t::bottom_center);
+    char leg[40];
+    if (_saved && _savedIdx >= 0 && _savedIdx < (int)_profile->library.size())
+      snprintf(leg, sizeof(leg), "saved as \"%s\" -> My Bots", _profile->library[_savedIdx].name.c_str());
+    else snprintf(leg, sizeof(leg), "you  vs  %s", _oppName.c_str());
+    label(g, SCREEN_W / 2, BOTBAR_Y - 9, leg, _saved ? C_GO : C_DIM, textdatum_t::bottom_center);
   }
 
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
@@ -243,9 +246,11 @@ void ArenaTrainScreen::drawNet() {
   char st[48];
   const char* verb = _matchType == MatchType::SUMO ? (_beatsAI ? "K.O.!" : "hunting")
                                                    : (_beatsAI ? "WINS!" : "racing");
-  if (_animating) snprintf(st, sizeof(st), "learning... gen %d  (you green vs %s red)", _evo.gen, _oppName.c_str());
+  if (_saved && _savedIdx >= 0 && _savedIdx < (int)_profile->library.size())
+    snprintf(st, sizeof(st), "saved as \"%s\" -> My Bots", _profile->library[_savedIdx].name.c_str());
+  else if (_animating) snprintf(st, sizeof(st), "learning... gen %d  (you green vs %s red)", _evo.gen, _oppName.c_str());
   else snprintf(st, sizeof(st), "you(green) vs %s(red): %s", _oppName.c_str(), verb);
-  label(g, 6, BOTBAR_Y - 13, st, _beatsAI ? C_GO : C_DIM);
+  label(g, 6, BOTBAR_Y - 13, st, _saved ? C_GO : (_beatsAI ? C_GO : C_DIM));
 }
 
 app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {

@@ -943,7 +943,8 @@ void GameScreen::saveToLibrary() {
   e.program = _prog;
   _profile->library.push_back(e);
   drawProgramList();
-  toast("saved to library", C_GO);
+  char msg[28]; snprintf(msg, sizeof(msg), "saved: %s", e.name.c_str());
+  toast(msg, C_GO);   // tell them the name so they can find it in My Bots
 }
 
 void GameScreen::loadFromLibrary() {
