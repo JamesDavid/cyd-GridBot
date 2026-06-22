@@ -66,8 +66,7 @@ int BrainViewScreen::nextVersion() const {
 void BrainViewScreen::saveToLibrary() {
   if (!_profile || (int)_profile->library.size() >= LIBRARY_MAX) { hal::audio.fail(); return; }
   LibEntry e;
-  char nm[16]; snprintf(nm, sizeof(nm), "Brain v%d", nextVersion());
-  e.name = nm;
+  e.name = autoLibName(*_profile, LIB_BRAINCAM, 0);
   uint8_t idx = e.program.addBrain(1);          // makes brains[idx] + rbrains[idx]
   Node nb = Node::neuro(idx);
   if (_useRnn) { e.program.rbrains[idx] = rnn(); nb = Node::rnnBrain(idx); }  // the trained memory brain
@@ -132,8 +131,7 @@ void BrainViewScreen::draw() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Brain Cam", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
   if (_profile) {  // save the trained brain into your library (then usable in code + Arena)
-    char sv[12]; if (_saved) snprintf(sv, sizeof(sv), "saved!"); else snprintf(sv, sizeof(sv), "save v%d", nextVersion());
-    button(g, R_SAVE, sv, _saved ? C_DIM : C_GO, C_PANEL);
+    button(g, R_SAVE, _saved ? "saved!" : "save", _saved ? C_DIM : C_GO, C_PANEL);
   }
   button(g, R_TYPE, _useRnn ? "rnn >" : "plain >", _useRnn ? C_ACCENT : C_INK, C_PANEL);
 

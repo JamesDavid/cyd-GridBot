@@ -5,6 +5,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <cstdio>
 #include "game/Program.h"
 
 namespace gb {
@@ -116,5 +117,28 @@ inline uint16_t animStepMs(const Settings& s) {
 }
 
 constexpr int LIBRARY_MAX = 12;
+
+// Auto-name a freshly-saved bot by where it came from (+ level for code/brain), with a " vN"
+// suffix to keep it unique: "code L8", then "code L8 v2"...; "fighter"; "braincam".
+inline std::string autoLibName(const Profile& p, uint8_t source, uint16_t level) {
+  char base[24];
+  switch (source) {
+    case LIB_CODE:     snprintf(base, sizeof(base), "code L%u", (unsigned)level); break;
+    case LIB_NEURO:    snprintf(base, sizeof(base), "brain L%u", (unsigned)level); break;
+    case LIB_BRAINCAM: snprintf(base, sizeof(base), "braincam"); break;
+    case LIB_ARENA:    snprintf(base, sizeof(base), "fighter"); break;
+    default:           snprintf(base, sizeof(base), "bot"); break;
+  }
+  auto taken = [&](const char* nm) {
+    for (const auto& e : p.library) if (e.name == nm) return true;
+    return false;
+  };
+  if (!taken(base)) return std::string(base);
+  for (int v = 2; v < 100; v++) {
+    char c[32]; snprintf(c, sizeof(c), "%s v%d", base, v);
+    if (!taken(c)) return std::string(c);
+  }
+  return std::string(base);
+}
 
 }  // namespace gb

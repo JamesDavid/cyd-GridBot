@@ -938,11 +938,9 @@ void GameScreen::saveToLibrary() {
   if (_prog.main.empty()) { toast("nothing to save", C_ACCENT); return; }
   if ((int)_profile->library.size() >= gb::LIBRARY_MAX) { toast("library full", C_BAD); return; }
   gb::LibEntry e;
-  char nm[16];
-  snprintf(nm, sizeof(nm), "Lib %d", (int)_profile->library.size() + 1);
-  e.name = nm;
-  e.program = _prog;
   e.source = gb::LIB_CODE; e.srcLevel = (uint16_t)_profile->level;
+  e.name = gb::autoLibName(*_profile, gb::LIB_CODE, (uint16_t)_profile->level);
+  e.program = _prog;
   _profile->library.push_back(e);
   drawProgramList();
   toast("saved to library", C_GO);

@@ -198,10 +198,7 @@ void NeuroTrainScreen::draw() {
       char base[40]; snprintf(base, sizeof(base), "base: %s >", _baseName.c_str());
       button(g, R_BASE, base, ui::rgb(120, 230, 245), C_PANEL);
       button(g, R_GAUNT, "Generalize", C_ACCENT, C_PANEL);  // train+test for the Generalist prize
-      char sv[20];
-      if (_savedCopy) snprintf(sv, sizeof(sv), "saved!");
-      else            snprintf(sv, sizeof(sv), "save v%d >", nextVersion());
-      button(g, R_SAVEV, sv, _savedCopy ? C_DIM : C_ACCENT, C_PANEL);
+      button(g, R_SAVEV, _savedCopy ? "saved!" : "save copy >", _savedCopy ? C_DIM : C_ACCENT, C_PANEL);
     }
   }
 
@@ -408,8 +405,7 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   } else if (R_SAVEV.contains(tx, ty)) {  // save the fine-tuned brain as a new version
     if (_profile && (int)_profile->library.size() < LIBRARY_MAX) {
       LibEntry e;
-      char nm[16]; snprintf(nm, sizeof(nm), "Brain v%d", nextVersion());
-      e.name = nm;
+      e.name = autoLibName(*_profile, LIB_NEURO, (uint16_t)_profile->level);
       e.program.brains.push_back(_brain);
       Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(0)); e.program.main.push_back(loop);
       e.source = LIB_NEURO; e.srcLevel = (uint16_t)_profile->level;

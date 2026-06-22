@@ -288,7 +288,7 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         _profile->library[_savedIdx].program = prog;   // update this session's fighter (no dupe)
         _saved = true; hal::audio.badge(); draw();
       } else if (_profile->library.size() < (size_t)LIBRARY_MAX) {
-        LibEntry e; e.name = nextFighterName(); e.program = prog; e.source = LIB_ARENA;
+        LibEntry e; e.source = LIB_ARENA; e.name = autoLibName(*_profile, LIB_ARENA, 0); e.program = prog;
         _profile->library.push_back(e);
         _savedIdx = (int)_profile->library.size() - 1;
         _saved = true; hal::audio.badge(); draw();

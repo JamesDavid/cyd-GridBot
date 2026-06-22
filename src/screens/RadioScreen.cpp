@@ -63,6 +63,8 @@ void RadioScreen::startLink(bool trade) {
   mine.name = _profile ? String(_profile->name.c_str()) : String("Player");
   mine.avatar = _myAvatar;
   mine.uuid = _profile ? String(_profile->uuid.c_str()) : String("");
+  mine.botName = (_profile && !_profile->library.empty())   // send the bot's own name along
+                   ? String(_profile->library.back().name.c_str()) : String("");
   mine.progJson = programToJsonString(_mine);
   net::radio.begin();
   net::radio.startSession(mine);
@@ -96,7 +98,9 @@ void RadioScreen::onReady() {
     // Pokemon-style: drop the friend's bot into the library, bounded (SPEC §11.1).
     if (_profile && (int)_profile->library.size() < gb::LIBRARY_MAX) {
       gb::LibEntry e;
-      e.name = std::string(tc.name.c_str()) + "'s bot";
+      // keep the name the friend gave the bot; fall back to "<friend>'s bot" for old senders
+      e.name = tc.botName.length() ? std::string(tc.botName.c_str())
+                                    : std::string(tc.name.c_str()) + "'s bot";
       e.program = _theirs;
       e.source = gb::LIB_RADIO;
       _profile->library.push_back(e);
