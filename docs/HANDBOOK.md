@@ -87,9 +87,15 @@ Powers unlock on a deliberately compressed curve so the big payoff — *sensing*
 | **10** | **Repeat** | Looper, Explorer (Lv10) | loops / efficiency |
 | **15** | **Sense** (`if` / `until`) + **Arena** opens | Sixth Sense | conditionals, reacting |
 | **20** | **Functions** | Architect, Veteran (Lv20) | abstraction, naming |
-| **28** | **NeuroBot** (`+brain` block) | Brainiac, Mind Over Maze, Battle-Ready | machine learning |
+| **28** | **NeuroBot** (`+brain` block) + **Teach** | Brainiac, Mind Over Maze, Battle-Ready | machine learning |
+| **31** | **Draw & tag** (label a path, train to it) | — | supervised data / labels |
+| **34** | **Evolve** (neuroevolution) | — | learning without a teacher |
+| **37** | **Pilot** (planner + follower) | — | search + control |
+| **40** | **Memory brain** (RNN) | — | sequence memory |
 
 The **"aha" moment** is Levels 15–22: a kid discovers that **one general program (a wall-follower) solves mazes it has never seen**. That's the jump from "memorising steps" to "an algorithm." Everything before builds the tools; everything after (Arena, NeuroBot) lets them use the tools creatively.
+
+The NeuroBot **training tools also unlock one at a time** (28–40) rather than all at graduation, so each new way to train a brain arrives with its own lesson (surfaced by a **"Learn it"** link on the level intro) instead of a wall of buttons. The lessons themselves stay open in **Learn** from day one for kids who want to run ahead.
 
 > **Generalist badge** (endgame): train *one* brain that clears a gauntlet of 10 fresh mazes it never saw. This is the kid-scale version of the single hardest idea in ML — *generalisation*.
 
