@@ -167,6 +167,28 @@ void App::debugStep() {
   else if (_state == State::ARENA) _arena.debugStep();
 }
 
+void App::debugDumpMaze() {
+  if (_state != State::GAME) { Serial.println("NOMAZE"); return; }
+  gb::Maze& m = _game.maze();
+  Serial.printf("MAZE %d %d\n", m.rows(), m.cols());
+  for (int r = 0; r < m.rows(); r++) {
+    for (int c = 0; c < m.cols(); c++) {
+      gb::Tile t = m.at(r, c);
+      char ch = '.';
+      if (t == gb::WALL) ch = '#';
+      else if (t == gb::PIT) ch = 'O';
+      else if (t == gb::GOAL) ch = 'G';
+      else if (t == gb::COIN) ch = 'c';
+      else if (t == gb::STAR) ch = '*';
+      Serial.write(ch);
+    }
+    Serial.write('\n');
+  }
+  gb::Pose p = m.startPose();
+  Serial.printf("ROBOT %d %d %d\n", p.row, p.col, (int)p.facing);
+  Serial.printf("GOAL %d %d\n", m.goalRow(), m.goalCol());
+}
+
 void App::debugNeuroLesson() {
   hal::audio.stopMusic();
   _lessonsMenu.enter();

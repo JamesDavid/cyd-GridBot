@@ -76,6 +76,15 @@ def main():
             time.sleep(float(parts[1]))
         elif op == "key":
             ser.write((" ".join(parts[1:]) + "\n").encode()); ser.flush()
+        elif op == "dump":
+            ser.reset_input_buffer(); ser.write(b"M\n"); ser.flush()
+            deadline = time.time() + 5; got = []
+            while time.time() < deadline:
+                line = ser.readline().decode(errors="replace").rstrip("\r\n")
+                if not line: continue
+                got.append(line)
+                if line.startswith("GOAL") or line == "NOMAZE": break
+            print("\n".join(got))
     ser.close()
 
 if __name__ == "__main__":

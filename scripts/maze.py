@@ -78,7 +78,10 @@ def main():
             pp=cellpx(cx,cy)
             voidfrac=sum(1 for p in pp if void(p))/len(pp)
             avg=tuple(sum(p[i] for p in pp)//len(pp) for i in range(3))
-            sums[(r,c)]=sum(avg); grid[(r,c)]='.' if voidfrac>0.4 else '?'
+            # --open: Nebula floor ~= void background, so don't trust pit detection there;
+            # treat void-ish cells as floor and rely on the bright-wall test for blocking.
+            ispit = voidfrac>0.4 and '--open' not in a
+            sums[(r,c)]=sum(avg); grid[(r,c)]='.' if ispit else '?'
             # saturated-blue pixel count, only used to GUESS the robot in warm biomes
             blue=sum(1 for p in pp if p[2]>120 and p[2]>p[0]+60 and p[2]>p[1]+50)
             if grid[(r,c)]=='?' and blue>6: bluecells.append((blue,(r,c)))
