@@ -18,9 +18,12 @@ class BackpropLessonScreen : public app::IScreen {
 
  private:
   void draw();
+  float meanErr() const;       // average |target - guess| over the four examples
   gb::Perceptron _p;
   int _ex = 0;     // which example (0..3)
   int _step = 0;   // 0 LOOK, 1 SCORE, 2 BLAME, 3 NUDGE
+  float _err[48] = {0};        // error after each nudge -> the convergence chart
+  int _errN = 0;
   app::TapDetector _tap;
 };
 

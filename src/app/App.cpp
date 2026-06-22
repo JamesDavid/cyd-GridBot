@@ -93,12 +93,13 @@ void App::drawIntro() {
   // newly-unlocked mechanic (compare this level's unlocks to the previous level's)
   gb::Unlocks now = gb::computeUnlocks(_introLevel);
   gb::Unlocks prev = gb::computeUnlocks(_introLevel ? _introLevel - 1 : 0);
-  const char* newText = nullptr;
-  if (now.jump && !prev.jump) newText = "New: Jump!";
-  else if (now.repeat && !prev.repeat) newText = "New: Repeat loops!";
-  else if (now.sense && !prev.sense) newText = "New: Sensing!";
-  else if (now.func && !prev.func) newText = "New: Functions!";
-  else if (now.neuro && !prev.neuro) newText = "New: NeuroBot!";
+  // a newly-unlocked power -> point straight at its lesson, at the teachable moment.
+  const char* newText = nullptr; _introLesson = -1;
+  if (now.jump && !prev.jump)        { newText = "New: Jump!";         _introLesson = 1; }   // CodeLab idx
+  else if (now.repeat && !prev.repeat){ newText = "New: Repeat loops!"; _introLesson = 2; }
+  else if (now.sense && !prev.sense)  { newText = "New: Sensing!";      _introLesson = 3; }
+  else if (now.func && !prev.func)    { newText = "New: Functions!";    _introLesson = 4; }
+  else if (now.neuro && !prev.neuro)  { newText = "New: NeuroBot!";     _introLesson = 100; } // NeuroLab hub
   if (newText) label(g, SCREEN_W / 2, y + 50, newText, C_GO, textdatum_t::middle_center);
   if (_newBadge) {
     char b[40]; snprintf(b, sizeof(b), "Badge: %s!", _newBadge);
@@ -107,8 +108,17 @@ void App::drawIntro() {
 
   label(g, SCREEN_W / 2, y + h - 18, "tap to start", C_DIM, textdatum_t::middle_center);
 
-  // a way out: tap the card to start, or this button to go back to the hub
-  button(g, _backBtn, "< Back", C_INK, C_PANEL);
+  // tap the card to start; back out to the hub; or learn the new power right now.
+  if (_introLesson >= 0) {
+    _backBtn = {28, 196, 120, 28};
+    _learnBtn = {172, 196, 120, 28};
+    button(g, _backBtn, "< Back", C_INK, C_PANEL);
+    button(g, _learnBtn, "Learn it >", ui::rgb(120, 230, 245), C_PANEL);
+  } else {
+    _backBtn = {90, 196, 140, 28};
+    _learnBtn = {0, 0, 0, 0};
+    button(g, _backBtn, "< Back", C_INK, C_PANEL);
+  }
 }
 
 void App::gotoGame() {
@@ -277,8 +287,12 @@ void App::tick(uint32_t now) {
     case State::INTRO: {
       int x, y;
       if (_introTap.tapped(tp, now, x, y)) {
-        if (_backBtn.contains(x, y)) gotoHome();  // back to the hub
-        else gotoGame();                           // tap the card to start the level
+        if (_introLesson >= 0 && _learnBtn.contains(x, y)) {  // learn the new power right now
+          _fromIntro = true;
+          if (_introLesson == 100) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+          else { _codeLesson.begin(_introLesson); _codeLesson.enter(); _state = State::CODE_LESSON; }
+        } else if (_backBtn.contains(x, y)) gotoHome();  // back to the hub
+        else gotoGame();                                  // tap the card to start the level
       }
       break;
     }
@@ -407,12 +421,18 @@ void App::tick(uint32_t now) {
       break;
     }
     case State::CODE_LESSON: {
-      if (_codeLesson.tick(now, tp) == Signal::BACK) { _codeLab.enter(); _state = State::CODE_LAB; }
+      if (_codeLesson.tick(now, tp) == Signal::BACK) {
+        if (_fromIntro) { _fromIntro = false; gotoIntro(_introLevel); }  // back to the level we came from
+        else { _codeLab.enter(); _state = State::CODE_LAB; }
+      }
       break;
     }
     case State::NEURO_HUB: {
       Signal s = _lessonHub.tick(now, tp);
-      if (s == Signal::BACK) { _lessonsMenu.enter(); _state = State::LESSONS_MENU; }
+      if (s == Signal::BACK) {
+        if (_fromIntro) { _fromIntro = false; gotoIntro(_introLevel); }
+        else { _lessonsMenu.enter(); _state = State::LESSONS_MENU; }
+      }
       else if (s == Signal::PLAY) {
         // Order: watch it learn -> how it learns -> what one neuron can't -> more outputs -> ...
         switch (_lessonHub.pick()) {

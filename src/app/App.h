@@ -101,7 +101,10 @@ class App {
   screens::BrainViewScreen _brainView;
   screens::BrainMapScreen _brainMap;
   TapDetector _introTap;
-  ui::Rect _backBtn{90, 196, 140, 28};  // "< Back" on the level intro -> hub
+  ui::Rect _backBtn{90, 196, 140, 28};   // "< Back" on the level intro -> hub
+  ui::Rect _learnBtn{0, 0, 0, 0};        // "Learn it >" on the intro when a power just unlocked
+  int _introLesson = -1;                 // lesson to open from the intro (CodeLesson idx, or 100 = NeuroLab)
+  bool _fromIntro = false;               // a lesson was opened from the intro -> return there on Back
 };
 
 }  // namespace app
