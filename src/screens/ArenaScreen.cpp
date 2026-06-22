@@ -38,6 +38,10 @@ static const Rect R_READY= {84, 150, 150, 34};
 // result-overlay buttons (a kid wants to instantly retry, not dead-end on a loss)
 static const Rect R_AGAIN = {62, 129, 96, 26};
 static const Rect R_RESULT_EXIT = {170, 129, 86, 26};
+// 3-button layout when we also offer "Train >" (vs-Computer, NeuroBot unlocked)
+static const Rect R_AGAIN3 = {56, 129, 64, 26};
+static const Rect R_TRAIN3 = {124, 129, 66, 26};
+static const Rect R_EXIT3  = {194, 129, 64, 26};
 
 static Program dashProgram() {
   Program p;
@@ -277,8 +281,16 @@ void ArenaScreen::finishOverlay() {
   g.fillRoundRect(x, y, w, h, 10, C_PANEL);
   g.drawRoundRect(x, y, w, h, 10, col);
   label(g, SCREEN_W / 2, y + 22, msg, col, textdatum_t::middle_center, 2);
-  button(g, R_AGAIN, "Play again", C_GO, C_PANEL_HI);   // rematch — pick a (different) bot
-  button(g, R_RESULT_EXIT, "Exit", C_INK, C_PANEL_HI);
+  // vs-Computer + NeuroBot: offer to retrain your fighter for this matchup, not just bounce out.
+  bool canTrain = !_hotseat && _profile && _profile->unlocks.neuro;
+  if (canTrain) {
+    button(g, R_AGAIN3, "Again", C_GO, C_PANEL_HI);          // replay the SAME matchup
+    button(g, R_TRAIN3, "Train >", ui::rgb(120, 230, 245), C_PANEL_HI);  // go improve your fighter
+    button(g, R_EXIT3, "Exit", C_INK, C_PANEL_HI);
+  } else {
+    button(g, R_AGAIN, "Play again", C_GO, C_PANEL_HI);
+    button(g, R_RESULT_EXIT, "Exit", C_INK, C_PANEL_HI);
+  }
 }
 
 // ---- input ----------------------------------------------------------------
@@ -364,13 +376,19 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     case Phase::BOARD:
       if (R_BACK.contains(tx, ty)) { hal::led.off(); return app::Signal::BACK; }
       break;
-    case Phase::DONE:
-      if (R_AGAIN.contains(tx, ty)) {  // rematch: back to the bot picker (try a different one)
-        hal::led.off(); _pick0 = _pick1 = -1; _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
-      } else if (R_RESULT_EXIT.contains(tx, ty) || R_BACK.contains(tx, ty)) {
+    case Phase::DONE: {
+      bool canTrain = !_hotseat && _profile && _profile->unlocks.neuro;
+      if (canTrain && R_TRAIN3.contains(tx, ty)) {  // go retrain a better fighter, then come back
+        hal::led.off(); return app::Signal::GOTO_ARENA_TRAIN;
+      } else if ((canTrain ? R_AGAIN3 : R_AGAIN).contains(tx, ty)) {  // replay the SAME matchup
+        hal::led.off();
+        if (_pick0 >= 0 && _pick1 >= 0) startMatch();
+        else { _pickScroll = 0; _phase = Phase::PICK1; drawPick(0); }
+      } else if ((canTrain ? R_EXIT3 : R_RESULT_EXIT).contains(tx, ty) || R_BACK.contains(tx, ty)) {
         hal::led.off(); return app::Signal::BACK;
       }
       break;
+    }
   }
   return app::Signal::NONE;
 }
