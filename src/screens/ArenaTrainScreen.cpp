@@ -175,11 +175,11 @@ void ArenaTrainScreen::draw() {
 // a small arena mini-map so the opponent (red) and your path (green) are visible alongside it.
 void ArenaTrainScreen::drawNet() {
   auto& g = hal::display.gfx();
-  drawBrainGraph(g, &_brain, nullptr, false, _in, _hid, _out, _action, -1);
+  drawBrainGraph(g, &_brain, nullptr, false, _in, _hid, _out, _action, -1, 18);  // shifted down to centre
 
-  // arena mini-map, top-left corner
+  // arena mini-map, below the view chip and left of the input labels (so nothing overlaps)
   int cols = _maze.cols(), rows = _maze.rows();
-  int box = 50, mx0 = 2, my0 = BAND_Y + 1;
+  int box = 50, mx0 = 2, my0 = BAND_Y + 22;
   g.fillRect(mx0, my0, box, box + 2, C_BG);
   int mt = (box - 2) / cols; if ((box - 2) / rows < mt) mt = (box - 2) / rows; if (mt < 3) mt = 3;
   int ox = mx0 + 1, oy = my0 + 1;

@@ -13,9 +13,10 @@ const char* const BRAIN_OUTLBL[5] = {"fwd","turnL","turnR","jump","zap"};
 
 // network geometry (absolute screen coords)
 static const int IX = 92, HX = 178, OX = 252;
-static int iy(int i) { return 30 + i * 15; }
-static int hy(int j) { return 34 + j * 18; }
-static int oy(int k) { return 40 + k * 26; }
+static int g_dy = 0;  // vertical offset so a caller can recentre the whole graph
+static int iy(int i) { return 30 + i * 15 + g_dy; }
+static int hy(int j) { return 34 + j * 18 + g_dy; }
+static int oy(int k) { return 40 + k * 26 + g_dy; }
 static int iabs(int v) { return v < 0 ? -v : v; }
 
 static uint16_t actCol(float a) {
@@ -49,7 +50,8 @@ bool brainGraphNodeAt(int x, int y, int nHid, int& layer, int& idx) {
 }
 
 void drawBrainGraph(LGFX& g, const Net* ff, const RNet* rnn, bool useRnn,
-                    const float* in, const float* hid, const float* out, int action, int sel) {
+                    const float* in, const float* hid, const float* out, int action, int sel, int dy) {
+  g_dy = dy;
   int nHid = useRnn ? rnn->nHid : ff->nHid;
   int selLayer = sel < 0 ? -1 : sel / 100, selIdx = sel < 0 ? -1 : sel % 100;
 

@@ -10,8 +10,9 @@ namespace screens {
 
 // Draw the graph for a brain (ff or rnn). in/hid/out are the current activations; action is
 // the argmax output (ringed); sel is -1 or layer*100+idx (layer 1=hidden, 2=output) to zoom.
+// dy shifts the whole graph vertically (0 = default position) so a caller can recentre it.
 void drawBrainGraph(LGFX& g, const gb::Net* ff, const gb::RNet* rnn, bool useRnn,
-                    const float* in, const float* hid, const float* out, int action, int sel);
+                    const float* in, const float* hid, const float* out, int action, int sel, int dy = 0);
 
 // Hit-test a hidden/output neuron at (x,y). Returns true + fills layer(1/2)+idx.
 bool brainGraphNodeAt(int x, int y, int nHid, int& layer, int& idx);
