@@ -96,7 +96,7 @@ class App {
   screens::BrainViewScreen _brainView;
   screens::BrainMapScreen _brainMap;
   TapDetector _introTap;
-  ui::Rect _arenaBtn{90, 196, 140, 28};  // shown on the level intro post-sensing
+  ui::Rect _backBtn{90, 196, 140, 28};  // "< Back" on the level intro -> hub
 };
 
 }  // namespace app

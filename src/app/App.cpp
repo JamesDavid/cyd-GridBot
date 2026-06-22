@@ -107,10 +107,8 @@ void App::drawIntro() {
 
   label(g, SCREEN_W / 2, y + h - 18, "tap to start", C_DIM, textdatum_t::middle_center);
 
-  // Arena unlocks after the sensing tier (SPEC §18).
-  if (_profile.unlocks.sense) {
-    button(g, _arenaBtn, "ARENA >", C_FUNC, C_PANEL);
-  }
+  // a way out: tap the card to start, or this button to go back to the hub
+  button(g, _backBtn, "< Back", C_INK, C_PANEL);
 }
 
 void App::gotoGame() {
@@ -258,13 +256,8 @@ void App::tick(uint32_t now) {
     case State::INTRO: {
       int x, y;
       if (_introTap.tapped(tp, now, x, y)) {
-        if (_profile.unlocks.sense && _arenaBtn.contains(x, y)) {
-          _arena.begin(&_profile); _arena.enter(); _state = State::ARENA;
-          if (hal::audio.enabled())  // battle theme on the arena menus
-            hal::audio.startMusic(hal::kArenaMusic, hal::kArenaMusicLen, true);
-        } else {
-          gotoGame();
-        }
+        if (_backBtn.contains(x, y)) gotoHome();  // back to the hub
+        else gotoGame();                           // tap the card to start the level
       }
       break;
     }
