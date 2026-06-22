@@ -438,17 +438,17 @@ void App::tick(uint32_t now) {
         switch (_lessonHub.pick()) {
           case 0:  _neuro.begin(0); _neuro.enter(); _state = State::NEURO_LESSON; break;       // One neuron
           case 1:  _backpropLesson.begin(); _backpropLesson.enter(); _state = State::BACKPROP_LESSON; break;  // Backprop
-          case 2:  _neuro.begin(2); _neuro.enter(); _state = State::NEURO_LESSON; break;       // Hidden layer (corners)
-          case 3:  _neuro.begin(1); _neuro.enter(); _state = State::NEURO_LESSON; break;       // Many actions
-          case 4:  _brainMap.enter(); _state = State::BRAIN_MAP; break;                        // Robot brain
-          case 5:  _qLesson.begin(); _qLesson.enter(); _state = State::Q_LESSON; break;
-          case 6:  _evoLesson.begin(); _evoLesson.enter(); _state = State::EVO_LESSON; break;
-          case 7:  _transferLesson.begin(0); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;  // Transfer
-          case 8:  _brainView.begin(&_profile); _brainView.enter(); _state = State::BRAIN_VIEW; break;
-          case 9:  _pilotLesson.begin(); _pilotLesson.enter(); _state = State::PILOT_LESSON; break;
-          case 10: _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; break;  // Memory
-          case 11: _perceptionLesson.begin(); _perceptionLesson.enter(); _state = State::PERCEPTION_LESSON; break;
-          case 12: _transferLesson.begin(1); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;  // Data (mode 1)
+          case 2:  _perceptionLesson.begin(); _perceptionLesson.enter(); _state = State::PERCEPTION_LESSON; break;  // Perception (sense)
+          case 3:  _neuro.begin(2); _neuro.enter(); _state = State::NEURO_LESSON; break;       // Hidden layer (corners/xor)
+          case 4:  _neuro.begin(1); _neuro.enter(); _state = State::NEURO_LESSON; break;       // Many actions
+          case 5:  _brainMap.enter(); _state = State::BRAIN_MAP; break;                        // Robot brain (puts it together)
+          case 6:  _evoLesson.begin(); _evoLesson.enter(); _state = State::EVO_LESSON; break;  // Evolution (random, simple)
+          case 7:  _transferLesson.begin(1); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;  // Data & labels (mode 1)
+          case 8:  _qLesson.begin(); _qLesson.enter(); _state = State::Q_LESSON; break;        // Q-learning (reward)
+          case 9:  _transferLesson.begin(0); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;  // Transfer
+          case 10: _brainView.begin(&_profile); _brainView.enter(); _state = State::BRAIN_VIEW; break;  // Brain Cam
+          case 11: _pilotLesson.begin(); _pilotLesson.enter(); _state = State::PILOT_LESSON; break;  // Pilot
+          case 12: _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; break;  // Memory
         }
       }
       break;
