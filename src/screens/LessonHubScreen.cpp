@@ -10,19 +10,19 @@ static const int N_LESSONS = 13;
 static const int PER_PAGE = 5;
 static const int N_PAGES = (N_LESSONS + PER_PAGE - 1) / PER_PAGE;
 static const LessonInfo LESSONS[N_LESSONS] = {
-  {"1. One neuron", "learn from a teacher", C_MOVE},
-  {"2. Many actions", "go / turn / jump", C_TURN},
-  {"3. Hidden layer", "what 1 neuron can't", C_LOOP},
-  {"4. Robot brain", "meet its senses", ui::rgb(120, 230, 245)},
-  {"5. Q-learning", "learn from reward", C_SENSE},
-  {"6. Evolution", "breed the best", C_FUNC},
-  {"7. Transfer", "reuse skills, new maze", ui::rgb(120, 230, 245)},
-  {"8. Brain Cam", "watch a brain think", ui::rgb(120, 230, 245)},
-  {"9. Pilot", "plan + steer (like FSD)", C_ACCENT},
-  {"10. Memory", "an RNN remembers", C_ACCENT},
-  {"11. Perception", "raw squares -> meaning", C_MOVE},
-  {"12. Data", "learn from examples", C_SENSE},
-  {"13. Backprop", "learn one step at a time", C_MOVE},
+  {"1. One neuron", "watch it learn", C_MOVE},
+  {"2. Backprop", "how it learns, step by step", C_MOVE},
+  {"3. Hidden layer", "what one neuron can't", C_LOOP},
+  {"4. Many actions", "go / turn / jump", C_TURN},
+  {"5. Robot brain", "meet its senses", ui::rgb(120, 230, 245)},
+  {"6. Q-learning", "learn from reward", C_SENSE},
+  {"7. Evolution", "breed the best", C_FUNC},
+  {"8. Transfer", "reuse skills, new maze", ui::rgb(120, 230, 245)},
+  {"9. Brain Cam", "watch a brain think", ui::rgb(120, 230, 245)},
+  {"10. Pilot", "plan + steer (like FSD)", C_ACCENT},
+  {"11. Memory", "an RNN remembers", C_ACCENT},
+  {"12. Perception", "raw squares -> meaning", C_MOVE},
+  {"13. Data", "learn from examples", C_SENSE},
 };
 
 // Roomy rows now that there are only 5 per page.
