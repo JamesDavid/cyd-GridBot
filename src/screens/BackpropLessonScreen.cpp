@@ -74,14 +74,15 @@ void BackpropLessonScreen::draw() {
   g.fillCircle(IX, IY1, 12, x1 ? C_SENSE : C_PANEL_HI);
   label(g, IX, IY1, x1 ? "1" : "0", x1 ? C_BG : C_DIM, textdatum_t::middle_center);
   label(g, IX - 16, IY1, "pit", x1 ? C_SENSE : C_DIM, textdatum_t::middle_right);
-  char w0s[8], w1s[8]; snprintf(w0s, sizeof(w0s), "%+.2f", _p.w[0]); snprintf(w1s, sizeof(w1s), "%+.2f", _p.w[1]);
-  label(g, 104, IY0 - 12, w0s, wcol(_p.w[0]));
-  label(g, 104, IY1 + 4, w1s, wcol(_p.w[1]));
+  // weights labelled w0 / w1 right on the wires, so the BLAME amounts map to the diagram
+  char w0s[14], w1s[14]; snprintf(w0s, sizeof(w0s), "w0=%+.2f", _p.w[0]); snprintf(w1s, sizeof(w1s), "w1=%+.2f", _p.w[1]);
+  label(g, 96, IY0 - 12, w0s, wcol(_p.w[0]));
+  label(g, 96, IY1 + 4, w1s, wcol(_p.w[1]));
   g.fillCircle(OX, OY, 16, pred > 0.5f ? C_GO : C_PANEL_HI);
   char po[6]; snprintf(po, sizeof(po), "%.2f", pred);
   label(g, OX, OY - 3, po, C_BG, textdatum_t::middle_center);
   label(g, OX, OY + 7, "guess", C_BG, textdatum_t::middle_center);
-  char bs[10]; snprintf(bs, sizeof(bs), "bias %+.2f", _p.b); label(g, OX, OY + 22, bs, C_DIM, textdatum_t::middle_center);
+  char bs[16]; snprintf(bs, sizeof(bs), "bias %+.2f", _p.b); label(g, OX, OY + 22, bs, C_DIM, textdatum_t::middle_center);
   char want[10]; snprintf(want, sizeof(want), "want %d", t);
   label(g, OX + 22, OY - 3, want, C_ACCENT, textdatum_t::middle_left);
 
