@@ -285,6 +285,28 @@ void generateArena(Maze& out, uint32_t seed, Pose& s0, Pose& s1) {
   out.set(s1.row, s1.col, START);
 }
 
+void generateSumoRing(Maze& out, uint32_t seed, Pose& s0, Pose& s1) {
+  Rng rng(seed);
+  out.reset(MAZE_MAX_ROWS, MAZE_MAX_COLS);   // 8x10: the biggest ring
+  int rows = out.rows(), cols = out.cols(), rmid = rows / 2;
+  out.fill(FLOOR);
+  // 1-3 mirrored pillar pairs for cover/variety, kept off the centre lanes and the start
+  // rows/columns so they never wall the two fighters into a corridor.
+  int pairs = 1 + (int)rng.below(3);
+  for (int k = 0; k < pairs; k++) {
+    int rr = 1 + (int)rng.below(rows - 2);
+    int cc = 2 + (int)rng.below(cols / 2 - 2);
+    if (rr >= rmid - 1 && rr <= rmid + 1) continue;  // keep the two fighters' lanes open
+    out.set(rr, cc, WALL);
+    out.set(rr, cols - 1 - cc, WALL);                // mirror -> fair
+  }
+  s0.row = (int8_t)(rmid - 1); s0.col = 0;                  s0.facing = EAST;
+  s1.row = (int8_t)(rmid + 1); s1.col = (int8_t)(cols - 1); s1.facing = WEST;
+  out.set(s0.row, s0.col, START);
+  out.set(s1.row, s1.col, START);
+  out.clearGoal();   // Sumo has no goal
+}
+
 int generateBoards(Maze* out, int maxOut, uint32_t seedBase, int level) {
   if (!isMultiLevel(level)) {
     generate(out[0], seedBase, level);

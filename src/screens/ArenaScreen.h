@@ -24,7 +24,7 @@ class ArenaScreen : public app::IScreen {
   enum class Phase : uint8_t { MENU, GAMETYPE, PICK1, HANDOFF, PICK2, BOARD, DONE };
   struct Candidate { std::string name; gb::Program prog; uint8_t avatar; std::string style; bool house; bool smart; bool neuro = false; };
 
-  void buildCandidates();
+  void buildCandidates(bool sumo = false);  // sumo => only NeuroBot fighters, no dashers
   void drawMenu();
   void drawGameType();
   void drawPick(int player);
@@ -47,6 +47,7 @@ class ArenaScreen : public app::IScreen {
   bool _hotseat = false;
   int _pick0 = -1, _pick1 = -1;
   int _pickScroll = 0;  // first visible candidate row in the (scrollable) pick list
+  uint32_t _sumoNonce = 0;  // bumped each Sumo match so the ring varies (local play)
 
   gb::Maze _maze;
   gb::Pose _s0, _s1;

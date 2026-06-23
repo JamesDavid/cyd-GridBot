@@ -180,6 +180,25 @@ void test_sumo_hp_three_hits() {
   TEST_ASSERT_EQUAL((int)ArenaOutcome::BOT0, (int)ar.outcome());
 }
 
+// The Sumo ring must be deterministic from its seed (so a network battle that feeds both
+// devices the SAME shared seed renders an identical ring) and be the big 8x10 board.
+void test_sumo_ring_deterministic_and_big() {
+  Maze A, B, C; Pose a0, a1, b0, b1, c0, c1;
+  MazeGen::generateSumoRing(A, 42, a0, a1);
+  MazeGen::generateSumoRing(B, 42, b0, b1);   // same seed -> identical on both "devices"
+  MazeGen::generateSumoRing(C, 99, c0, c1);   // different seed -> a different ring
+  TEST_ASSERT_EQUAL(8, A.rows()); TEST_ASSERT_EQUAL(10, A.cols());   // big ring
+  bool sameAB = true, diffAC = false;
+  for (int r = 0; r < A.rows(); r++)
+    for (int c = 0; c < A.cols(); c++) {
+      if (A.at(r, c) != B.at(r, c)) sameAB = false;
+      if (A.at(r, c) != C.at(r, c)) diffAC = true;
+    }
+  TEST_ASSERT_TRUE(sameAB);   // same seed => byte-identical ring (network safe)
+  TEST_ASSERT_TRUE(diffAC);   // a different seed => a different ring (varies each match)
+  TEST_ASSERT_TRUE(a0.row != a1.row);   // starts offset onto different rows
+}
+
 void test_sumo_deterministic() {
   Program a = hunterProgram(), b = hunterProgram();
   Maze m; Pose s0, s1;
@@ -265,6 +284,7 @@ int main(int, char**) {
   RUN_TEST(test_sumo_ram_off_edge);
   RUN_TEST(test_sumo_seeker_turns_and_kos);
   RUN_TEST(test_sumo_hp_three_hits);
+  RUN_TEST(test_sumo_ring_deterministic_and_big);
   RUN_TEST(test_sumo_deterministic);
   return UNITY_END();
 }

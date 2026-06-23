@@ -61,19 +61,22 @@ void ArenaScreen::begin(Profile* profile) {
   buildCandidates();
 }
 
-void ArenaScreen::buildCandidates() {
+void ArenaScreen::buildCandidates(bool sumo) {
   _cands.clear();
-  // The kid's OWN bots first — any program saved to the library in the campaign
-  // (Save>Lib) fights here. THIS is how you battle a custom program (SPEC §18.4).
+  // The kid's OWN saved bots first. In SUMO only their trained NEUROBOT fighters belong (a
+  // code dasher or a maze-brain just gets shoved off); Race takes any saved program. The list
+  // scrolls, and newest are last, so a just-trained fighter is always reachable.
   if (_profile) {
-    // ALL of the kid's saved bots (the list scrolls) -- newest are last, so a just-trained
-    // fighter must be reachable, not capped off after the first few.
     for (auto& e : _profile->library)
-      _cands.push_back({e.name, e.program, _profile->avatar, "your bot", false, false});
+      if (!sumo || !e.program.brains.empty())
+        _cands.push_back({e.name, e.program, _profile->avatar, "your bot", false, false});
   }
-  // House battle-bots: themed names + characters to go up against.
-  _cands.push_back({"Rusty", alwaysForwardProgram(), 5, "charges blindly", true, false});
-  _cands.push_back({"Bolt",  dashProgram(),          6, "fast & straight", true, false});
+  // House bots. The pure dashers (Rusty/Bolt) are Race-only filler -- in Sumo they'd just lose,
+  // so they're hidden. The real FIGHTERS show in both (and one is the Sumo opponent).
+  if (!sumo) {
+    _cands.push_back({"Rusty", alwaysForwardProgram(), 5, "charges blindly", true, false});
+    _cands.push_back({"Bolt",  dashProgram(),          6, "fast & straight", true, false});
+  }
   _cands.push_back({"Vex",   hunterProgram(),        7, "hunts & zaps",    true, false});
   // Ace solves the board on the fly — a real navigator (program built at match start).
   _cands.push_back({"Ace",   Program{},              3, "solves the maze", true, true});
@@ -225,21 +228,15 @@ void ArenaScreen::setupMatchBot(int pick, const Pose& start, bool sumo) {
 
 void ArenaScreen::startMatch() {
   hal::audio.stopMusic();  // the board uses step-tick SFX; silence the battle theme
-  MazeGen::generateArena(_maze, _profile ? _profile->seedBase + 7u : 7u, _s0, _s1);
   bool sumo = (_type == MatchType::SUMO);
   if (sumo) {
-    _maze.clearGoal();   // Sumo = last bot standing: no goal, so bots fight not race
-    // A clean OPEN ring: clear every interior wall/pit. Walls (esp. the central dash walls)
-    // form a corridor the shoves just ping-pong off; an open ring lets a shove push the foe
-    // all the way to the EDGE (ring-out). No pits = no cheap one-shove KO -> a real brawl.
-    int rows = _maze.rows(), cols = _maze.cols(), rmid = rows / 2;
-    for (int r = 0; r < rows; r++)
-      for (int c = 0; c < cols; c++)
-        if (_maze.at(r, c) == gb::PIT || _maze.at(r, c) == gb::WALL) _maze.set(r, c, gb::FLOOR);
-    // Offset the two starts to DIFFERENT rows so the seekers close in diagonally and brawl
-    // across the ring, instead of meeting dead-on for a symmetric push-stalemate.
-    _s0.row = (int8_t)(rmid - 1);
-    _s1.row = (int8_t)(rmid + 1);
+    // A big, open ring that's DIFFERENT every match (the nonce changes the seed). Local play
+    // so a local nonce is fine; a network Sumo would pass the SHARED seed here instead, and
+    // both devices would build the identical ring (the gen is deterministic from the seed).
+    uint32_t seed = (_profile ? _profile->seedBase : 7u) + 101u * (++_sumoNonce);
+    MazeGen::generateSumoRing(_maze, seed, _s0, _s1);
+  } else {
+    MazeGen::generateArena(_maze, _profile ? _profile->seedBase + 7u : 7u, _s0, _s1);
   }
   setupMatchBot(_pick0, _s0, sumo);
   setupMatchBot(_pick1, _s1, sumo);
@@ -378,10 +375,11 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     case Phase::GAMETYPE:
       if (R_BACK.contains(tx, ty)) { drawMenu(); break; }  // < Opponents
       if (R_G1.contains(tx, ty)) {  // Race (both branches)
-        _type = MatchType::RACE; _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
+        _type = MatchType::RACE; buildCandidates(false); _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
       } else if (R_G2.contains(tx, ty)) {  // Sumo (both branches) — gated behind NeuroBot
         if (_profile && _profile->unlocks.neuro) {
-          _type = MatchType::SUMO; _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
+          _type = MatchType::SUMO; buildCandidates(true);  // only NeuroBot fighters in Sumo
+          _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
         } else hal::audio.fail();
       } else if (_hotseat && R_G3.contains(tx, ty)) {
         return app::Signal::GOTO_PUZZLE;

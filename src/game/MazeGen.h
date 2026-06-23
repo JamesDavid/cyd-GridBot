@@ -48,6 +48,12 @@ int generateBoards(Maze* out, int maxOut, uint32_t seedBase, int level);
 // column and two starts equidistant from it (left facing E, right facing W), so
 // neither bot has a positional edge. Returns the two start poses via s0/s1.
 void generateArena(Maze& out, uint32_t seed, Pose& s0, Pose& s1);
+
+// A big, open Sumo RING (8x10) with a few mirrored pillars for cover -- different each match
+// as the seed changes. Deterministic from the seed ALONE, so a network battle that feeds both
+// devices the same shared seed renders the identical ring. No goal, no pits (Sumo is an
+// HP / ring-out brawl); starts offset onto different rows for a diagonal approach.
+void generateSumoRing(Maze& out, uint32_t seed, Pose& s0, Pose& s1);
 }  // namespace MazeGen
 
 }  // namespace gb
