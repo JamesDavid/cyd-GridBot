@@ -5,19 +5,25 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <cstdio>
 #include "game/Program.h"
 
 namespace gb {
 
 // Command histogram buckets for stats (SPEC §9). (Backward was removed from the game.)
-enum CmdStat : uint8_t { CS_FWD, CS_TURN, CS_JUMP, CS_REPEAT, CS_CALL, CS_SENSE, CS_COUNT };
+enum CmdStat : uint8_t { CS_FWD, CS_TURN, CS_JUMP, CS_REPEAT, CS_CALL, CS_SENSE, CS_ZAP, CS_NEURO, CS_COUNT };
 
 struct Unlocks {
   bool jump = false;
   bool repeat = false;
   bool func = false;
   bool sense = false;
-  bool neuro = false;     // NeuroBot: train a brain and drop it in your program
+  bool neuro = false;     // NeuroBot: train a brain (Teach) and drop it in your program
+  // NeuroBot training tools unlock progressively after the brain (paced like the blocks):
+  bool nDraw = false;     // tag a path (Draw) and train to it
+  bool nEvolve = false;   // neuroevolution
+  bool nPilot = false;    // planner + follower (brain mode + trainer)
+  bool nRnn = false;      // recurrent memory brain
 };
 
 struct Settings {
@@ -45,9 +51,14 @@ struct Stats {
   uint8_t  gauntletBest = 0;    // most consecutive campaign levels a frozen brain cleared
 };
 
+// Where a saved bot came from (shown in the library / "My Bots" manager).
+enum LibSource : uint8_t { LIB_UNKNOWN, LIB_CODE, LIB_NEURO, LIB_BRAINCAM, LIB_ARENA, LIB_RADIO };
+
 struct LibEntry {
   std::string name;
   Program program;
+  uint8_t source = LIB_UNKNOWN;  // code editor / neuro trainer / Brain Cam / arena / radio
+  uint16_t srcLevel = 0;         // campaign level it was saved from (code editor); 0 = n/a
 };
 
 struct Profile {
@@ -97,7 +108,11 @@ inline Unlocks computeUnlocks(uint32_t level) {
   u.repeat   = level >= 10;
   u.sense    = level >= 15;  // if / repeat-until: the wall-follower payoff, taught first
   u.func     = level >= 20;  // functions come AFTER sensing, so you can wrap if-logic in one
-  u.neuro    = level >= 28;  // graduation: train a brain, a few levels after sensing/if logic
+  u.neuro    = level >= 28;  // graduation: train a brain (Teach), a few levels after sensing
+  u.nDraw    = level >= 31;  // then the training tools arrive one at a time, with a lesson each
+  u.nEvolve  = level >= 34;
+  u.nPilot   = level >= 37;
+  u.nRnn     = level >= 40;
   return u;
 }
 
@@ -111,5 +126,28 @@ inline uint16_t animStepMs(const Settings& s) {
 }
 
 constexpr int LIBRARY_MAX = 12;
+
+// Auto-name a freshly-saved bot by where it came from (+ level for code/brain), with a " vN"
+// suffix to keep it unique: "code L8", then "code L8 v2"...; "fighter"; "braincam".
+inline std::string autoLibName(const Profile& p, uint8_t source, uint16_t level) {
+  char base[24];
+  switch (source) {
+    case LIB_CODE:     snprintf(base, sizeof(base), "code L%u", (unsigned)level); break;
+    case LIB_NEURO:    snprintf(base, sizeof(base), "brain L%u", (unsigned)level); break;
+    case LIB_BRAINCAM: snprintf(base, sizeof(base), "braincam"); break;
+    case LIB_ARENA:    snprintf(base, sizeof(base), "fighter"); break;
+    default:           snprintf(base, sizeof(base), "bot"); break;
+  }
+  auto taken = [&](const char* nm) {
+    for (const auto& e : p.library) if (e.name == nm) return true;
+    return false;
+  };
+  if (!taken(base)) return std::string(base);
+  for (int v = 2; v < 100; v++) {
+    char c[32]; snprintf(c, sizeof(c), "%s v%d", base, v);
+    if (!taken(c)) return std::string(c);
+  }
+  return std::string(base);
+}
 
 }  // namespace gb

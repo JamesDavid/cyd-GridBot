@@ -63,6 +63,8 @@ void RadioScreen::startLink(bool trade) {
   mine.name = _profile ? String(_profile->name.c_str()) : String("Player");
   mine.avatar = _myAvatar;
   mine.uuid = _profile ? String(_profile->uuid.c_str()) : String("");
+  mine.botName = (_profile && !_profile->library.empty())   // send the bot's own name along
+                   ? String(_profile->library.back().name.c_str()) : String("");
   mine.progJson = programToJsonString(_mine);
   net::radio.begin();
   net::radio.startSession(mine);
@@ -96,8 +98,11 @@ void RadioScreen::onReady() {
     // Pokemon-style: drop the friend's bot into the library, bounded (SPEC §11.1).
     if (_profile && (int)_profile->library.size() < gb::LIBRARY_MAX) {
       gb::LibEntry e;
-      e.name = std::string(tc.name.c_str()) + "'s bot";
+      // keep the name the friend gave the bot; fall back to "<friend>'s bot" for old senders
+      e.name = tc.botName.length() ? std::string(tc.botName.c_str())
+                                    : std::string(tc.name.c_str()) + "'s bot";
       e.program = _theirs;
+      e.source = gb::LIB_RADIO;
       _profile->library.push_back(e);
     }
     _phase = Phase::TRADED;
@@ -174,7 +179,16 @@ app::Signal RadioScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     _last = now;
     Pose b0 = _arena.pose(0), b1 = _arena.pose(1);
     ArenaOutcome o = _arena.tick();
-    drawCell(b0.row, b0.col); drawCell(b1.row, b1.col);
+    // redraw each vacated cell + its neighbours: the robot's facing arrow overhangs the next tile,
+    // so clearing only the one cell leaves yellow specks as it moves.
+    auto erase = [&](int r, int c) {
+      for (int dr = -1; dr <= 1; dr++)
+        for (int dc = -1; dc <= 1; dc++) {
+          int rr = r + dr, cc = c + dc;
+          if (rr >= 0 && rr < _maze.rows() && cc >= 0 && cc < _maze.cols()) drawCell(rr, cc);
+        }
+    };
+    erase(b0.row, b0.col); erase(b1.row, b1.col);
     bool me0 = net::radio.iAmBot0();
     drawBot(0, _arena.pose(0), me0 ? _myAvatar : _theirAvatar);
     drawBot(1, _arena.pose(1), me0 ? _theirAvatar : _myAvatar);

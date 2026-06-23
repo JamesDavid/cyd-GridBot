@@ -14,6 +14,20 @@ static const Rect R_BACK  = {244, (int16_t)(BOTBAR_Y + 2), 70, 26};
 
 void QLessonScreen::begin() {
   MazeGen::generate(_maze, 5u, 5);   // a small fixed maze (few cells -> fast, clear Q)
+  // Scatter a gem + two coins on floor cells: reward comes from collecting too, not just the
+  // goal -- so value (and the policy arrows) bend toward them.
+  Pose st = _maze.startPose();
+  int floors[MAZE_MAX_CELLS], nf = 0, cols = _maze.cols();
+  for (int r = 0; r < _maze.rows(); r++)
+    for (int c = 0; c < cols; c++)
+      if (_maze.at(r, c) == FLOOR && !(r == st.row && c == st.col) && !_maze.isGoal(r, c))
+        if (nf < MAZE_MAX_CELLS) floors[nf++] = r * cols + c;
+  if (nf >= 3) {
+    int gem = floors[nf / 4], c1 = floors[nf / 2], c2 = floors[3 * nf / 4];
+    _maze.set(gem / cols, gem % cols, STAR);
+    _maze.set(c1 / cols, c1 % cols, COIN);
+    _maze.set(c2 / cols, c2 % cols, COIN);
+  }
   _q.init(&_maze, 7);
   _solved = false;
 }
@@ -54,8 +68,13 @@ void QLessonScreen::draw() {
       else if (t == PIT) col = C_BG;
       else col = valColor(_q.maxQ(r, c));         // value heatmap
       g.fillRect(x, y, tile - 1, tile - 1, col);
+      int cxx = x + tile / 2, cyy = y + tile / 2;
       if (_maze.isGoal(r, c)) {
-        assets::drawGoalToken(g, x + tile / 2, y + tile / 2, tile, 0);
+        assets::drawGoalToken(g, cxx, cyy, tile, 0);
+      } else if (t == STAR) {
+        g.fillCircle(cxx, cyy, tile / 5, ui::rgb(120, 230, 245));  // gem
+      } else if (t == COIN) {
+        g.fillCircle(cxx, cyy, tile / 6, ui::rgb(255, 210, 60));   // coin
       } else if (t != WALL && t != PIT && _q.maxQ(r, c) > 0.01f) {
         // policy arrow: best move learned for this cell (0=N,1=E,2=S,3=W)
         int a = _q.bestAction(r, c), cx = x + tile / 2, cy = y + tile / 2, s = tile / 4;
@@ -74,8 +93,9 @@ void QLessonScreen::draw() {
   button(g, R_LEARN, "Learn x50", C_GO, C_PANEL);
   button(g, R_RESET, "Reset", C_ACCENT, C_PANEL);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
-  if (_solved) label(g, SCREEN_W / 2, BOTBAR_Y - 10, "it learned the way!", C_GO,
-                     textdatum_t::bottom_center);
+  label(g, SCREEN_W / 2, BOTBAR_Y - 10,
+        _solved ? "it learned the way!" : "explore (try moves), then exploit (keep best)",
+        _solved ? C_GO : C_DIM, textdatum_t::bottom_center);
 }
 
 app::Signal QLessonScreen::tick(uint32_t now, const hal::TouchPoint& tp) {

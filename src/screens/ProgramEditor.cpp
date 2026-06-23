@@ -16,14 +16,18 @@ static constexpr int PAD_X0 = 6, PAD_Y0 = BAND_Y + 2, PAD_CELL = 50, PAD_PITCH =
 static Rect padCell(int i, int j) { return {(int16_t)(PAD_X0 + j * PAD_PITCH),
                                             (int16_t)(PAD_Y0 + i * PAD_PITCH),
                                             PAD_CELL, PAD_CELL}; }
-static const Rect R_CLEAR  = {6, 179, 48, 30};
-static const Rect R_DELPAD = {58, 179, 46, 30};
-static const Rect R_RUNPAD = {108, 179, 54, 30};
+static const Rect R_CLEAR  = {6, 179, 30, 30};
+static const Rect R_DELPAD = {38, 179, 30, 30};
+static const Rect R_UP     = {70, 179, 26, 30};    // move selected line up
+static const Rect R_DN     = {98, 179, 26, 30};    // move selected line down (= insert anywhere)
+static const Rect R_RUNPAD = {126, 179, 36, 30};
 static constexpr int LIST_X = 166, LIST_W = 320 - 166;
 static constexpr int ROW_Y0 = BAND_Y + 22, ROW_H = 24;
 static inline Rect repCycleRect(int y) { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 80, (int16_t)(ROW_H - 2)}; }
-static inline Rect condRect(int y)     { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 80, (int16_t)(ROW_H - 2)}; }
 static inline Rect callCycleRect(int y){ return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 80, (int16_t)(ROW_H - 2)}; }
+// A sense block shows two tappable chips: the keyword (if<->until) then the condition.
+static inline Rect kwRect(int y)   { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 34, (int16_t)(ROW_H - 2)}; }  // 228..262
+static inline Rect condRect(int y) { return {(int16_t)(LIST_X + LIST_W - 56), (int16_t)(y + 1), 44, (int16_t)(ROW_H - 2)}; }  // 264..308
 
 static bool spriteHasPixels(const std::vector<uint8_t>& v) {
   if (v.size() != (size_t)gb::PIX_CELLS) return false;
@@ -36,8 +40,11 @@ static const char* condName(Cond c) {
     case WALL_AHEAD: return "wall";
     case PIT_AHEAD: return "pit";
     case AT_GOAL: return "goal";
-    case ENEMY_AHEAD: return "enemy";
-    case ENEMY_NEAR: return "near";
+    case ENEMY_AHEAD: return "foe ^";
+    case ENEMY_NEAR: return "foe near";
+    case ENEMY_LEFT: return "foe <";
+    case ENEMY_RIGHT: return "foe >";
+    case BLOCKED_AHEAD: return "wall/pit";
   }
   return "?";
 }
@@ -68,7 +75,9 @@ static void nodeLabel(const Node& n, char* buf, size_t bn, Glyph& gl, uint16_t& 
     case N_REPEAT_UNTIL: gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "until %s", condName(n.cond)); break;
     case N_IF:           gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "if %s", condName(n.cond)); break;
     case N_CALL:         gl = Glyph::CALL;   col = C_FUNC;  snprintf(buf, bn, "call F%d", n.func); break;
-    case N_NEURO:        gl = Glyph::SENSE;  col = ui::rgb(120, 230, 245); snprintf(buf, bn, "brain"); break;
+    case N_NEURO:        gl = Glyph::SENSE;  col = ui::rgb(120, 230, 245);
+      snprintf(buf, bn, n.rnn ? (n.pilot ? "rnn pilot" : "rnn brain")
+                              : (n.pilot ? "pilot" : "brain")); break;
   }
 }
 
@@ -132,12 +141,19 @@ void ProgramEditor::drawControlPad() {
   const int ci[4] = {0, 0, 2, 2}, cj[4] = {0, 2, 0, 2};
   for (int s = 0; s < 4; s++) cell(ci[s], cj[s], cg[s], cc[s], !cornerUnlocked(s));
   button(g, R_CLEAR, "CLR", C_BAD, C_PANEL);
-  bool canDel = false;
+  bool canDel = false, canUp = false, canDn = false;
   if (_selected >= 0) {
     std::vector<Row> rows; flatten(*_editList, 0, rows);
-    canDel = (_selected < (int)rows.size() && !rows[_selected].addSlot);
+    if (_selected < (int)rows.size() && !rows[_selected].addSlot && !rows[_selected].trainSlot) {
+      canDel = true;
+      Row& r = rows[_selected];
+      canUp = r.index > 0;
+      canDn = r.index + 1 < (int)r.list->size();
+    }
   }
   button(g, R_DELPAD, "DEL", canDel ? C_BAD : C_DIM, C_PANEL);
+  button(g, R_UP, "Up", canUp ? C_INK : C_DIM, C_PANEL);
+  button(g, R_DN, "Dn", canDn ? C_INK : C_DIM, C_PANEL);
   button(g, R_RUNPAD, "RUN", C_GO, C_PANEL);
 }
 
@@ -317,12 +333,16 @@ void ProgramEditor::drawProgramList() {
       char rl[14]; snprintf(rl, sizeof(rl), "repeat %d", nd->count);
       button(g, repCycleRect(y), rl, C_LOOP, C_PANEL_HI);
     } else if (sel && (nd->type == N_IF || nd->type == N_REPEAT_UNTIL)) {
-      label(g, gx + 18, y + 6, nd->type == N_IF ? "if" : "until", C_SENSE);
+      button(g, kwRect(y), nd->type == N_IF ? "if" : "until", C_SENSE, C_PANEL_HI);
       button(g, condRect(y), condName(nd->cond), C_SENSE, C_PANEL_HI);
     } else if (sel && nd->type == N_CALL) {
       char cl[8]; snprintf(cl, sizeof(cl), "F%d", nd->func);
       label(g, gx + 18, y + 6, "call", C_FUNC);
       button(g, callCycleRect(y), cl, C_FUNC, C_PANEL_HI);
+    } else if (sel && nd->type == N_NEURO) {
+      const char* mode = nd->rnn ? (nd->pilot ? "rnn+pilot" : "rnn")
+                                 : (nd->pilot ? "pilot" : "plain");
+      button(g, callCycleRect(y), mode, ui::rgb(120, 230, 245), C_PANEL_HI);
     } else {
       label(g, gx + 18, y + 6, lab, C_INK);
     }
@@ -399,19 +419,38 @@ ProgramEditor::Action ProgramEditor::handleListTap(int x, int y) {
             hal::audio.blip(); drawProgramList(); return Action::NONE;
           }
         } else if (sn->type == N_IF || sn->type == N_REPEAT_UNTIL) {
+          if (kwRect(yy).contains(x, y)) {  // toggle keyword: until (loop while) <-> if (once)
+            sn->type = (sn->type == N_REPEAT_UNTIL) ? N_IF : N_REPEAT_UNTIL;
+            hal::audio.blip(); drawProgramList(); return Action::NONE;
+          }
           if (condRect(yy).contains(x, y)) {
-            // wall -> pit -> goal -> enemy -> near -> wall. The two enemy senses are
-            // arena conditions, but we expose them in maze mode too so a kid can write
-            // and test their battle-bot's logic here (they simply read false with no foe).
+            // wall -> pit -> wall/pit -> goal -> foe ahead -> foe near -> foe left -> foe right
+            // -> wall. The foe senses are arena conditions, exposed here too so a kid can write
+            // and test a battle-bot's hunting logic (they simply read false with no foe).
             sn->cond = (sn->cond == WALL_AHEAD) ? PIT_AHEAD
-                     : (sn->cond == PIT_AHEAD) ? AT_GOAL
+                     : (sn->cond == PIT_AHEAD) ? BLOCKED_AHEAD
+                     : (sn->cond == BLOCKED_AHEAD) ? AT_GOAL
                      : (sn->cond == AT_GOAL) ? ENEMY_AHEAD
-                     : (sn->cond == ENEMY_AHEAD) ? ENEMY_NEAR : WALL_AHEAD;
+                     : (sn->cond == ENEMY_AHEAD) ? ENEMY_NEAR
+                     : (sn->cond == ENEMY_NEAR) ? ENEMY_LEFT
+                     : (sn->cond == ENEMY_LEFT) ? ENEMY_RIGHT : WALL_AHEAD;
             hal::audio.blip(); drawProgramList(); return Action::NONE;
           }
         } else if (sn->type == N_CALL) {
           if (callCycleRect(yy).contains(x, y)) {
             sn->func = (sn->func == 1) ? 2 : 1;
+            hal::audio.blip(); drawProgramList(); return Action::NONE;
+          }
+        } else if (sn->type == N_NEURO) {
+          if (callCycleRect(yy).contains(x, y)) {  // cycle brain mode: plain -> pilot -> rnn -> rnn+pilot (skip locked)
+            bool uP = !_profile || _profile->unlocks.nPilot;   // pilot tool unlocked (Lv 37)
+            bool uR = !_profile || _profile->unlocks.nRnn;     // memory brain unlocked (Lv 40)
+            int s = (sn->rnn ? 2 : 0) + (sn->pilot ? 1 : 0);   // 0 plain,1 pilot,2 rnn,3 both
+            for (int k = 1; k <= 4; k++) {
+              int n = (s + k) % 4; bool wantP = n & 1, wantR = n & 2;
+              if ((wantP && !uP) || (wantR && !uR)) continue;
+              sn->pilot = wantP; sn->rnn = wantR; break;
+            }
             hal::audio.blip(); drawProgramList(); return Action::NONE;
           }
         }
@@ -438,10 +477,31 @@ void ProgramEditor::deleteSelected() {
   drawProgramList();
 }
 
+void ProgramEditor::moveSelected(int dir) {
+  std::vector<Row> rows;
+  flatten(*_editList, 0, rows);
+  if (_selected < 0 || _selected >= (int)rows.size()) return;
+  Row& r = rows[_selected];
+  if (r.addSlot || r.trainSlot) return;
+  NodeList* lst = r.list;
+  int i = r.index, j = i + dir;
+  if (j < 0 || j >= (int)lst->size()) return;
+  std::swap((*lst)[i], (*lst)[j]);            // moves the whole block (its body rides along)
+  _failNode = nullptr;
+  std::vector<Row> rows2;
+  flatten(*_editList, 0, rows2);
+  for (int k = 0; k < (int)rows2.size(); k++)
+    if (rows2[k].list == lst && rows2[k].index == j && !rows2[k].addSlot && !rows2[k].trainSlot) { _selected = k; break; }
+  hal::audio.blip();
+  drawProgramList(); drawControlPad();
+}
+
 ProgramEditor::Action ProgramEditor::handleTap(int x, int y) {
   if (_cfg.readOnly) return Action::NONE;
   if (R_CLEAR.contains(x, y)) { _editList->clear(); _selected = -1; _failNode = nullptr; hal::audio.blip(); drawProgramList(); drawControlPad(); return Action::NONE; }
   if (R_DELPAD.contains(x, y)) { if (_selected >= 0) { deleteSelected(); drawControlPad(); } return Action::NONE; }
+  if (R_UP.contains(x, y)) { if (_selected >= 0) moveSelected(-1); return Action::NONE; }
+  if (R_DN.contains(x, y)) { if (_selected >= 0) moveSelected(+1); return Action::NONE; }
   if (R_RUNPAD.contains(x, y)) return Action::RUN;
   if (x < LIST_X) { handlePadTap(x, y); return Action::NONE; }
   return handleListTap(x, y);

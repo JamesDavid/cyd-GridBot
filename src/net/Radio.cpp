@@ -84,7 +84,7 @@ void Radio::computeSeedAndRole() {
 void Radio::sendCardChunks() {
   if (!_hasPeer) return;
   if (!_beginSent) {
-    // [M_BEGIN][u16 totalLen][u8 avatar][u8 nameLen][name...][u8 uuidLen][uuid...]
+    // [M_BEGIN][u16 totalLen][u8 avatar][u8 nameLen][name...][u8 uuidLen][uuid...][u8 botNameLen][botName...]
     uint8_t pkt[96];
     int n = 0;
     pkt[n++] = M_BEGIN;
@@ -97,6 +97,9 @@ void Radio::sendCardChunks() {
     uint8_t ul = (uint8_t)min((int)_mine.uuid.length(), 32);
     pkt[n++] = ul;
     for (int i = 0; i < ul; i++) pkt[n++] = _mine.uuid[i];
+    uint8_t bnl = (uint8_t)min((int)_mine.botName.length(), 16);  // the bot's own name
+    pkt[n++] = bnl;
+    for (int i = 0; i < bnl; i++) pkt[n++] = _mine.botName[i];
     esp_now_send(_peer, pkt, n);
     _beginSent = true;
     _sendOffset = 0;
@@ -142,6 +145,11 @@ void Radio::onRecv(const uint8_t* mac, const uint8_t* data, int len) {
       if (p < len) {
         uint8_t ul = data[p++];
         for (int i = 0; i < ul && p < len; i++) _their.uuid += (char)data[p++];
+      }
+      _their.botName = "";
+      if (p < len) {
+        uint8_t bnl = data[p++];
+        for (int i = 0; i < bnl && p < len; i++) _their.botName += (char)data[p++];
       }
       _their.progJson = "";
       _their.progJson.reserve(total);

@@ -73,6 +73,11 @@ class Interpreter {
   Outcome _last = OUT_OK;
   const Node* _current = nullptr;
   Cmd _lastCmd = CMD_FWD;  // effective primitive of the last step() (see lastCmd())
+
+  // Pilot mode (N_NEURO with pilot=true): a one-time planned route the brain follows.
+  uint8_t _wp[40];
+  int _wpN = 0, _wpIdx = 0;
+  bool _wpPlanned = false;
 };
 
 }  // namespace gb

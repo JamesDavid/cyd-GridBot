@@ -1,5 +1,6 @@
 // CodeLab — the coding-basics lessons hub (parallel to NeuroLab). Each teaches one core
-// programming block with a runnable demo: 0 Move, 1 Repeat, 2 Sense, 3 Functions, 4 Jump.
+// programming block with a runnable demo: Move, Jump, Repeat, Sense, Functions, then the
+// neurosymbolic Brain block and a Debug-it lesson. Paginated (5 per page).
 #pragma once
 #include "app/Screen.h"
 #include "ui/UI.h"
@@ -15,6 +16,7 @@ class CodeLabScreen : public app::IScreen {
  private:
   void draw();
   int _pick = -1;
+  int _page = 0;
   app::TapDetector _tap;
 };
 

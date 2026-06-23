@@ -40,6 +40,7 @@ class Maze {
   int goalRow() const { return _goalR; }
   int goalCol() const { return _goalC; }
   void setGoal(int r, int c) { _goalR = r; _goalC = c; set(r, c, GOAL); }
+  void clearGoal() { if (inBounds(_goalR, _goalC)) set(_goalR, _goalC, FLOOR); _goalR = -1; _goalC = -1; }  // Sumo: no goal
   bool isGoal(int r, int c) const { return r == _goalR && c == _goalC; }
 
  private:

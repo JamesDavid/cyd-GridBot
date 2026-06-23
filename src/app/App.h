@@ -5,6 +5,7 @@
 #include "app/Screen.h"
 #include "game/Profile.h"
 #include "screens/GameScreen.h"
+#include "screens/HomeScreen.h"
 #include "screens/ProfileSelectScreen.h"
 #include "screens/ProfileCreateScreen.h"
 #include "screens/StatsScreen.h"
@@ -25,6 +26,11 @@
 #include "screens/CodeLabScreen.h"
 #include "screens/CodeLessonScreen.h"
 #include "screens/TransferLessonScreen.h"
+#include "screens/PilotLessonScreen.h"
+#include "screens/RnnLessonScreen.h"
+#include "screens/PerceptionLessonScreen.h"
+#include "screens/BackpropLessonScreen.h"
+#include "screens/LibraryScreen.h"
 #include "screens/BrainViewScreen.h"
 #include "screens/BrainMapScreen.h"
 
@@ -41,15 +47,19 @@ class App {
   void debugAutoRun();                    // GAME: solve + run paused ('A')
   void debugStep();                       // advance the current run/match one tick ('N')
   void debugNeuroLesson();                // open the single-neuron lesson ('B')
+  void debugDumpMaze();                   // GAME: print the exact maze grid over serial ('M')
 
  private:
-  enum class State : uint8_t { SELECT, CREATE, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE,
+  enum class State : uint8_t { SELECT, CREATE, HOME, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE,
                                NEURO_HUB, NEURO_LESSON, Q_LESSON, EVO_LESSON, NEURO_TRAIN, ARENA_TRAIN,
-                               LESSONS_MENU, CODE_LAB, CODE_LESSON, TRANSFER_LESSON, BRAIN_VIEW, BRAIN_MAP };
+                               LESSONS_MENU, CODE_LAB, CODE_LESSON, TRANSFER_LESSON, BRAIN_VIEW, BRAIN_MAP,
+                               PILOT_LESSON, RNN_LESSON, PERCEPTION_LESSON, BACKPROP_LESSON, LIBRARY };
 
   void gotoSelect();
+  void gotoHome();
   void gotoIntro(uint32_t level);
   void gotoGame();
+  void returnToSub();        // BACK from Badges/Shop/Draw -> Home or Stats (whoever opened it)
   void drawIntro();
   void loadProfileInto(const std::string& id);
   void saveProfile();
@@ -58,9 +68,11 @@ class App {
   gb::Profile _profile;
   uint32_t _introLevel = 1;
   const char* _newBadge = nullptr;  // achievement to celebrate on the next intro
+  bool _subFromHome = false;        // did Badges/Shop/Draw open from the hub (vs Stats)?
 
   screens::ProfileSelectScreen _select;
   screens::ProfileCreateScreen _create;
+  screens::HomeScreen _home;
   screens::GameScreen _game;
   screens::StatsScreen _stats;
   screens::ArenaScreen _arena;
@@ -81,10 +93,19 @@ class App {
   screens::CodeLabScreen _codeLab;
   screens::CodeLessonScreen _codeLesson;
   screens::TransferLessonScreen _transferLesson;
+  screens::PilotLessonScreen _pilotLesson;
+  screens::RnnLessonScreen _rnnLesson;
+  screens::PerceptionLessonScreen _perceptionLesson;
+  screens::BackpropLessonScreen _backpropLesson;
+  screens::LibraryScreen _library;
+  int _renameLibIdx = -1;   // library entry being renamed via the keyboard (-1 = none)
   screens::BrainViewScreen _brainView;
   screens::BrainMapScreen _brainMap;
   TapDetector _introTap;
-  ui::Rect _arenaBtn{90, 196, 140, 28};  // shown on the level intro post-sensing
+  ui::Rect _backBtn{90, 196, 140, 28};   // "< Back" on the level intro -> hub
+  ui::Rect _learnBtn{0, 0, 0, 0};        // "Learn it >" on the intro when a power just unlocked
+  int _introLesson = -1;                 // lesson to open from the intro (CodeLesson idx, or 100 = NeuroLab)
+  bool _fromIntro = false;               // a lesson was opened from the intro -> return there on Back
 };
 
 }  // namespace app

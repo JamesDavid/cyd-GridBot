@@ -1,8 +1,10 @@
 #include "screens/BrainViewScreen.h"
+#include "screens/BrainGraph.h"
 #include "hal/Audio.h"
 #include "assets/Assets.h"
 #include "game/MazeGen.h"
 #include "game/Sensors.h"
+#include "game/Reactive.h"
 #include "game/Distill.h"
 
 using namespace ui;
@@ -10,41 +12,117 @@ using namespace gb;
 
 namespace screens {
 
-static const Rect R_STEP = {6,   (int16_t)(BOTBAR_Y + 2), 84, 26};
-static const Rect R_RUN  = {94,  (int16_t)(BOTBAR_Y + 2), 78, 26};
-static const Rect R_RST  = {176, (int16_t)(BOTBAR_Y + 2), 66, 26};
-static const Rect R_BACK = {250, (int16_t)(BOTBAR_Y + 2), 64, 26};
+static const Rect R_TEACH = {6,   (int16_t)(BOTBAR_Y + 2), 60, 32};
+static const Rect R_RUN   = {70,  (int16_t)(BOTBAR_Y + 2), 48, 32};
+static const Rect R_MAP   = {122, (int16_t)(BOTBAR_Y + 2), 52, 32};
+static const Rect R_NEW   = {178, (int16_t)(BOTBAR_Y + 2), 48, 32};  // scramble to a fresh brain
+static const Rect R_BACK  = {230, (int16_t)(BOTBAR_Y + 2), 84, 32};
+static const Rect R_TYPE  = {196, 1, 56, 20};   // ff/rnn toggle, top bar
+static const Rect R_SAVE  = {136, 1, 56, 20};   // save the brain to your library
 
-static const char* INLBL[SENSOR_COUNT_FOR_BRAIN] =
-  {"wallF","wallL","wallR","pitF","goalF","goalR","goalD","foeF","foeR","foeD"};
-static const char* OUTLBL[5] = {"fwd","turnL","turnR","jump","zap"};
-
-// node colour by activation (~[-1,1]): green = positive/firing, red = negative, dim = ~0
-static uint16_t actCol(float a) {
-  if (a > 0.05f) { int i = (int)(a * 200); if (i > 200) i = 200; return ui::rgb(20, 55 + i, 50); }
-  if (a < -0.05f) { int i = (int)(-a * 180); if (i > 180) i = 180; return ui::rgb(60 + i, 28, 28); }
-  return C_PANEL_HI;
+// weight bar colour for the zoom strip (reuse the graph's forward-weight scale)
+static uint16_t wtCol(float w) {
+  float m = w < 0 ? -w : w; if (m > 1.5f) m = 1.5f; int s = (int)(m * 150);
+  if (w > 0.03f) return ui::rgb(10, 40 + s, 30);
+  if (w < -0.03f) return ui::rgb(40 + s, 18, 18);
+  return ui::rgb(30, 30, 38);
 }
 
-void BrainViewScreen::begin() {
-  MazeGen::generate(_maze, 9u, 6);
-  _brain.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 7);
-  distillSolver(_brain, _maze, true, 500);     // a brain that actually navigates
+// ---- accessors (branch on the active brain type) --------------------------
+float BrainViewScreen::wIn(int i, int j) const { return _useRnn ? rnn().wih[j][i] : ff().w1[j][i]; }
+float BrainViewScreen::wOut(int j, int k) const { return _useRnn ? rnn().who[k][j] : ff().w2[k][j]; }
+float BrainViewScreen::wRec(int a, int b) const { return _useRnn ? rnn().whh[b][a] : 0.0f; }
+float BrainViewScreen::bHid(int j) const { return _useRnn ? rnn().bh[j] : ff().b1[j]; }
+float BrainViewScreen::bOut(int k) const { return _useRnn ? rnn().bo[k] : ff().b2[k]; }
+int   BrainViewScreen::nHid() const { return _useRnn ? rnn().nHid : ff().nHid; }
+
+void BrainViewScreen::loadMaze() {
+  MazeGen::generate(_maze, 4242u, _level);
+  _T = captureSolverShared(_maze);
+}
+
+void BrainViewScreen::resetBrains() {
   _prog.clear();
-  uint8_t idx = _prog.addBrain(1); _prog.brains[idx] = _brain;
-  Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(idx)); _prog.main.push_back(loop);
-  _it.load(&_prog, &_maze, _maze.startPose(), 200);
-  _running = false;
-  computeActivations();
+  _prog.addBrain(7);              // creates brains[0] (Net) + rbrains[0] (RNet), both untrained
+  rnn().lr = 0.05f;
+  _epoch = 0; _loss = 1.0f;
+}
+
+void BrainViewScreen::begin(Profile* profile) {
+  _profile = profile;
+  _level = 6; _useRnn = false; _sel = -1; _mode = M_IDLE; _saved = false;
+  loadMaze();
+  resetBrains();
+  resetRun();
+}
+
+int BrainViewScreen::nextVersion() const {
+  int hi = 0;
+  if (_profile)
+    for (auto& e : _profile->library) { int v = 0; if (sscanf(e.name.c_str(), "Brain v%d", &v) == 1 && v > hi) hi = v; }
+  return hi + 1;
+}
+
+void BrainViewScreen::saveToLibrary() {
+  if (!_profile || (int)_profile->library.size() >= LIBRARY_MAX) { hal::audio.fail(); return; }
+  LibEntry e;
+  e.name = autoLibName(*_profile, LIB_BRAINCAM, 0);
+  uint8_t idx = e.program.addBrain(1);          // makes brains[idx] + rbrains[idx]
+  Node nb = Node::neuro(idx);
+  if (_useRnn) { e.program.rbrains[idx] = rnn(); nb = Node::rnnBrain(idx); }  // the trained memory brain
+  else         { e.program.brains[idx]  = ff(); }                            // the trained feedforward brain
+  Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(nb); e.program.main.push_back(loop);
+  e.source = LIB_BRAINCAM;
+  _profile->library.push_back(e);
+  if (_profile->stats.fightersSaved < 0xFFFF) _profile->stats.fightersSaved++;  // counts toward Battle-Ready
+  _saved = true; hal::audio.badge();
 }
 
 void BrainViewScreen::enter() { draw(); }
 
-void BrainViewScreen::computeActivations() {
-  senseEgo(_maze, _it.pose(), nullptr, _in);
-  _brain.forward(_in, _out, _hid);
+void BrainViewScreen::infer() {
+  senseEgo(_maze, _pose, nullptr, _in);
+  if (_useRnn) { rnn().step(_in, _out); for (int j = 0; j < rnn().nHid; j++) _hid[j] = rnn().h[j]; }
+  else { ff().forward(_in, _out, _hid); }
   _action = 0;
-  for (int k = 1; k < _brain.nOut; k++) if (_out[k] > _out[_action]) _action = k;
+  for (int k = 1; k < 5; k++) if (_out[k] > _out[_action]) _action = k;
+}
+
+void BrainViewScreen::resetRun() {
+  _pose = _maze.startPose(); _done = false; _won = false; _steps = 0;
+  if (_useRnn) rnn().resetState();
+  infer();
+}
+
+void BrainViewScreen::stepRun() {
+  if (_done) return;
+  if (++_steps > 140) { _done = true; return; }   // gave up (a reactive brain can spin forever)
+  static const Cmd kAct[4] = {CMD_FWD, CMD_TURN_L, CMD_TURN_R, CMD_JUMP};  // (zap isn't a maze move)
+  // try the brain's actions strongest-first, do the first one that's actually LEGAL — so an
+  // impossible "jump" doesn't kill the run, it falls back to the next idea (turn, forward...).
+  int rank[4] = {0, 1, 2, 3};
+  for (int a = 0; a < 4; a++) for (int b = a + 1; b < 4; b++)
+    if (_out[rank[b]] > _out[rank[a]]) { int t = rank[a]; rank[a] = rank[b]; rank[b] = t; }
+  for (int r = 0; r < 4; r++) {
+    Pose test = _pose;
+    Outcome o = reactiveApply(_maze, test, kAct[rank[r]]);
+    if (o == OUT_BONK || o == OUT_FELL) continue;   // illegal here -> try the next-best action
+    _action = rank[r]; _pose = test;
+    if (o == OUT_WIN || _maze.isGoal(_pose.row, _pose.col)) { _won = true; _done = true; }
+    break;
+  }
+  if (!_done) infer();
+}
+
+void BrainViewScreen::trainChunk() {
+  if (_T <= 0) { _mode = M_IDLE; return; }
+  if (_useRnn) { _loss = rnnTrainShared(rnn(), 3); _epoch += 3; }
+  else         { _loss = ffTrainShared(ff(), 6);   _epoch += 6; }
+  if (_epoch >= (_useRnn ? 240 : 150)) { _mode = M_IDLE; resetRun(); }  // trained -> ready to run
+}
+
+bool BrainViewScreen::nodeAt(int x, int y, int& layer, int& idx) const {
+  return brainGraphNodeAt(x, y, nHid(), layer, idx);
 }
 
 void BrainViewScreen::draw() {
@@ -52,11 +130,30 @@ void BrainViewScreen::draw() {
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Brain Cam", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
-  label(g, 150, 4, "sense -> think -> act", C_DIM, textdatum_t::top_left);
+  if (_profile) {  // save the trained brain into your library (then usable in code + Arena)
+    button(g, R_SAVE, _saved ? "saved!" : "save", _saved ? C_DIM : C_GO, C_PANEL);
+  }
+  button(g, R_TYPE, _useRnn ? "rnn >" : "plain >", _useRnn ? C_ACCENT : C_INK, C_PANEL);
 
-  // small maze (top-left) so you see WHAT it senses
-  int mtile = 52 / _maze.cols(); if (44 / _maze.rows() < mtile) mtile = 44 / _maze.rows();
-  int mox = 6, moy = BAND_Y + 4;
+  drawMaze();
+  drawWeb();
+
+  g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
+  button(g, R_TEACH, _mode == M_LEARN ? "..." : "Teach", C_GO, C_PANEL);
+  button(g, R_RUN, _mode == M_RUN ? "stop" : "Run", C_GO, C_PANEL);
+  char mp[10]; snprintf(mp, sizeof(mp), "Map%d>", _level);
+  button(g, R_MAP, mp, C_FUNC, C_PANEL);      // next map, KEEP the brain (transfer learning)
+  button(g, R_NEW, "New", C_ACCENT, C_PANEL); // scramble to a fresh untrained brain
+  button(g, R_BACK, "Back", C_INK, C_PANEL);
+}
+
+// the small maze + robot (top-left). Clears just its own corner.
+void BrainViewScreen::drawMaze() {
+  auto& g = hal::display.gfx();
+  g.fillRect(0, BAND_Y, 50, 52, C_BG);
+  int mtile = 46 / _maze.cols(); if (40 / _maze.rows() < mtile) mtile = 40 / _maze.rows();
+  if (mtile < 4) mtile = 4;
+  int mox = 4, moy = BAND_Y + 4;
   for (int r = 0; r < _maze.rows(); r++)
     for (int c = 0; c < _maze.cols(); c++) {
       int x = mox + c * mtile, y = moy + r * mtile;
@@ -66,68 +163,88 @@ void BrainViewScreen::draw() {
       g.fillRect(x, y, mtile - 1, mtile - 1, col);
       if (_maze.isGoal(r, c)) g.fillCircle(x + mtile / 2, y + mtile / 2, mtile / 3, C_ACCENT);
     }
-  Pose p = _it.pose();
-  assets::drawCharacter(g, mox + p.col * mtile + mtile / 2, moy + p.row * mtile + mtile / 2, mtile, 0, p.facing);
+  assets::drawCharacter(g, mox + _pose.col * mtile + mtile / 2, moy + _pose.row * mtile + mtile / 2,
+                        mtile, 0, _pose.facing);
+}
 
-  // ---- the network: inputs (left) -> hidden (mid) -> outputs (right) ----
-  int IX = 96, HX = 168, OX = 238;
-  // node columns centred vertically in the band (was scrunched at the top)
-  int iy0 = BAND_Y + 22, idy = 16;
-  int hy0 = BAND_Y + 26, hdy = 20;
-  int oy0 = BAND_Y + 32, ody = 28;
-  // dim wiring
-  for (int i = 0; i < SENSOR_COUNT_FOR_BRAIN; i++)
-    for (int j = 0; j < _brain.nHid; j++) g.drawLine(IX, iy0 + i * idy, HX, hy0 + j * hdy, C_LOCK);
-  for (int j = 0; j < _brain.nHid; j++)
-    for (int k = 0; k < _brain.nOut; k++) g.drawLine(HX, hy0 + j * hdy, OX, oy0 + k * ody, C_LOCK);
-  // input nodes + labels
-  for (int i = 0; i < SENSOR_COUNT_FOR_BRAIN; i++) {
-    int y = iy0 + i * idy;
-    label(g, 62, y - 3, INLBL[i], C_DIM);
-    g.fillCircle(IX, y, 4, actCol(_in[i]));
-  }
-  // hidden nodes
-  for (int j = 0; j < _brain.nHid; j++) g.fillCircle(HX, hy0 + j * hdy, 6, actCol(_hid[j]));
-  // output nodes + labels (winner ringed)
-  for (int k = 0; k < _brain.nOut; k++) {
-    int y = oy0 + k * ody;
-    g.fillCircle(OX, y, 8, actCol(_out[k] * 2 - 1));
-    if (k == _action) g.drawCircle(OX, y, 10, ui::rgb(120, 230, 245));
-    label(g, OX + 14, y - 3, OUTLBL[k], k == _action ? ui::rgb(120, 230, 245) : C_DIM);
-  }
-  // headers + verdict
-  label(g, 70, BAND_Y - 0, "SEES", C_MOVE);
-  label(g, HX - 14, BAND_Y, "THINKS", C_SENSE);
-  label(g, OX - 6, BAND_Y, "DOES", C_GO);
-  char v[24]; snprintf(v, sizeof(v), "decides: %s", OUTLBL[_action]);
-  label(g, SCREEN_W / 2, BOTBAR_Y - 16, v, ui::rgb(120, 230, 245), textdatum_t::top_center);
+// the network: connections (redrawn in place over the last frame -> no full clear, no flicker)
+// + nodes + the status/zoom strip (only that small strip is cleared each frame).
+void BrainViewScreen::drawWeb() {
+  auto& g = hal::display.gfx();
+  int selLayer = _sel < 0 ? -1 : _sel / 100, selIdx = _sel < 0 ? -1 : _sel % 100;
 
-  g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
-  button(g, R_STEP, "Step", C_GO, C_PANEL);
-  button(g, R_RUN, _running ? "..." : "Run", C_GO, C_PANEL);
-  button(g, R_RST, "Reset", C_ACCENT, C_PANEL);
-  button(g, R_BACK, "Back", C_INK, C_PANEL);
+  drawBrainGraph(g, &ff(), &rnn(), _useRnn, _in, _hid, _out, _action, _sel);  // the shared network graph
+
+  // ---- status / zoom strip (just above the toolbar) — clear only this strip each frame ----
+  int sy = BOTBAR_Y - 16;
+  g.fillRect(0, sy - 16, SCREEN_W, 32, C_BG);
+  if (_mode == M_LEARN) {
+    char m[28]; snprintf(m, sizeof(m), "learning  epoch %d", _epoch);
+    label(g, 6, sy, m, C_ACCENT);
+    int bw = 120, bx = 150; g.drawRect(bx, sy, bw, 10, C_DIM);
+    float f = _loss > 1 ? 1 : (_loss < 0 ? 0 : _loss);
+    g.fillRect(bx + 1, sy + 1, (int)((bw - 2) * (1 - f)), 8, C_GO);   // fills as loss falls
+  } else if (_sel >= 0) {
+    // zoom: the selected neuron's incoming weights as a bar strip + bias + value
+    float val = (selLayer == 1) ? _hid[selIdx] : _out[selIdx];
+    char m[40];
+    snprintf(m, sizeof(m), "%s%d  bias %+.2f  out %+.2f",
+             selLayer == 1 ? "hidden " : "output ", selIdx,
+             selLayer == 1 ? bHid(selIdx) : bOut(selIdx), val);
+    label(g, 6, sy, m, ui::rgb(120, 230, 245));
+    int n = (selLayer == 1) ? SENSOR_COUNT_FOR_BRAIN : nHid();
+    int bx = 6, bw = (SCREEN_W - 12) / n;
+    for (int q = 0; q < n; q++) {
+      float w = (selLayer == 1) ? wIn(q, selIdx) : wOut(q, selIdx);
+      int h = (int)(w * 7); if (h > 7) h = 7; if (h < -7) h = -7;
+      int cx = bx + q * bw + bw / 2;
+      g.fillRect(cx - bw / 2 + 1, sy - 8 - (h > 0 ? h : 0), bw - 2, h > 0 ? h : -h, wtCol(w * 3));
+    }
+  } else if (_saved && _profile && !_profile->library.empty()) {
+    char v[40]; snprintf(v, sizeof(v), "saved as \"%s\" -> My Bots", _profile->library.back().name.c_str());
+    label(g, 6, sy, v, C_GO);
+  } else {
+    char v[28]; snprintf(v, sizeof(v), "decides: %s", BRAIN_OUTLBL[_action]);
+    label(g, 6, sy, v, ui::rgb(120, 230, 245));
+    label(g, 150, sy, _epoch ? "tap a neuron to zoom" : "tap Teach to train", C_DIM);
+  }
 }
 
 app::Signal BrainViewScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
-  if (_running && !_it.finished() && now - _last >= 600) {
-    _last = now; _it.step(); computeActivations();
-    if (_it.finished()) _running = false;
-    draw();
-  }
+  // Animate WITHOUT a full-screen clear (that was the flicker): training redraws only the
+  // network web (lines in place) + the status strip; running also refreshes the maze corner.
+  if (_mode == M_LEARN && now - _last >= 70) { _last = now; trainChunk();
+    if (_mode == M_LEARN) drawWeb(); else draw(); }
+  else if (_mode == M_RUN && !_done && now - _last >= 550) { _last = now; stepRun();
+    drawMaze(); drawWeb(); if (_done) { _mode = M_IDLE; draw(); } }
+
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
-  if (R_STEP.contains(tx, ty)) {
-    if (!_it.finished()) { _it.step(); computeActivations(); }
-    else { _it.load(&_prog, &_maze, _maze.startPose(), 200); computeActivations(); }
-    hal::audio.blip(); draw();
+  if (_profile && R_SAVE.contains(tx, ty)) {
+    saveToLibrary(); draw();
+  } else if (R_TYPE.contains(tx, ty)) {
+    _useRnn = !_useRnn; _sel = -1; _mode = M_IDLE; _saved = false; resetRun(); hal::audio.blip(); draw();
+  } else if (R_TEACH.contains(tx, ty)) {
+    if (_mode == M_LEARN) { _mode = M_IDLE; resetRun(); }
+    else { _epoch = 0; _mode = M_LEARN; _last = now; }
+    _saved = false; hal::audio.blip(); draw();
   } else if (R_RUN.contains(tx, ty)) {
-    if (_it.finished()) { _it.load(&_prog, &_maze, _maze.startPose(), 200); computeActivations(); }
-    _running = !_running; _last = now; draw();
-  } else if (R_RST.contains(tx, ty)) {
-    begin(); draw();
+    if (_mode == M_RUN) { _mode = M_IDLE; }
+    else { _sel = -1; resetRun(); _mode = M_RUN; _last = now; }
+    hal::audio.blip(); draw();
+  } else if (R_MAP.contains(tx, ty)) {
+    _level = _level >= 14 ? 3 : _level + 1;   // cycle a few campaign maps
+    // KEEP the trained brain — it carries over to the new map (transfer learning); Teach
+    // then fine-tunes it. Tap "New" to scramble and learn the map from scratch instead.
+    _sel = -1; _mode = M_IDLE; _saved = false; loadMaze(); resetRun(); hal::audio.blip(); draw();
+  } else if (R_NEW.contains(tx, ty)) {
+    _sel = -1; _mode = M_IDLE; _saved = false; resetBrains(); resetRun(); hal::audio.blip(); draw();  // fresh brain
   } else if (R_BACK.contains(tx, ty)) {
     return app::Signal::BACK;
+  } else {
+    int layer, idx;
+    if (nodeAt(tx, ty, layer, idx)) { _sel = layer * 100 + idx; hal::audio.blip(); draw(); }
+    else if (_sel >= 0) { _sel = -1; draw(); }
   }
   return app::Signal::NONE;
 }

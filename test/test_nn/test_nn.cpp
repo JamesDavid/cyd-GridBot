@@ -12,6 +12,10 @@
 #include "game/Interpreter.h"
 #include "game/Distill.h"
 #include "game/Gauntlet.h"
+#include "game/Pilot.h"
+#include "game/Reactive.h"
+#include "game/Sensors.h"
+#include "game/RNet.h"
 #include "game/Score.h"
 
 using namespace gb;
@@ -220,8 +224,122 @@ void test_gauntlet_is_winnable() {
                             "a trained reactive brain should clear the whole gauntlet");
 }
 
+// Pilot mode (planner waypoints + a pilot-trained follower) clears the campaign that a bare
+// reactive brain cannot — the planner-decides-where / brain-decides-how split.
+void test_pilot_clears_campaign() {
+  const uint32_t seed = 4242;
+  Net brain; brain.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
+  pilotTrain(brain, seed, 30, 30);          // learn to steer toward waypoints on lvls 1..30
+  TEST_ASSERT_EQUAL_MESSAGE(30, pilotRun(brain, seed, 30),
+                            "a pilot-trained brain should clear the whole campaign chunk");
+}
+
+// TEMP: does an RNN (memory) beat a feedforward brain (no memory) at solving mazes ALONE?
+// Both imitate the memory-using explorer from the SAME 10 senses (no trail input). The RNN
+// must build memory internally via its recurrent state; the feedforward brain cannot.
+// Roll out the explorer on a maze, capturing (senses, action) for each step.
+static int explorerRollout(const Maze& m, float* X, int* act, int maxT) {
+  uint8_t vis[MAZE_MAX_CELLS] = {0};
+  Pose p = m.startPose(); vis[p.row * m.cols() + p.col] = 1;
+  int T = 0;
+  for (int s = 0; s < maxT; s++) {
+    if (m.isGoal(p.row, p.col)) break;
+    senseEgo(m, p, nullptr, X + T * SENSOR_COUNT);          // standard 10 senses, no trail
+    Cmd c = exploreActionTo(m, p, vis, m.goalRow(), m.goalCol());
+    act[T] = reactiveCmdToAction(c); T++;
+    if (reactiveApply(m, p, c) != OUT_OK) break;
+    vis[p.row * m.cols() + p.col] = 1;
+  }
+  return T;
+}
+static int ffBrainCount(const Net& brain, uint32_t seed, int N) {
+  int n = 0;
+  for (int l = 1; l <= N; l++) {
+    Maze m; MazeGen::generate(m, seed, l);
+    Pose p = m.startPose(); bool won = false;
+    for (int s = 0; s < 300; s++) {
+      if (m.isGoal(p.row, p.col)) { won = true; break; }
+      float sv[SENSOR_COUNT]; senseEgo(m, p, nullptr, sv);
+      int a = brain.argmax(sv);
+      Cmd c = a == 1 ? CMD_TURN_L : a == 2 ? CMD_TURN_R : a == 3 ? CMD_JUMP : CMD_FWD;
+      Outcome o = reactiveApply(m, p, c);
+      if (o == OUT_WIN) { won = true; break; }
+      if (o == OUT_BONK || o == OUT_FELL) break;
+    }
+    if (won) n++;
+  }
+  return n;
+}
+static int rnnBrainCount(RNet& brain, uint32_t seed, int N) {
+  int n = 0;
+  for (int l = 1; l <= N; l++) {
+    Maze m; MazeGen::generate(m, seed, l);
+    Pose p = m.startPose(); bool won = false; brain.resetState();
+    for (int s = 0; s < 300; s++) {
+      if (m.isGoal(p.row, p.col)) { won = true; break; }
+      float sv[SENSOR_COUNT]; senseEgo(m, p, nullptr, sv);
+      int a = brain.argmaxStep(sv);
+      Cmd c = a == 1 ? CMD_TURN_L : a == 2 ? CMD_TURN_R : a == 3 ? CMD_JUMP : CMD_FWD;
+      Outcome o = reactiveApply(m, p, c);
+      if (o == OUT_WIN) { won = true; break; }
+      if (o == OUT_BONK || o == OUT_FELL) break;
+    }
+    if (won) n++;
+  }
+  return n;
+}
+// Memory wins: an RNN trained (BPTT) to imitate the explorer solves more mazes ALONE than a
+// feedforward brain given the identical training examples — because escaping dead-ends needs
+// state the feedforward brain can't hold. Guards the RNN lesson's core claim.
+void test_rnn_memory_beats_feedforward() {
+  const uint32_t seed = 4242; const int N = 30;
+  // Same 8-neuron hidden layer as the real robot brain — the ONLY difference is the RNN's
+  // recurrent memory loop, so the win is attributable to memory, not extra capacity.
+  Net ff; ff.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
+  RNet rnn; rnn.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1); rnn.lr = 0.05f;
+  static float X[56 * SENSOR_COUNT]; static int act[56];
+  for (int e = 0; e < 100; e++)
+    for (int l = 1; l <= N; l++) {
+      Maze m; MazeGen::generate(m, seed, l);
+      int T = explorerRollout(m, X, act, 56);
+      if (T <= 0) continue;
+      rnn.trainEpisode(X, act, T);
+      for (int t = 0; t < T; t++) {            // same examples for the feedforward brain
+        float tgt[NET_MAX_OUT] = {0}; tgt[act[t]] = 1.0f;
+        ff.trainStep(X + t * SENSOR_COUNT, tgt);
+      }
+    }
+  int ffN = ffBrainCount(ff, seed, N);
+  int rnnN = rnnBrainCount(rnn, seed, N);
+  TEST_ASSERT_TRUE_MESSAGE(rnnN >= ffN + 3, "the RNN's memory should clear clearly more mazes");
+}
+
+// A NEURO node with rnn=true runs the program's recurrent brain (rbrains), not the
+// feedforward one — verifies the interpreter wiring + per-run memory reset.
+void test_rnn_brain_node_runs() {
+  Program prog;
+  uint8_t idx = prog.addBrain(1);             // creates brains[idx] AND rbrains[idx]
+  RNet& r = prog.rbrains[idx];
+  for (int m = 0; m < 5; m++) {               // force argmax -> forward (action 0)
+    for (int j = 0; j < r.nHid; j++) r.who[m][j] = 0.0f;
+    r.bo[m] = (m == 0) ? 6.0f : -6.0f;
+  }
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(Node::rnnBrain(idx));   // the RECURRENT brain
+  prog.main.push_back(loop);
+
+  Maze m; m.reset(1, 5); m.fill(FLOOR);
+  Pose s; s.row = 0; s.col = 0; s.facing = EAST;
+  m.setStart(s); m.set(0, 0, START); m.setGoal(0, 4);
+  Interpreter it; it.load(&prog, &m, m.startPose());
+  TEST_ASSERT_EQUAL((int)OUT_WIN, (int)it.runToEnd());   // the rnn node drove it to the goal
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
+  RUN_TEST(test_rnn_memory_beats_feedforward);
+  RUN_TEST(test_rnn_brain_node_runs);
+  RUN_TEST(test_pilot_clears_campaign);
   RUN_TEST(test_distill_brain_navigates);
   RUN_TEST(test_gauntlet_bounded_and_deterministic);
   RUN_TEST(test_gauntlet_is_winnable);

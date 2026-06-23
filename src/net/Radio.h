@@ -16,6 +16,7 @@ struct BotCard {
   String name;       // friend's profile name (<= 8 chars)
   uint8_t avatar = 0;
   String uuid;       // friend's stable profile id (for cross-session recognition)
+  String botName;    // the name the friend gave THIS bot (so it keeps it on arrival)
   String progJson;   // program AST serialized via gb::programToJson
 };
 

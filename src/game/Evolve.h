@@ -6,6 +6,7 @@
 #include "game/Maze.h"
 #include "game/Net.h"
 #include "game/Interpreter.h"  // EnemyView
+#include "game/Arena.h"        // MatchType
 
 namespace gb {
 
@@ -16,10 +17,10 @@ constexpr int EVO_KEEP = 5;   // top survivors that get to breed
 // a small efficiency cost. (Reuses the interpreter + N_NEURO; deterministic.)
 float scoreBrain(const Net& brain, const Maze& m, const EnemyView* enemy, int maxSteps);
 
-// Fitness as an ARENA FIGHTER: run a real Race match vs an AI program and score by
-// outcome (win >> progress >> loss) + survival. For training bots to battle.
+// Fitness as an ARENA FIGHTER vs an AI program. RACE = score by progress/win to the goal;
+// SUMO = score by knocking the enemy out + surviving + hunting it down (no goal).
 float scoreFighter(const Net& brain, const Maze& m, const Pose& s0, const Pose& s1,
-                   const Program& ai, int maxSteps);
+                   const Program& ai, int maxSteps, MatchType type = MatchType::RACE);
 
 struct Evolve {
   Net pop[EVO_POP];
@@ -31,7 +32,8 @@ struct Evolve {
   void init(int in, int hid, int out, uint32_t seed);
   void evaluate(const Maze& m, const EnemyView* enemy = nullptr, int maxSteps = 120);
   // score every brain as a fighter vs the AI (for the Arena trainer)
-  void evaluateArena(const Maze& m, const Pose& s0, const Pose& s1, const Program& ai, int maxSteps = 200);
+  void evaluateArena(const Maze& m, const Pose& s0, const Pose& s1, const Program& ai,
+                     int maxSteps = 200, MatchType type = MatchType::RACE);
   void breed();                       // selection + mutation -> next generation
   void step(const Maze& m, int maxSteps = 120) { evaluate(m, nullptr, maxSteps); breed(); }
 

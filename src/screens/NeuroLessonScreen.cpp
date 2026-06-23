@@ -18,8 +18,8 @@ static const Rect R_T50  = {84,  (int16_t)(BOTBAR_Y + 2), 86, 26};
 static const Rect R_RST  = {174, (int16_t)(BOTBAR_Y + 2), 64, 26};
 static const Rect R_BACK = {242, (int16_t)(BOTBAR_Y + 2), 72, 26};
 
-static const char* TITLES[3] = {"Neuron: watch it learn", "Multi-class: 3 actions", "Hidden layer: XOR"};
-static const char* RULES[3]  = {"turn if WALL or PIT", "jump if pit, turn if wall, else go", "ON if exactly one of A, B"};
+static const char* TITLES[3] = {"Neuron: watch it learn", "Multi-class: 3 actions", "Hidden layer: corners"};
+static const char* RULES[3]  = {"turn if WALL or PIT", "jump if pit, turn if wall, else go", "turn if EXACTLY ONE side is open"};
 
 void NeuroLessonScreen::begin(int mode) {
   _mode = mode;
@@ -47,7 +47,7 @@ static int correctClass(int mode, int i) {
 
 static const char* actionName(int mode, int cls) {
   if (mode == 1) { static const char* a[3] = {"GO", "TURN", "JUMP"}; return a[cls]; }
-  if (mode == 2) return cls ? "ON" : "OFF";
+  if (mode == 2) return cls ? "turn" : "go";
   return cls ? "TURN" : "GO";
 }
 
@@ -104,9 +104,9 @@ void NeuroLessonScreen::draw() {
     label(g, 8, 150, "weights & bias update as it learns", C_DIM);
   } else {
     // 2 inputs -> hidden row -> outputs (a layered blob — "more neurons").
-    // mode 1 reacts to wall/pit; mode 2 (XOR) is an abstract logic gate over two inputs A,B.
-    const char* nA = (_mode == 2) ? "A" : "wall";
-    const char* nB = (_mode == 2) ? "B" : "pit";
+    // mode 1 reacts to wall/pit; mode 2 senses whether the LEFT/RIGHT side is open (corners).
+    const char* nA = (_mode == 2) ? "L" : "wall";
+    const char* nB = (_mode == 2) ? "R" : "pit";
     g.fillCircle(30, 70, 12, C_MOVE); label(g, 30, 70, nA, C_BG, textdatum_t::middle_center);
     g.fillCircle(30, 120, 12, C_PANEL_HI); label(g, 30, 120, nB, C_INK, textdatum_t::middle_center);
     int outs = (_mode == 1) ? 3 : 1;
@@ -130,8 +130,8 @@ void NeuroLessonScreen::draw() {
     int wall = (int)DX[i * 2], pit = (int)DX[i * 2 + 1];
     // a bright word when the input is ON, dim when OFF -> you read why each row decides.
     // modes 0/1 are wall/pit sensors; mode 2 (XOR) is two abstract inputs A,B.
-    label(g, ex0, y, _mode == 2 ? (wall ? "A" : "a") : (wall ? "WALL" : "wall"), wall ? C_MOVE : C_LOCK);
-    label(g, ex0 + 34, y, _mode == 2 ? (pit ? "B" : "b") : (pit ? "PIT" : "pit"), pit ? C_SENSE : C_LOCK);
+    label(g, ex0, y, _mode == 2 ? (wall ? "L" : "l") : (wall ? "WALL" : "wall"), wall ? C_MOVE : C_LOCK);
+    label(g, ex0 + 34, y, _mode == 2 ? (pit ? "R" : "r") : (pit ? "PIT" : "pit"), pit ? C_SENSE : C_LOCK);
     label(g, ex0 + 58, y, "->", C_DIM);
     int act = decision(i), want = correctClass(_mode, i);
     bool ok = (act == want);
@@ -140,8 +140,8 @@ void NeuroLessonScreen::draw() {
     label(g, ex0 + 134, y, ok ? "ok" : "X", ok ? C_GO : C_BAD);
   }
 
-  int ly = TOPBAR_H + 18 + N_EX * 42 - 6;
-  char lb[20]; snprintf(lb, sizeof(lb), "error %.3f", _loss);
+  int ly = BOTBAR_Y - 14;  // anchored just above the toolbar (was pushed under it by the taller bar)
+  char lb[20]; snprintf(lb, sizeof(lb), "loss %.3f", _loss);  // "loss" = how wrong it still is
   label(g, 6, ly, lb, _loss < 0.02f ? C_GO : C_INK);
   int barW = 120; g.drawRect(80, ly, barW, 8, C_PANEL_HI);
   int fill = (int)(barW * (_loss / 0.25f)); if (fill > barW) fill = barW;

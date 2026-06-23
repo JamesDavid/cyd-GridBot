@@ -45,6 +45,19 @@ void App::gotoSelect() {
     hal::audio.startMusic(hal::kTitleMusic, hal::kTitleMusicLen, true);  // menu theme
 }
 
+void App::gotoHome() {
+  _state = State::HOME;
+  _home.begin(&_profile);
+  _home.enter();
+  if (hal::audio.enabled())  // the hub keeps the menu theme
+    hal::audio.startMusic(hal::kTitleMusic, hal::kTitleMusicLen, true);
+}
+
+void App::returnToSub() {
+  if (_subFromHome) { gotoHome(); }
+  else { _stats.begin(&_profile); _stats.enter(); _state = State::STATS; }
+}
+
 void App::loadProfileInto(const std::string& id) {
   if (!store::profiles.load(id, _profile)) {
     _profile = gb::Profile{};
@@ -80,13 +93,21 @@ void App::drawIntro() {
   // newly-unlocked mechanic (compare this level's unlocks to the previous level's)
   gb::Unlocks now = gb::computeUnlocks(_introLevel);
   gb::Unlocks prev = gb::computeUnlocks(_introLevel ? _introLevel - 1 : 0);
-  const char* newText = nullptr;
-  if (now.jump && !prev.jump) newText = "New: Jump!";
-  else if (now.repeat && !prev.repeat) newText = "New: Repeat loops!";
-  else if (now.sense && !prev.sense) newText = "New: Sensing!";
-  else if (now.func && !prev.func) newText = "New: Functions!";
-  else if (now.neuro && !prev.neuro) newText = "New: NeuroBot!";
+  // a newly-unlocked power -> point straight at its lesson, at the teachable moment.
+  const char* newText = nullptr; const char* subText = nullptr; _introLesson = -1;
+  if (now.jump && !prev.jump)        { newText = "New: Jump!";         _introLesson = 1; }   // CodeLab idx
+  else if (now.repeat && !prev.repeat){ newText = "New: Repeat loops!"; _introLesson = 2; }
+  else if (now.sense && !prev.sense)  { newText = "New: Sensing!";      _introLesson = 3;
+                                        subText = "+ Arena Battle - code a fighter!"; }  // foe senses + zap unlock Battle
+  else if (now.func && !prev.func)    { newText = "New: Functions!";    _introLesson = 4; }
+  else if (now.neuro && !prev.neuro)  { newText = "New: NeuroBot!";     _introLesson = 100; } // NeuroLab hub
+  // the training tools arrive one at a time after the brain, each pointing at its lesson:
+  else if (now.nDraw && !prev.nDraw)    { newText = "New: Draw & tag!";   _introLesson = 101; } // Data lesson
+  else if (now.nEvolve && !prev.nEvolve){ newText = "New: Evolve!";       _introLesson = 102; } // Evolution
+  else if (now.nPilot && !prev.nPilot)  { newText = "New: Pilot!";        _introLesson = 103; } // Pilot
+  else if (now.nRnn && !prev.nRnn)      { newText = "New: Memory brain!"; _introLesson = 104; } // RNN
   if (newText) label(g, SCREEN_W / 2, y + 50, newText, C_GO, textdatum_t::middle_center);
+  if (subText) label(g, SCREEN_W / 2, y + 64, subText, C_ACCENT, textdatum_t::middle_center);
   if (_newBadge) {
     char b[40]; snprintf(b, sizeof(b), "Badge: %s!", _newBadge);
     label(g, SCREEN_W / 2, y + 68, b, C_FUNC, textdatum_t::middle_center);
@@ -94,9 +115,16 @@ void App::drawIntro() {
 
   label(g, SCREEN_W / 2, y + h - 18, "tap to start", C_DIM, textdatum_t::middle_center);
 
-  // Arena unlocks after the sensing tier (SPEC §18).
-  if (_profile.unlocks.sense) {
-    button(g, _arenaBtn, "ARENA >", C_FUNC, C_PANEL);
+  // tap the card to start; back out to the hub; or learn the new power right now.
+  if (_introLesson >= 0) {
+    _backBtn = {28, 196, 120, 28};
+    _learnBtn = {172, 196, 120, 28};
+    button(g, _backBtn, "< Back", C_INK, C_PANEL);
+    button(g, _learnBtn, "Learn it >", ui::rgb(120, 230, 245), C_PANEL);
+  } else {
+    _backBtn = {90, 196, 140, 28};
+    _learnBtn = {0, 0, 0, 0};
+    button(g, _backBtn, "< Back", C_INK, C_PANEL);
   }
 }
 
@@ -139,6 +167,28 @@ void App::debugAutoRun() {
 void App::debugStep() {
   if (_state == State::GAME) _game.debugStep();
   else if (_state == State::ARENA) _arena.debugStep();
+}
+
+void App::debugDumpMaze() {
+  if (_state != State::GAME) { Serial.println("NOMAZE"); return; }
+  gb::Maze& m = _game.maze();
+  Serial.printf("MAZE %d %d\n", m.rows(), m.cols());
+  for (int r = 0; r < m.rows(); r++) {
+    for (int c = 0; c < m.cols(); c++) {
+      gb::Tile t = m.at(r, c);
+      char ch = '.';
+      if (t == gb::WALL) ch = '#';
+      else if (t == gb::PIT) ch = 'O';
+      else if (t == gb::GOAL) ch = 'G';
+      else if (t == gb::COIN) ch = 'c';
+      else if (t == gb::STAR) ch = '*';
+      Serial.write(ch);
+    }
+    Serial.write('\n');
+  }
+  gb::Pose p = m.startPose();
+  Serial.printf("ROBOT %d %d %d\n", p.row, p.col, (int)p.facing);
+  Serial.printf("GOAL %d %d\n", m.goalRow(), m.goalCol());
 }
 
 void App::debugNeuroLesson() {
@@ -204,15 +254,52 @@ void App::tick(uint32_t now) {
   switch (_state) {
     case State::SELECT: {
       Signal s = _select.tick(now, tp);
-      if (s == Signal::PLAY) { loadProfileInto(_select.chosenId()); gotoIntro(_profile.level); }
+      if (s == Signal::PLAY) { loadProfileInto(_select.chosenId()); gotoHome(); }
       else if (s == Signal::NEW_PROFILE) { _create.begin(); _create.enter(); _state = State::CREATE; }
       else if (s == Signal::GOTO_STATS) { loadProfileInto(_select.chosenId()); _stats.begin(&_profile); _stats.enter(); _state = State::STATS; }
       break;
     }
+    case State::HOME: {
+      Signal s = _home.tick(now, tp);
+      if (s == Signal::GOTO_PLAY) gotoIntro(_profile.level);
+      else if (s == Signal::GOTO_ARENA) {
+        _arena.begin(&_profile); _arena.enter(); _state = State::ARENA;
+        if (hal::audio.enabled()) hal::audio.startMusic(hal::kArenaMusic, hal::kArenaMusicLen, true);
+      }
+      else if (s == Signal::GOTO_LEARN) { _lessonsMenu.enter(); _state = State::LESSONS_MENU; }
+      else if (s == Signal::GOTO_DRAW) { _subFromHome = true; _pixed.begin(&_profile); _pixed.enter(); _state = State::DRAW; }
+      else if (s == Signal::GOTO_BADGES) { _subFromHome = true; _badges.begin(&_profile); _badges.enter(); _state = State::BADGES; }
+      else if (s == Signal::GOTO_SHOP) { _subFromHome = true; _shop.begin(&_profile); _shop.enter(); _state = State::SHOP; }
+      else if (s == Signal::GOTO_STATS) { _stats.begin(&_profile); _stats.enter(); _state = State::STATS; }
+      else if (s == Signal::GOTO_MYBOTS) { _library.begin(&_profile); _library.enter(); _state = State::LIBRARY; }
+      else if (s == Signal::BACK) { saveProfile(); gotoSelect(); }
+      break;
+    }
+    case State::LIBRARY: {
+      Signal s = _library.tick(now, tp);
+      if (s == Signal::BACK) { saveProfile(); gotoHome(); }
+      else if (s == Signal::RENAME_LIB) {
+        _renameLibIdx = _library.renameIdx();
+        if (_renameLibIdx >= 0 && _renameLibIdx < (int)_profile.library.size()) {
+          _create.beginRename(_profile.library[_renameLibIdx].name);
+          _create.enter(); _state = State::CREATE;
+        }
+      }
+      break;
+    }
     case State::CREATE: {
       Signal s = _create.tick(now, tp);
+      if (s == Signal::BACK) {  // cancel
+        if (_renameLibIdx >= 0) { _renameLibIdx = -1; _library.begin(&_profile); _library.enter(); _state = State::LIBRARY; }
+        else gotoSelect();
+        break;
+      }
       if (s == Signal::CREATED) {
-        if (_create.isEdit()) {
+        if (_renameLibIdx >= 0) {  // renaming a library bot, not a profile
+          if (_renameLibIdx < (int)_profile.library.size()) _profile.library[_renameLibIdx].name = _create.name();
+          _renameLibIdx = -1; saveProfile();
+          _library.begin(&_profile); _library.enter(); _state = State::LIBRARY;
+        } else if (_create.isEdit()) {
           // tweak name/avatar in place — keep all stats/progress
           _profile.name = _create.name();
           _profile.avatar = _create.avatar();
@@ -221,7 +308,7 @@ void App::tick(uint32_t now) {
         } else {
           std::string id = store::profiles.createProfile(_create.name(), _create.avatar());
           loadProfileInto(id);
-          gotoIntro(_profile.level);
+          gotoHome();   // land on the menu/hub (Play / Arena / Learn / ...), not straight in a level
         }
       }
       break;
@@ -229,13 +316,16 @@ void App::tick(uint32_t now) {
     case State::INTRO: {
       int x, y;
       if (_introTap.tapped(tp, now, x, y)) {
-        if (_profile.unlocks.sense && _arenaBtn.contains(x, y)) {
-          _arena.begin(&_profile); _arena.enter(); _state = State::ARENA;
-          if (hal::audio.enabled())  // battle theme on the arena menus
-            hal::audio.startMusic(hal::kArenaMusic, hal::kArenaMusicLen, true);
-        } else {
-          gotoGame();
-        }
+        if (_introLesson >= 0 && _learnBtn.contains(x, y)) {  // learn the new power right now
+          _fromIntro = true;
+          if (_introLesson == 100) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+          else if (_introLesson == 101) { _transferLesson.begin(1); _transferLesson.enter(); _state = State::TRANSFER_LESSON; }  // Data & labels
+          else if (_introLesson == 102) { _evoLesson.begin(); _evoLesson.enter(); _state = State::EVO_LESSON; }                 // Evolution
+          else if (_introLesson == 103) { _pilotLesson.begin(); _pilotLesson.enter(); _state = State::PILOT_LESSON; }           // Pilot
+          else if (_introLesson == 104) { _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; }                 // Memory
+          else { _codeLesson.begin(_introLesson); _codeLesson.enter(); _state = State::CODE_LESSON; }
+        } else if (_backBtn.contains(x, y)) gotoHome();  // back to the hub
+        else gotoGame();                                  // tap the card to start the level
       }
       break;
     }
@@ -255,7 +345,7 @@ void App::tick(uint32_t now) {
         _challenge.begin(&_profile); _challenge.enter(); _state = State::CHALLENGE;
         break;
       }
-      if (s == Signal::BACK) { saveProfile(); gotoSelect(); break; }
+      if (s == Signal::BACK) { saveProfile(); gotoHome(); break; }
       if (s == Signal::WON) {
         _profile.stats.levelsCompleted++;
         if (_game.lastStars() == 3) _profile.stats.threeStarWins++;
@@ -285,20 +375,20 @@ void App::tick(uint32_t now) {
     }
     case State::STATS: {
       Signal s = _stats.tick(now, tp);
-      if (s == Signal::BACK) gotoSelect();
+      if (s == Signal::BACK) gotoHome();
       else if (s == Signal::EDIT_PROFILE) {
         _create.beginEdit(_profile.name, _profile.avatar);
         _create.enter();
         _state = State::CREATE;
       }
       else if (s == Signal::GOTO_BADGES) {
-        _badges.begin(&_profile); _badges.enter(); _state = State::BADGES;
+        _subFromHome = false; _badges.begin(&_profile); _badges.enter(); _state = State::BADGES;
       }
       else if (s == Signal::GOTO_SHOP) {
-        _shop.begin(&_profile); _shop.enter(); _state = State::SHOP;
+        _subFromHome = false; _shop.begin(&_profile); _shop.enter(); _state = State::SHOP;
       }
       else if (s == Signal::GOTO_DRAW) {
-        _pixed.begin(&_profile); _pixed.enter(); _state = State::DRAW;
+        _subFromHome = false; _pixed.begin(&_profile); _pixed.enter(); _state = State::DRAW;
       }
       else if (s == Signal::DELETE_PROFILE) {
         store::profiles.remove(_profile.id);
@@ -316,7 +406,7 @@ void App::tick(uint32_t now) {
         if (allZero(_profile.customChar)) _profile.customChar.clear();
         if (allZero(_profile.customGoal)) _profile.customGoal.clear();
         saveProfile();
-        _stats.begin(&_profile); _stats.enter(); _state = State::STATS;
+        returnToSub();
       }
       break;
     }
@@ -326,8 +416,8 @@ void App::tick(uint32_t now) {
         // an arena win may have earned the Champion badge
         _profile.achievements |= gb::evaluateAchievements(_profile);
         saveProfile();
-        hal::audio.stopMusic();  // drop the battle theme so the intro restarts its own
-        gotoIntro(_profile.level);
+        hal::audio.stopMusic();  // drop the battle theme so the hub restarts its own
+        gotoHome();
       }
       else if (s == Signal::GOTO_RADIO) {
         _radio.begin(&_profile); _radio.enter(); _state = State::RADIO;
@@ -350,7 +440,7 @@ void App::tick(uint32_t now) {
     }
     case State::LESSONS_MENU: {
       Signal s = _lessonsMenu.tick(now, tp);
-      if (s == Signal::BACK) gotoSelect();
+      if (s == Signal::BACK) gotoHome();
       else if (s == Signal::PLAY) {
         if (_lessonsMenu.pick() == 0) { _codeLab.enter(); _state = State::CODE_LAB; }
         else { _lessonHub.enter(); _state = State::NEURO_HUB; }
@@ -364,21 +454,34 @@ void App::tick(uint32_t now) {
       break;
     }
     case State::CODE_LESSON: {
-      if (_codeLesson.tick(now, tp) == Signal::BACK) { _codeLab.enter(); _state = State::CODE_LAB; }
+      if (_codeLesson.tick(now, tp) == Signal::BACK) {
+        if (_fromIntro) { _fromIntro = false; gotoIntro(_introLevel); }  // back to the level we came from
+        else { _codeLab.enter(); _state = State::CODE_LAB; }
+      }
       break;
     }
     case State::NEURO_HUB: {
       Signal s = _lessonHub.tick(now, tp);
-      if (s == Signal::BACK) { _lessonsMenu.enter(); _state = State::LESSONS_MENU; }
+      if (s == Signal::BACK) {
+        if (_fromIntro) { _fromIntro = false; gotoIntro(_introLevel); }
+        else { _lessonsMenu.enter(); _state = State::LESSONS_MENU; }
+      }
       else if (s == Signal::PLAY) {
+        // Order: watch it learn -> how it learns -> what one neuron can't -> more outputs -> ...
         switch (_lessonHub.pick()) {
-          case 0: case 1: case 2:
-            _neuro.begin(_lessonHub.pick()); _neuro.enter(); _state = State::NEURO_LESSON; break;
-          case 3: _brainMap.enter(); _state = State::BRAIN_MAP; break;
-          case 4: _qLesson.begin(); _qLesson.enter(); _state = State::Q_LESSON; break;
-          case 5: _evoLesson.begin(); _evoLesson.enter(); _state = State::EVO_LESSON; break;
-          case 6: _transferLesson.begin(); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;
-          case 7: _brainView.begin(); _brainView.enter(); _state = State::BRAIN_VIEW; break;
+          case 0:  _neuro.begin(0); _neuro.enter(); _state = State::NEURO_LESSON; break;       // One neuron
+          case 1:  _backpropLesson.begin(); _backpropLesson.enter(); _state = State::BACKPROP_LESSON; break;  // Backprop
+          case 2:  _perceptionLesson.begin(); _perceptionLesson.enter(); _state = State::PERCEPTION_LESSON; break;  // Perception (sense)
+          case 3:  _neuro.begin(2); _neuro.enter(); _state = State::NEURO_LESSON; break;       // Hidden layer (corners/xor)
+          case 4:  _neuro.begin(1); _neuro.enter(); _state = State::NEURO_LESSON; break;       // Many actions
+          case 5:  _brainMap.enter(); _state = State::BRAIN_MAP; break;                        // Robot brain (puts it together)
+          case 6:  _evoLesson.begin(); _evoLesson.enter(); _state = State::EVO_LESSON; break;  // Evolution (random, simple)
+          case 7:  _transferLesson.begin(1); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;  // Data & labels (mode 1)
+          case 8:  _qLesson.begin(); _qLesson.enter(); _state = State::Q_LESSON; break;        // Q-learning (reward)
+          case 9:  _transferLesson.begin(0); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;  // Transfer
+          case 10: _brainView.begin(&_profile); _brainView.enter(); _state = State::BRAIN_VIEW; break;  // Brain Cam
+          case 11: _pilotLesson.begin(); _pilotLesson.enter(); _state = State::PILOT_LESSON; break;  // Pilot
+          case 12: _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; break;  // Memory
         }
       }
       break;
@@ -392,15 +495,43 @@ void App::tick(uint32_t now) {
       break;
     }
     case State::EVO_LESSON: {
-      if (_evoLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      if (_evoLesson.tick(now, tp) == Signal::BACK) {
+        if (_fromIntro) { _fromIntro = false; gotoIntro(_introLevel); }
+        else { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      }
       break;
     }
     case State::TRANSFER_LESSON: {
-      if (_transferLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      if (_transferLesson.tick(now, tp) == Signal::BACK) {
+        if (_fromIntro) { _fromIntro = false; gotoIntro(_introLevel); }
+        else { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      }
       break;
     }
     case State::BRAIN_VIEW: {
       if (_brainView.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      break;
+    }
+    case State::PILOT_LESSON: {
+      if (_pilotLesson.tick(now, tp) == Signal::BACK) {
+        if (_fromIntro) { _fromIntro = false; gotoIntro(_introLevel); }
+        else { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      }
+      break;
+    }
+    case State::RNN_LESSON: {
+      if (_rnnLesson.tick(now, tp) == Signal::BACK) {
+        if (_fromIntro) { _fromIntro = false; gotoIntro(_introLevel); }
+        else { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      }
+      break;
+    }
+    case State::PERCEPTION_LESSON: {
+      if (_perceptionLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      break;
+    }
+    case State::BACKPROP_LESSON: {
+      if (_backpropLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
       break;
     }
     case State::BRAIN_MAP: {
@@ -420,7 +551,13 @@ void App::tick(uint32_t now) {
       if (_arenaTrain.tick(now, tp) == Signal::BACK) {
         if (_arenaTrain.savedFighter()) { _profile.stats.fightersSaved++; _profile.stats.brainsTrained++; }
         _profile.achievements |= gb::evaluateAchievements(_profile);
-        saveProfile(); _arena.begin(&_profile); _arena.enter(); _state = State::ARENA;
+        saveProfile();
+        if (_arenaTrain.launchFight()) {   // "Fight! >": go straight into a battle vs the sparring foe
+          _arena.beginQuickBattle(&_profile, _arenaTrain.fightLibIdx(), _arenaTrain.fightOppName(), _arenaTrain.fightSumo());
+        } else {
+          _arena.begin(&_profile); _arena.enter();
+        }
+        _state = State::ARENA;
       }
       break;
     }
@@ -444,12 +581,12 @@ void App::tick(uint32_t now) {
     }
     case State::BADGES: {
       Signal s = _badges.tick(now, tp);
-      if (s == Signal::BACK) { _stats.begin(&_profile); _stats.enter(); _state = State::STATS; }
+      if (s == Signal::BACK) returnToSub();
       break;
     }
     case State::SHOP: {
       Signal s = _shop.tick(now, tp);
-      if (s == Signal::BACK) { saveProfile(); _stats.begin(&_profile); _stats.enter(); _state = State::STATS; }
+      if (s == Signal::BACK) { saveProfile(); returnToSub(); }
       break;
     }
   }

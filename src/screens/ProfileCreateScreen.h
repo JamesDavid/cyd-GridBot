@@ -11,6 +11,7 @@ class ProfileCreateScreen : public app::IScreen {
  public:
   void begin();                                   // new profile
   void beginEdit(const std::string& name, uint8_t avatar);  // edit existing
+  void beginRename(const std::string& name);      // rename a library bot (name only, no avatar)
   void enter() override;
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
 
@@ -27,6 +28,7 @@ class ProfileCreateScreen : public app::IScreen {
   std::string _name;
   uint8_t _avatar = 0;
   bool _edit = false;
+  bool _rename = false;   // renaming a library bot: title "Rename bot", no avatar row
   app::TapDetector _tap;
 };
 

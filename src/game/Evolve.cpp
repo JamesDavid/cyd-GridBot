@@ -33,7 +33,7 @@ float scoreBrain(const Net& brain, const Maze& m, const EnemyView* enemy, int ma
 }
 
 float scoreFighter(const Net& brain, const Maze& m, const Pose& s0, const Pose& s1,
-                   const Program& ai, int maxSteps) {
+                   const Program& ai, int maxSteps, MatchType type) {
   Program bp;
   bp.brains.push_back(brain);
   Node loop = Node::repeatUntil(AT_GOAL);
@@ -41,14 +41,27 @@ float scoreFighter(const Net& brain, const Maze& m, const Pose& s0, const Pose& 
   bp.main.push_back(loop);
 
   Arena ar;
-  ar.setup(&m, &bp, &ai, s0, s1, MatchType::RACE, maxSteps);
+  ar.setup(&m, &bp, &ai, s0, s1, type, maxSteps);
   ar.run();
+  ArenaOutcome o = ar.outcome();
+
+  if (type == MatchType::SUMO) {
+    // No goal in Sumo: reward knocking the enemy out, surviving, and HUNTING (ending close
+    // to the enemy) so evolution discovers facing + zapping rather than wandering.
+    float f = 0.0f;
+    if (o == ArenaOutcome::BOT0) f += 100.0f;        // shoved the enemy out -> win
+    else if (o == ArenaOutcome::BOT1) f -= 40.0f;    // got knocked out
+    if (ar.alive(0)) f += 15.0f;                     // still standing
+    int dr = ar.pose(0).row - ar.pose(1).row, dc = ar.pose(0).col - ar.pose(1).col;
+    int dEnemy = (dr < 0 ? -dr : dr) + (dc < 0 ? -dc : dc);
+    f -= (float)dEnemy * 2.0f;                        // close the distance (hunt)
+    return f;
+  }
 
   int startDist = distanceToGoal(m, s0.row, s0.col);
   int endDist = distanceToGoal(m, ar.pose(0).row, ar.pose(0).col);
   if (endDist < 0) endDist = startDist;
   float f = (float)(startDist - endDist);           // progress toward the goal
-  ArenaOutcome o = ar.outcome();
   if (o == ArenaOutcome::BOT0) f += 100.0f;          // beat the AI to the goal
   else if (o == ArenaOutcome::BOT1) f -= 20.0f;      // lost
   if (ar.alive(0)) f += 5.0f;                        // survived (didn't fall/get shoved)
@@ -56,8 +69,8 @@ float scoreFighter(const Net& brain, const Maze& m, const Pose& s0, const Pose& 
 }
 
 void Evolve::evaluateArena(const Maze& m, const Pose& s0, const Pose& s1,
-                           const Program& ai, int maxSteps) {
-  for (int i = 0; i < EVO_POP; i++) fit[i] = scoreFighter(pop[i], m, s0, s1, ai, maxSteps);
+                           const Program& ai, int maxSteps, MatchType type) {
+  for (int i = 0; i < EVO_POP; i++) fit[i] = scoreFighter(pop[i], m, s0, s1, ai, maxSteps, type);
 }
 
 void Evolve::init(int in, int hid, int out, uint32_t seed) {

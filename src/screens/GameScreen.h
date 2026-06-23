@@ -69,6 +69,7 @@ class GameScreen : public app::IScreen {
   void handleListTap(int x, int y);
   void appendCommand(gb::Cmd c);
   void deleteSelected();
+  void moveSelected(int dir);   // reorder the selected line within its block (-1 up, +1 down)
   void startRun();
   void resetRun();
   void stepOnce(uint32_t now);

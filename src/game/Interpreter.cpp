@@ -2,6 +2,7 @@
 #include "core/Util.h"
 #include "game/Sensors.h"
 #include "game/Net.h"
+#include "game/Pilot.h"
 
 namespace gb {
 
@@ -18,6 +19,9 @@ void Interpreter::load(const Program* prog, const Maze* maze, const Pose& start,
   _finished = false;
   _last = OUT_OK;
   _current = nullptr;
+  _wpPlanned = false; _wpN = 0; _wpIdx = 0;
+  if (prog)  // clear any recurrent brain's memory so each run starts fresh
+    for (size_t i = 0; i < prog->rbrains.size(); i++) prog->rbrains[i].resetState();
   _stack.clear();
   if (prog && !prog->main.empty()) push(F_SEQ, &prog->main);
   // An empty program that doesn't start on the goal will end as DONE_NO_WIN.
@@ -46,6 +50,16 @@ bool Interpreter::evalCond(Cond c) const {
     case ENEMY_NEAR:  return _enemy && _enemy->pose &&
                              (absv(_enemy->pose->row - _pose.row) +
                               absv(_enemy->pose->col - _pose.col)) <= _enemy->nearDist;
+    case BLOCKED_AHEAD: return !_maze->inBounds(ar, ac) ||
+                               _maze->at(ar, ac) == WALL || _maze->at(ar, ac) == PIT;
+    case ENEMY_LEFT:
+    case ENEMY_RIGHT: {
+      if (!_enemy || !_enemy->pose) return false;
+      // ego-relative bearing: right vector = facing rotated 90° CW = (dc, -dr)
+      int er = _enemy->pose->row - _pose.row, ec = _enemy->pose->col - _pose.col;
+      int side = er * dc - ec * dr;        // >0 => foe to the right, <0 => to the left
+      return (c == ENEMY_RIGHT) ? side > 0 : side < 0;
+    }
   }
   return false;
 }
@@ -163,10 +177,32 @@ Outcome Interpreter::step() {
         fr.ip++;
         if (++_prim > _stepCap) { finish(OUT_DONE_NO_WIN); return OUT_DONE_NO_WIN; }
         _current = &n;
-        if (!_prog || n.brainIdx >= _prog->brains.size()) return OUT_OK;  // untrained: no-op
+        // pick the brain store: recurrent (memory) or feedforward
+        bool useRnn = n.rnn && _prog && n.brainIdx < _prog->rbrains.size();
+        if (!_prog || (!useRnn && n.brainIdx >= _prog->brains.size())) return OUT_OK;  // none: no-op
         float s[SENSOR_COUNT];
-        senseEgo(*_maze, _pose, _enemy, s);
-        int act = _prog->brains[n.brainIdx].argmax(s);
+        if (n.pilot) {
+          // Planner + follower: get the route once, then steer toward the next corner. The kid's
+          // hand-placed waypoints win; only if there are none do we auto-plan the BFS route.
+          if (!_wpPlanned) {
+            if (_prog && !_prog->waypoints.empty()) {
+              _wpN = (int)_prog->waypoints.size(); if (_wpN > 40) _wpN = 40;
+              for (int i = 0; i < _wpN; i++) _wp[i] = _prog->waypoints[i];
+            } else {
+              _wpN = planWaypoints(*_maze, _pose, _wp, 40);
+            }
+            _wpIdx = 0; _wpPlanned = true;
+          }
+          int cur = _pose.row * _maze->cols() + _pose.col;
+          while (_wpIdx < _wpN && _wp[_wpIdx] == cur) _wpIdx++;   // reached this waypoint
+          int tr = _maze->goalRow(), tc = _maze->goalCol();
+          if (_wpIdx < _wpN) { tr = _wp[_wpIdx] / _maze->cols(); tc = _wp[_wpIdx] % _maze->cols(); }
+          senseEgoTo(*_maze, _pose, _enemy, tr, tc, s);
+        } else {
+          senseEgo(*_maze, _pose, _enemy, s);
+        }
+        int act = useRnn ? _prog->rbrains[n.brainIdx].argmaxStep(s)
+                         : _prog->brains[n.brainIdx].argmax(s);
         _lastCmd = kBrainAction[act];
         Outcome o = execCmd(_lastCmd);
         if (o != OUT_OK) { finish(o); return o; }

@@ -33,6 +33,7 @@ bool QLearn::runEpisode(int maxSteps) {
   episodes++;
   Pose start = m->startPose();
   int r = start.row, c = start.col;
+  bool collected[MAZE_MAX_CELLS] = {false};  // coins/gems pay out once per episode (no farming)
   for (int step = 0; step < maxSteps; step++) {
     int s = r * m->cols() + c;
     // epsilon-greedy: usually exploit, sometimes try something random (explore)
@@ -50,6 +51,10 @@ bool QLearn::runEpisode(int maxSteps) {
       reward = 1.0f; terminal = true; won = true;  // reached the battery
     } else {
       reward = -0.01f;                          // a step costs a little (be efficient)
+      Tile nt = m->at(nr, nc);                  // coins/gems are rewarding too (collect on the way)
+      int ns = nr * m->cols() + nc;
+      if (nt == STAR && !collected[ns]) { reward += 0.5f; collected[ns] = true; }  // gem
+      else if (nt == COIN && !collected[ns]) { reward += 0.3f; collected[ns] = true; }
     }
     float future = terminal ? 0.0f : maxQ(nr, nc);
     Q[s][a] += alpha * (reward + gamma * future - Q[s][a]);

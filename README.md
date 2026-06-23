@@ -17,6 +17,11 @@ all on the same $10 board.
 > toolchain. (Powered by ESP Web Tools; see the [flasher page](docs/index.html).)
 > **Need the board?** [Grab a CYD (ESP32-2432S028R) on Amazon](https://a.co/d/05H98aWQ) (~$10–15).
 
+> ### 👩‍🏫 Parent or teacher? [**The Grown-Up Guide →**](docs/HANDBOOK.md)
+> A handbook to sit beside the game: the big idea + questions to ask for every lesson, a
+> classroom track (with the radio for student/teacher interaction), an "is this *really* how
+> AI works?" honesty appendix, and a standards map. No coding or AI background needed.
+
 ---
 
 ## Why GridBot exists — *a robot you can hold, not one more app*
@@ -62,6 +67,10 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 |:--|
 | **Make a robot.** A big-key **QWERTY** keyboard (tuned for finger-on-resistive-glass), a name up to 8 letters, and a row of **eight differently-coloured robots** to pick from. Each kid also gets a hidden global ID so two GridBots can recognise each other over the radio. |
 
+| ![Home menu](docs/img/home-hub.png) |
+|:--|
+| **One menu, everything one tap away.** Picking (or making) a player lands here — not buried in a maze. **Play** jumps to your current level; **Arena**, **Learn** (CodeLab + NeuroLab), **Customize** (the pixel editor), **Badges**, and **Shop** are each a single tap. The header shows your level, stars, and badge count; Arena stays locked-but-visible until you reach it, so a kid can *see* what's coming. Every screen's top button returns here. |
+
 ### Write code, run it, fix it — *the core loop*
 
 | ![The Code view](docs/img/code-view.png) |
@@ -70,7 +79,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![A built program](docs/img/code-program.png) |
 |:--|
-| **A real program.** Snap blocks together and they stack up — each colour-coded with its glyph and **hierarchically numbered** (`1, 2, 3 …`, nested steps as `4a, 4b`). Tap a block to edit it: a `repeat` shows a big button that **cycles its count 2→3→4→5**, an `if`/`until` cycles its condition. Dim **`+ add inside`** / **`+ add here`** slots make it obvious *exactly where* your next step lands. The list scrolls — no length limit. |
+| **A real program.** Snap blocks together and they stack up — each colour-coded with its glyph and **hierarchically numbered** (`1, 2, 3 …`, nested steps as `4a, 4b`). Tap a block to edit it: a `repeat` cycles its count **2→3→4→5**, an `if`/`until` cycles its condition (wall → pit → **wall/pit** → goal), a `call` switches **F1↔F2**, a `brain` cycles its mode (plain → **+pilot** → **rnn** → **rnn+pilot**). **Reorder** any line with the **Up/Dn** buttons — so you can drop a block in, then slide it exactly where it belongs — and the top button reads **Menu** (back to the hub) or **< Code** (back to the editor while a run plays). |
 
 | ![Study the maze](docs/img/maze-preview.png) |
 |:--|
@@ -185,7 +194,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![NeuroLab](docs/img/neurolab-hub.png) |
 |:--|
-| **NeuroLab** — eight lessons, each small enough to *watch*: one neuron, many actions, a hidden layer, **your robot's brain** (a tour of its real senses), Q-learning, evolution, **transfer learning**, and **Brain Cam**. |
+| **NeuroLab** — ten lessons, each small enough to *watch*: one neuron, many actions, a hidden layer, **your robot's brain** (a tour of its real senses), Q-learning, evolution, **transfer learning**, **Brain Cam**, **Pilot** (plan + steer), and **Memory** (a recurrent brain). |
 
 | ![Watch a neuron learn](docs/img/neuro-neuron.gif) |
 |:--|
@@ -193,7 +202,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![Learning XOR with a hidden layer](docs/img/neuro-xor.png) |
 |:--|
-| **Why a hidden layer?** The same lesson has an **XOR** mode over two abstract inputs **A, B** — the classic problem a single neuron *provably* cannot learn (the classes aren't linearly separable). Add a hidden layer and watch the error finally collapse to zero: a hands-on proof of *why* deeper networks exist. |
+| **Why a hidden layer?** A real bot decision: **turn at a corner** — turn when *exactly one* side is open, but go straight in a corridor (both walls) or a junction (both open). A single neuron *provably* cannot learn this (it's the classic **XOR** — the classes aren't linearly separable); add a hidden layer and watch the loss finally collapse to zero. A hands-on proof of *why* deeper networks exist, framed as something the robot actually does. |
 
 | ![Meet your robot's brain](docs/img/robot-brain.png) |
 |:--|
@@ -213,7 +222,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![Train the brain](docs/img/neuro-train.png) |
 |:--|
-| **The neuro interface — with transfer learning.** Open it from the **`train brain >`** line. **Teach** it (distil the optimal solver by backprop — reliable) or **Evolve** it, watch its path solve the maze, then **Use it**. Pick a **base** to fine-tune from — start fresh or **load a saved brain** and build on what it knows — and **save a copy as an incremented version** (`Brain v1 → v2 → …`), so you can grow a *lineage*. The trained brain saves *with* your program, so it persists and **trades & battles over the radio**. |
+| **The neuro interface — with transfer learning.** Open it from the **`train brain >`** line. **Teach** it (distil the optimal solver by backprop — reliable) or **Evolve** it, watch its path solve the maze, then **Use it**. Pick a **base** to fine-tune from — start fresh or **load a saved brain** and build on what it knows — and **save a copy as an incremented version** (`Brain v1 → v2 → …`), so you can grow a *lineage*. The trained brain saves *with* your program, so it persists and **trades & battles over the radio**. Tap the **neuron widget** in the top bar and the trainer unfolds the very same **Brain Cam network graph** for *your* program's brain — inputs → hidden → outputs, weights recolouring as you Teach — then folds back to the maze. |
 
 | ![Transfer learning](docs/img/neuro-transfer.png) |
 |:--|
@@ -221,20 +230,30 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![Brain Cam](docs/img/brain-cam.png) |
 |:--|
-| **Brain Cam — watch a trained brain *think*.** Step a distilled brain through a maze and see it live: which of the **10 inputs** light up (**SEES**), the **hidden layer** firing (**THINKS**), and the **5 outputs** with the winner ringed (**DOES**) — plus a *"decides: turnR"* verdict. The clearest answer to "what is the network actually doing?" |
+| **Brain Cam — watch a brain *learn* and *think*.** A live inspector for the network. Tap **Teach** and watch **backprop animate**: the connection lines are coloured by weight (green +, red −) and **recolour as it learns**, with an epoch counter and a loss bar that fills as the loss falls. Then **Run** it and the **10 inputs** (SEES), **hidden layer** (THINKS), and **5 outputs** (DOES, winner ringed) light up step-by-step. **Tap any neuron** to zoom in on its **bias and incoming weights** as they update. Flip **plain ↔ rnn** to see a recurrent brain's memory loop (every hidden neuron's feedback to itself *and* every other — drawn as real arcs), and cycle **Map N** to watch the *same* brain **transfer** onto a different real maze. **Save** what you train straight to your **library**, so a brain you grew here can graduate into an Arena fighter. The clearest possible answer to "what is the network actually doing?" |
+
+| ![Pilot — plan + steer](docs/img/neuro-pilot.gif) |
+|:--|
+| **Pilot — plan + steer (the self-driving split).** A brain only senses what's *nearby*, so on a twisty maze it gets stuck. Add a **route planner**: it lays down **waypoints** (the dots) and the same brain just steers dot-to-dot — and now it solves it. The **planner decides *where*, the brain decides *how*** — exactly how a self-driving stack splits a *map route* from the *neural net that handles the road*. A pilot-trained brain clears the whole campaign that a bare reactive brain can't. |
+
+| ![Memory — a recurrent brain](docs/img/neuro-rnn.gif) |
+|:--|
+| **Memory — the brain that remembers (an RNN).** Pilot gave the brain an *outside* planner; this gives it its *own* memory. A plain brain picks `action = f(senses **now**)`, so in a dead-end it forgets it's been there and **loops** (red). A **recurrent** brain picks `action = f(senses now **+ memory**)` — it remembers its trail, **backs out, and solves it** (green). The only change is a **feedback path**: the hidden layer feeds back into itself (an **8×8 weight matrix** that a plain brain keeps at 0). Same maze, same teacher; only the one with memory gets through. Trained on-device by **backprop-through-time**. |
 
 | ![Train a fighter for the Arena](docs/img/neuro-arena-train.png) |
 |:--|
-| **Train a fighter for the Arena.** A **"Train a fighter"** mode off the Computer branch: **Teach** or **Evolve** a brain to **win real arena matches**. A **"spar vs"** chip cycles your sparring partner easy→hard (so a first Teach reliably reads *"taught WINS!"*). **Save** it and it joins your roster as **your bot** — and it **fine-tunes to each new battle board** at match start, so a trained fighter actually wins instead of over-fitting. |
+| **Train a fighter for the Arena.** A **"Train a fighter"** mode off the Computer branch: **Teach** or **Evolve** a brain to **win real arena matches**. A **"spar vs"** chip cycles your sparring partner easy→hard — the blind dasher **Bolt**, the wall-huggers **Coil** & **Spin** (left- and right-hand rule, so they take different routes), the hunter **Vex**, and the perfect solver **Ace**, then every bot in your **library** (incl. radio-traded ones) — so a first Teach reliably reads *"taught WINS!"* and you can climb to a real challenge. **Save** it and it joins your roster as **your bot** — and it **fine-tunes to each new battle board** at match start, so a trained fighter actually wins instead of over-fitting. |
 
 **The ML ideas a kid actually meets here** — not as jargon, but as things you *do* and *watch*:
 gradient-descent **backprop**; **multi-class** outputs (argmax picks the action); why a
 **hidden layer** is needed (it cracks **XOR**); **reinforcement learning** (tabular Q, reward,
 explore-vs-exploit); **neuroevolution** (fitness, selection, breeding); **imitation learning /
 distillation** (copy an expert solver); **transfer learning & fine-tuning**; a **shared
-feature representation** (one network for two jobs); and **generalization / over-fitting**
+feature representation** (one network for two jobs); **generalization / over-fitting**
 (a brain trained on one board that flounders on another — visible as the step counter marches
-to the cap, and fixed by fine-tuning).
+to the cap, and fixed by fine-tuning); **planning vs. control** (a route planner feeds the
+brain waypoints — the self-driving split); and **memory / recurrence** (an RNN that escapes
+dead-ends a memoryless brain loops in).
 
 ---
 
@@ -306,7 +325,7 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
   test, which hands you fair rematches and replays for free.
 - **Neural nets on a no-PSRAM ESP32** — a tiny MLP + backprop, Q-learning, evolution, and
   distillation in a few KB, with a learned brain embedded as an interpreter node and trained
-  on-device fast enough to animate. **67 host tests** cover the engine.
+  on-device fast enough to animate. **79 host tests** cover the engine.
 
 **Still open / known limits**
 - ESP-NOW radio battle/trade is built but **hardware-pending** — needs two physical boards.
@@ -323,19 +342,20 @@ first-time hints, locked-block tooltips) · ✅ **program carry-over** across le
 solver, keep winning) · ✅ a **zap block** (the robot icon) so code bots fight Sumo · ✅ a
 kid-friendly **Arena** (opponent-first menu, beatable AI, "Play again" rematch, trained
 fighters that adapt to each board) · ✅ the full **NeuroBot** mode (backprop / Q-learning /
-evolution / transfer lessons, Brain Cam, a trainable brain block with versioned saves) ·
+evolution / transfer / **Pilot** (plan + steer) / **Memory** (an RNN) lessons, Brain Cam, a
+trainable brain block with versioned saves) ·
 ✅ **CodeLab** lessons in the real editor style · ✅ coin & gem collectibles + a shop ·
-✅ five **biomes**, a 16-badge gallery, jump-arc animation + a live step counter ·
+✅ five **biomes**, a 17-badge gallery, jump-arc animation + a live step counter ·
 ✅ a one-click **online flasher**.
 
 Still on deck (full list in **[BACKLOG.md](BACKLOG.md)**):
 
 - More **mode types** — relay, co-op, king-of-the-hill — building on Race / Sumo / Puzzle Race.
 - **Daily shared-seed challenges** and a leaderboard; library-bot **tournaments**.
-- **Draw-the-path** brain training (teach by demonstration); deeper ML topics (regularization,
-  reward shaping, a tiny memory cell).
-- **Verify the radio link** on two boards; an optional **mini-map** in the Code view;
-  **drag-to-reorder** + **Undo** in the editor.
+- Deeper ML topics (regularization/overfitting, reward shaping, batching) building on the
+  existing **draw-the-path**, **Pilot** (planner+follower), and **RNN memory** trainers.
+- **Verify the radio link** on two boards; an optional **mini-map** in the Code view; **Undo**
+  in the editor (reorder already ships as Up/Dn).
 
 ---
 
@@ -343,7 +363,7 @@ Still on deck (full list in **[BACKLOG.md](BACKLOG.md)**):
 
 Working firmware, verified on a real CYD — the campaign (all unlock tiers), the arena,
 lessons, NeuroBot training, the pixel editor, and achievements all run on hardware. Built
-phase-by-phase from `SPEC.md` following `IMPLEMENTATION_STEPS.md`; **67 host unit tests** plus
+phase-by-phase from `SPEC.md` following `IMPLEMENTATION_STEPS.md`; **79 host unit tests** plus
 an on-device self-test gate every change.
 
 **License: [PolyForm Noncommercial 1.0.0](LICENSE).** Free for personal, hobby, research, and

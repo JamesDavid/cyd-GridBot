@@ -15,7 +15,11 @@ enum Cmd : uint8_t { CMD_FWD, CMD_BACK, CMD_TURN_L, CMD_TURN_R, CMD_JUMP,
                      CMD_FIRE };  // FIRE ("zap") is the arena attack — shoves a rival (§18.2)
 
 // Conditions for IF / REPEAT_UNTIL (SPEC §8.1). ENEMY_* are arena-only (§18.3).
-enum Cond : uint8_t { WALL_AHEAD, PIT_AHEAD, AT_GOAL, ENEMY_AHEAD, ENEMY_NEAR };
+// BLOCKED_AHEAD = wall OR pit (the kid's "can't go straight" — handy for wall-followers).
+// ENEMY_LEFT/RIGHT = the foe is off to that side (ego-relative) — used by the Sumo seeker so
+// a code bot can TURN toward the enemy and line up a zap. Appended to keep byte values stable.
+enum Cond : uint8_t { WALL_AHEAD, PIT_AHEAD, AT_GOAL, ENEMY_AHEAD, ENEMY_NEAR, BLOCKED_AHEAD,
+                      ENEMY_LEFT, ENEMY_RIGHT };
 
 // AST node kinds (SPEC §5.4). N_NEURO (NeuroBot) runs a trained brain: it senses, picks
 // an action via argmax, and executes it — a learned reactive policy embedded in code.

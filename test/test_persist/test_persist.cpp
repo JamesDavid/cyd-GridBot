@@ -19,7 +19,7 @@ static bool sameNode(const Node& a, const Node& b) {
     case N_REPEAT_UNTIL:
     case N_IF: if (a.cond != b.cond) return false; break;
     case N_CALL: if (a.func != b.func) return false; break;
-    case N_NEURO: if (a.brainIdx != b.brainIdx) return false; break;
+    case N_NEURO: if (a.brainIdx != b.brainIdx || a.pilot != b.pilot || a.rnn != b.rnn) return false; break;
     default: break;
   }
   return sameList(a.body, b.body);
@@ -80,7 +80,7 @@ void test_neuro_program_roundtrip() {
   uint8_t idx = p.addBrain(1);
   p.brains[idx].w1[0][0] = 1.25f; p.brains[idx].b2[3] = -0.5f;  // distinctive weights
   Node loop = Node::repeatUntil(AT_GOAL);
-  loop.body.push_back(Node::neuro(idx));
+  loop.body.push_back(Node::pilotBrain(idx));   // a PILOT brain: the pilot flag must survive
   p.main.push_back(loop);
 
   JsonDocument doc; programToJson(p, doc.to<JsonObject>());
@@ -95,10 +95,54 @@ void test_neuro_program_roundtrip() {
   TEST_ASSERT_EQUAL(5, q.brains[0].nOut);
 }
 
+// A trained RECURRENT brain (rnn node) round-trips: the node.rnn flag and the recurrent
+// feedback weights survive save/load, and an untrained rbrain is NOT bloating the JSON.
+void test_rnn_program_roundtrip() {
+  Program p;
+  uint8_t idx = p.addBrain(1);
+  p.rbrains[idx].trained = true;                 // mark trained so it serializes
+  p.rbrains[idx].whh[0][0] = 0.77f;              // distinctive feedback weight
+  p.rbrains[idx].who[2][1] = -0.4f;
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(Node::rnnBrain(idx));      // an RNN brain node
+  p.main.push_back(loop);
+
+  JsonDocument doc; programToJson(p, doc.to<JsonObject>());
+  std::string s; serializeJson(doc, s);
+  JsonDocument doc2; deserializeJson(doc2, s);
+  Program q; programFromJson(doc2.as<JsonObjectConst>(), q);
+
+  TEST_ASSERT_TRUE(sameList(p.main, q.main));    // rnn flag survives
+  TEST_ASSERT_EQUAL(1, (int)q.rbrains.size());   // rebuilt parallel to brains
+  TEST_ASSERT_TRUE(q.rbrains[0].trained);
+  TEST_ASSERT_EQUAL_FLOAT(0.77f, q.rbrains[0].whh[0][0]);  // feedback weights survived
+  TEST_ASSERT_EQUAL_FLOAT(-0.4f, q.rbrains[0].who[2][1]);
+}
+
+// Hand-placed pilot waypoints must survive save/load (and radio trade), so the kid's route sticks.
+void test_pilot_waypoints_roundtrip() {
+  Program p;
+  uint8_t idx = p.addBrain(1);
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(Node::pilotBrain(idx));
+  p.main.push_back(loop);
+  p.waypoints = {12, 13, 23, 33, 34};            // a hand-drawn route (tile indices)
+
+  JsonDocument doc; programToJson(p, doc.to<JsonObject>());
+  std::string s; serializeJson(doc, s);
+  JsonDocument doc2; deserializeJson(doc2, s);
+  Program q; programFromJson(doc2.as<JsonObjectConst>(), q);
+
+  TEST_ASSERT_EQUAL(5, (int)q.waypoints.size());
+  for (int i = 0; i < 5; i++) TEST_ASSERT_EQUAL(p.waypoints[i], q.waypoints[i]);
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_program_roundtrip);
   RUN_TEST(test_empty_program_roundtrip);
   RUN_TEST(test_neuro_program_roundtrip);
+  RUN_TEST(test_rnn_program_roundtrip);
+  RUN_TEST(test_pilot_waypoints_roundtrip);
   return UNITY_END();
 }

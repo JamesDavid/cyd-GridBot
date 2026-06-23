@@ -22,9 +22,11 @@ static constexpr int PAD_X0 = 6, PAD_Y0 = BAND_Y + 2, PAD_CELL = 50, PAD_PITCH =
 static Rect padCell(int i, int j) { return {(int16_t)(PAD_X0 + j * PAD_PITCH),
                                             (int16_t)(PAD_Y0 + i * PAD_PITCH),
                                             PAD_CELL, PAD_CELL}; }
-static const Rect R_CLEAR  = {6, 179, 48, 30};
-static const Rect R_DELPAD = {58, 179, 46, 30};    // delete selected line
-static const Rect R_RUNPAD = {108, 179, 54, 30};   // RUN sits with CLEAR/DEL
+static const Rect R_CLEAR  = {6, 179, 30, 30};
+static const Rect R_DELPAD = {38, 179, 30, 30};    // delete selected line
+static const Rect R_UP     = {70, 179, 26, 30};    // move selected line up
+static const Rect R_DN     = {98, 179, 26, 30};    // move selected line down
+static const Rect R_RUNPAD = {126, 179, 36, 30};   // RUN sits with CLEAR/DEL/move
 static constexpr int LIST_X = 166, LIST_W = 320 - 166;
 static constexpr int ROW_Y0 = BAND_Y + 22, ROW_H = 24;
 // Block controls live INLINE on the selected row (kept left of the scrollbar zone and
@@ -32,7 +34,9 @@ static constexpr int ROW_Y0 = BAND_Y + 22, ROW_H = 24;
 // One BIG button per block control (the old +/- were too small to tap): the repeat
 // button cycles the count 2->3->4->5->2; the cond button cycles the sense condition.
 static inline Rect repCycleRect(int y) { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 80, (int16_t)(ROW_H - 2)}; }
-static inline Rect condRect(int y)     { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 80, (int16_t)(ROW_H - 2)}; }
+// A sense block shows two tappable chips: the keyword (if<->until) then the condition.
+static inline Rect kwRect(int y)   { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 34, (int16_t)(ROW_H - 2)}; }  // 228..262
+static inline Rect condRect(int y) { return {(int16_t)(LIST_X + LIST_W - 56), (int16_t)(y + 1), 44, (int16_t)(ROW_H - 2)}; }  // 264..308
 static const Rect R_PAUSE = {238, 0, 82, 22};   // big back button in the status bar
 static const Rect R_TOGGLE = {6, (int16_t)(BOTBAR_Y + 2), 156, 26};  // right edge aligns with the RUN/pad above
 static const Rect R_RUNBAR = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
@@ -161,8 +165,8 @@ void GameScreen::drawChrome() {
   uint32_t stars = _profile ? _profile->stats.starsTotal : 0;
   snprintf(buf, sizeof(buf), "*%u", (unsigned)stars);
   label(g, 232, 4, buf, C_ACCENT, textdatum_t::top_right);
-  // big back button (SPEC §10): returns to the profile menu
-  button(g, R_PAUSE, "< HOME", C_INK, C_PANEL_HI);
+  // big nav button (SPEC §10): while running it backs out to the code editor, else to the menu
+  button(g, R_PAUSE, _mode == M_RUN ? "< Code" : "Menu", C_INK, C_PANEL_HI);
 }
 
 // Live step counter, drawn over the stars during a run so you can watch the count
@@ -379,12 +383,19 @@ void GameScreen::drawControlPad() {
     cell(ci[s], cj[s], cg[s], cc[s], !cornerUnlocked(s));
   // CLEAR / DEL / RUN under the pad
   button(g, R_CLEAR, "CLR", C_BAD, C_PANEL);
-  bool canDel = false;
+  bool canDel = false, canUp = false, canDn = false;
   if (_selected >= 0) {
     std::vector<Row> rows; flatten(*_editList, 0, rows);
-    canDel = (_selected < (int)rows.size() && !rows[_selected].addSlot);
+    if (_selected < (int)rows.size() && !rows[_selected].addSlot && !rows[_selected].trainSlot) {
+      canDel = true;
+      Row& r = rows[_selected];
+      canUp = r.index > 0;                          // a sibling above to swap with
+      canDn = r.index + 1 < (int)r.list->size();    // a sibling below
+    }
   }
   button(g, R_DELPAD, "DEL", canDel ? C_BAD : C_DIM, C_PANEL);
+  button(g, R_UP, "Up", canUp ? C_INK : C_DIM, C_PANEL);   // move the selected line up
+  button(g, R_DN, "Dn", canDn ? C_INK : C_DIM, C_PANEL);   // ...or down (= insert anywhere)
   button(g, R_RUNPAD, "RUN", C_GO, C_PANEL);
 }
 
@@ -420,8 +431,9 @@ void GameScreen::flatten(NodeList& list, int depth, std::vector<Row>& out, uint1
 }
 
 int GameScreen::listTop() const {
-  bool tabs = _profile && _profile->unlocks.func;
-  return ROW_Y0 + (tabs ? 26 : 0);
+  // the tab/library row shows from Sense (Save>Lib, for coded battle bots); F1/F2 join at Functions
+  bool row = _profile && _profile->unlocks.sense;
+  return ROW_Y0 + (row ? 26 : 0);
 }
 
 ui::Rect GameScreen::funcTabRect(int i) const {
@@ -465,8 +477,11 @@ static const char* condName(Cond c) {
     case WALL_AHEAD: return "wall";
     case PIT_AHEAD: return "pit";
     case AT_GOAL: return "goal";
-    case ENEMY_AHEAD: return "enemy";
-    case ENEMY_NEAR: return "near";
+    case ENEMY_AHEAD: return "foe ^";
+    case ENEMY_NEAR: return "foe near";
+    case ENEMY_LEFT: return "foe <";
+    case ENEMY_RIGHT: return "foe >";
+    case BLOCKED_AHEAD: return "wall/pit";
   }
   return "?";
 }
@@ -488,7 +503,9 @@ static void nodeLabel(const Node& n, char* buf, size_t bn, Glyph& gl, uint16_t& 
     case N_REPEAT_UNTIL: gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "until %s", condName(n.cond)); break;
     case N_IF:           gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "if %s", condName(n.cond)); break;
     case N_CALL:         gl = Glyph::CALL;   col = C_FUNC;  snprintf(buf, bn, "call F%d", n.func); break;
-    case N_NEURO:        gl = Glyph::SENSE;  col = ui::rgb(120, 230, 245); snprintf(buf, bn, "brain"); break;
+    case N_NEURO:        gl = Glyph::SENSE;  col = ui::rgb(120, 230, 245);
+      snprintf(buf, bn, n.rnn ? (n.pilot ? "rnn pilot" : "rnn brain")
+                              : (n.pilot ? "pilot" : "brain")); break;
   }
 }
 
@@ -527,8 +544,11 @@ void GameScreen::drawProgramList() {
     }
   }
 
-  // MAIN | F1 | F2 | Save | Load once functions/library unlock (SPEC §10, §11.1)
-  if (_profile && _profile->unlocks.func) {
+  // Function tabs (MAIN|F1|F2) unlock at Functions (L20); the library Save/Load (S>L|L<L) unlock at
+  // Sense (L15) so a kid can save a hand-CODED battle bot to My Bots and field it in Battle.
+  bool fn = _profile && _profile->unlocks.func;
+  bool lib = _profile && _profile->unlocks.sense;
+  if (fn) {
     const char* tabs[3] = {"MAIN", "F1", "F2"};
     NodeList* lists[3] = {&_prog.main, &_prog.f1, &_prog.f2};
     for (int i = 0; i < 3; i++) {
@@ -536,8 +556,11 @@ void GameScreen::drawProgramList() {
       bool on = (_editList == lists[i]);
       button(g, r, tabs[i], on ? C_ACCENT : C_DIM, on ? C_PANEL_HI : C_PANEL);
     }
-    button(g, funcTabRect(3), "S>L", C_GO, C_PANEL);
-    button(g, funcTabRect(4), "L<L", C_FUNC, C_PANEL);
+  }
+  if (lib) {
+    int sl = fn ? 3 : 0, ll = fn ? 4 : 1;   // sit after the tabs when those are present
+    button(g, funcTabRect(sl), "S>L", C_GO, C_PANEL);
+    button(g, funcTabRect(ll), "L<L", C_FUNC, C_PANEL);
   }
 
   int top = listTop();
@@ -604,8 +627,16 @@ void GameScreen::drawProgramList() {
       char rl[14]; snprintf(rl, sizeof(rl), "repeat %d", nd->count);
       button(g, repCycleRect(y), rl, C_LOOP, C_PANEL_HI);  // one big tap: cycles 2-5
     } else if (sel && (nd->type == N_IF || nd->type == N_REPEAT_UNTIL)) {
-      label(g, gx + 18, y + 6, nd->type == N_IF ? "if" : "until", C_SENSE);
+      button(g, kwRect(y), nd->type == N_IF ? "if" : "until", C_SENSE, C_PANEL_HI);
       button(g, condRect(y), condName(nd->cond), C_SENSE, C_PANEL_HI);
+    } else if (sel && nd->type == N_CALL) {
+      char cl[6]; snprintf(cl, sizeof(cl), "F%d", nd->func);
+      label(g, gx + 18, y + 6, "call", C_FUNC);
+      button(g, condRect(y), cl, C_FUNC, C_PANEL_HI);   // tap to switch F1<->F2
+    } else if (sel && nd->type == N_NEURO) {
+      const char* mode = nd->rnn ? (nd->pilot ? "rnn+pilot" : "rnn")
+                                 : (nd->pilot ? "pilot" : "plain");
+      button(g, condRect(y), mode, ui::rgb(120, 230, 245), C_PANEL_HI);  // cycle brain mode
     } else {
       label(g, gx + 18, y + 6, lab, C_INK);
     }
@@ -652,6 +683,7 @@ void GameScreen::appendCommand(Cmd c) {
   if (_profile) {  // command histogram (SPEC §9)
     if (c == CMD_FWD) _profile->stats.commandsUsed[CS_FWD]++;
     else if (c == CMD_JUMP) _profile->stats.commandsUsed[CS_JUMP]++;
+    else if (c == CMD_FIRE) _profile->stats.commandsUsed[CS_ZAP]++;
     else _profile->stats.commandsUsed[CS_TURN]++;
   }
   appendNodeToTarget(Node::command(c));
@@ -672,6 +704,7 @@ void GameScreen::handlePadTap(int x, int y) {
       gb::Node loop = gb::Node::repeatUntil(gb::AT_GOAL);
       loop.body.push_back(gb::Node::neuro(idx));
       appendNodeToTarget(loop);
+      _profile->stats.commandsUsed[CS_NEURO]++;
     } else {
       toast("NeuroBot unlocks at Lv 28", C_ACCENT);  // consistent with the corner padlocks
     }
@@ -697,8 +730,10 @@ void GameScreen::handlePadTap(int x, int y) {
 }
 
 void GameScreen::handleListTap(int x, int y) {
-  // function-body tabs + library Save/Load
-  if (_profile && _profile->unlocks.func) {
+  // function-body tabs (L20) + library Save/Load (L15, for coded battle bots)
+  bool fn = _profile && _profile->unlocks.func;
+  bool lib = _profile && _profile->unlocks.sense;
+  if (fn) {
     NodeList* lists[3] = {&_prog.main, &_prog.f1, &_prog.f2};
     for (int i = 0; i < 3; i++) {
       if (funcTabRect(i).contains(x, y)) {
@@ -706,8 +741,11 @@ void GameScreen::handleListTap(int x, int y) {
         drawProgramList(); return;
       }
     }
-    if (funcTabRect(3).contains(x, y)) { hal::audio.blip(); saveToLibrary(); return; }
-    if (funcTabRect(4).contains(x, y)) { hal::audio.blip(); loadFromLibrary(); return; }
+  }
+  if (lib) {
+    int sl = fn ? 3 : 0, ll = fn ? 4 : 1;
+    if (funcTabRect(sl).contains(x, y)) { hal::audio.blip(); saveToLibrary(); return; }
+    if (funcTabRect(ll).contains(x, y)) { hal::audio.blip(); loadFromLibrary(); return; }
   }
   if (x < LIST_X) return;
   int top = listTop();
@@ -742,9 +780,39 @@ void GameScreen::handleListTap(int x, int y) {
             hal::audio.blip(); drawProgramList(); return;
           }
         } else if (sn->type == N_IF || sn->type == N_REPEAT_UNTIL) {
-          if (condRect(yy).contains(x, y)) {
-            sn->cond = (sn->cond == WALL_AHEAD) ? PIT_AHEAD
-                     : (sn->cond == PIT_AHEAD) ? AT_GOAL : WALL_AHEAD;
+          if (kwRect(yy).contains(x, y)) {         // toggle keyword: until (loop) <-> if (once)
+            sn->type = (sn->type == N_REPEAT_UNTIL) ? N_IF : N_REPEAT_UNTIL;
+            hal::audio.blip(); drawProgramList(); return;
+          }
+          if (condRect(yy).contains(x, y)) {       // wall -> pit -> wall/pit -> goal -> [foe senses] -> wall
+            bool foes = _profile && _profile->unlocks.sense;  // enemy senses appear with Battle (Sense, L15)
+            Cond c = sn->cond;
+            if (c == WALL_AHEAD) c = PIT_AHEAD;
+            else if (c == PIT_AHEAD) c = BLOCKED_AHEAD;
+            else if (c == BLOCKED_AHEAD) c = AT_GOAL;
+            else if (c == AT_GOAL) c = foes ? ENEMY_AHEAD : WALL_AHEAD;
+            else if (c == ENEMY_AHEAD) c = ENEMY_NEAR;
+            else if (c == ENEMY_NEAR) c = ENEMY_LEFT;
+            else if (c == ENEMY_LEFT) c = ENEMY_RIGHT;
+            else c = WALL_AHEAD;
+            sn->cond = c;
+            hal::audio.blip(); drawProgramList(); return;
+          }
+        } else if (sn->type == N_CALL) {
+          if (condRect(yy).contains(x, y)) {       // switch which function this call runs
+            sn->func = (sn->func == 1) ? 2 : 1;
+            hal::audio.blip(); drawProgramList(); return;
+          }
+        } else if (sn->type == N_NEURO) {
+          if (condRect(yy).contains(x, y)) {       // plain -> pilot -> rnn -> rnn+pilot (skip locked)
+            bool uP = !_profile || _profile->unlocks.nPilot;   // pilot tool unlocked (Lv 37)
+            bool uR = !_profile || _profile->unlocks.nRnn;     // memory brain unlocked (Lv 40)
+            int s = (sn->rnn ? 2 : 0) + (sn->pilot ? 1 : 0);   // 0 plain,1 pilot,2 rnn,3 both
+            for (int k = 1; k <= 4; k++) {
+              int n = (s + k) % 4; bool wantP = n & 1, wantR = n & 2;
+              if ((wantP && !uP) || (wantR && !uR)) continue;
+              sn->pilot = wantP; sn->rnn = wantR; break;
+            }
             hal::audio.blip(); drawProgramList(); return;
           }
         }
@@ -770,9 +838,31 @@ void GameScreen::deleteSelected() {
   drawProgramList();
 }
 
+void GameScreen::moveSelected(int dir) {
+  std::vector<Row> rows;
+  flatten(*_editList, 0, rows);
+  if (_selected < 0 || _selected >= (int)rows.size()) return;
+  Row& r = rows[_selected];
+  if (r.addSlot || r.trainSlot) return;
+  NodeList* lst = r.list;
+  int i = r.index, j = i + dir;
+  if (j < 0 || j >= (int)lst->size()) return;   // already at the top/bottom of its block
+  std::swap((*lst)[i], (*lst)[j]);              // moves the whole block (its body rides along)
+  _failNode = nullptr;
+  // re-flatten and keep the moved node selected at its new spot
+  std::vector<Row> rows2;
+  flatten(*_editList, 0, rows2);
+  for (int k = 0; k < (int)rows2.size(); k++)
+    if (rows2[k].list == lst && rows2[k].index == j && !rows2[k].addSlot && !rows2[k].trainSlot) { _selected = k; break; }
+  hal::audio.blip();
+  drawProgramList(); drawControlPad();
+}
+
 void GameScreen::handleCodeTap(int x, int y) {
   if (R_CLEAR.contains(x, y)) { _editList->clear(); _selected = -1; _failNode = nullptr; hal::audio.blip(); drawProgramList(); drawControlPad(); return; }
   if (R_DELPAD.contains(x, y)) { if (_selected >= 0) { deleteSelected(); drawControlPad(); } return; }
+  if (R_UP.contains(x, y)) { if (_selected >= 0) moveSelected(-1); return; }
+  if (R_DN.contains(x, y)) { if (_selected >= 0) moveSelected(+1); return; }
   if (R_RUNPAD.contains(x, y)) { startRun(); return; }
   if (x < LIST_X) handlePadTap(x, y);
   else handleListTap(x, y);
@@ -874,13 +964,13 @@ void GameScreen::saveToLibrary() {
   if (_prog.main.empty()) { toast("nothing to save", C_ACCENT); return; }
   if ((int)_profile->library.size() >= gb::LIBRARY_MAX) { toast("library full", C_BAD); return; }
   gb::LibEntry e;
-  char nm[16];
-  snprintf(nm, sizeof(nm), "Lib %d", (int)_profile->library.size() + 1);
-  e.name = nm;
+  e.source = gb::LIB_CODE; e.srcLevel = (uint16_t)_profile->level;
+  e.name = gb::autoLibName(*_profile, gb::LIB_CODE, (uint16_t)_profile->level);
   e.program = _prog;
   _profile->library.push_back(e);
   drawProgramList();
-  toast("saved to library", C_GO);
+  char msg[28]; snprintf(msg, sizeof(msg), "saved: %s", e.name.c_str());
+  toast(msg, C_GO);   // tell them the name so they can find it in My Bots
 }
 
 void GameScreen::loadFromLibrary() {
@@ -941,6 +1031,7 @@ void GameScreen::settleOutcome(Outcome o) {
     // Multi-maze generalization level: the same program must clear every board.
     if (_boardIdx + 1 < _boardCount) { hal::audio.tick(); advanceBoard(); return; }
     _mode = M_WIN;
+    drawChrome();   // refresh the top button label (was "< Code" during the run -> "Menu")
     _writtenCount = programWrittenCount(_prog);
     _stars = starsFor(_writtenCount, _par);
     hal::audio.win();
@@ -998,6 +1089,7 @@ void GameScreen::settleOutcome(Outcome o) {
   }
   _failNode = _it.currentNode();
   _mode = M_FAIL;
+  drawChrome();   // refresh the top button label -> "Menu"
   _auto = false;
   hal::audio.fail();
   hal::led.red();
@@ -1024,12 +1116,17 @@ app::Signal GameScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int tx = 0, ty = 0;
   bool tap = _tap.tapped(tp, now, tx, ty);
 
-  // HOME/back always exits to the profile menu, from ANY mode (run/win/fail too) — it
-  // used to be checked after the mode handlers, so tapping it on the win/fail screen was
-  // swallowed and dropped you back in the editor instead. Autosave the resume slot first.
+  // Top-right nav button. Two levels: while a run is playing it backs out to the CODE
+  // EDITOR (so you can tweak and re-run); in the editor it goes up to the MENU (hub).
+  // Win/fail are end states -> menu. Autosave the resume slot first.
   if (tap && R_PAUSE.contains(tx, ty)) {
+    if (_mode == M_RUN) {                 // running -> back to the code editor
+      _auto = false; _tween = false;
+      _mode = M_EDIT; _view = V_CODE; drawCodeView();
+      return app::Signal::NONE;
+    }
     if (_profile) { _profile->workLevel = _level; _profile->work = _prog; }
-    return app::Signal::BACK;
+    return app::Signal::BACK;             // editing / win / fail -> menu (hub)
   }
 
   // level-start maze preview: hold ~2.5s (or until tapped), then go to code view

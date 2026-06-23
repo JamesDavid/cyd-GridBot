@@ -17,10 +17,14 @@ static int rowOf(int i) { return i < 10 ? 0 : (i < 19 ? 1 : 2); }
 static int colOf(int i) { return i < 10 ? i : (i < 19 ? i - 10 : i - 19); }
 static int countOf(int row) { return row == 0 ? 10 : 9; }
 
-void ProfileCreateScreen::begin() { _name.clear(); _avatar = 0; _edit = false; }
+void ProfileCreateScreen::begin() { _name.clear(); _avatar = 0; _edit = false; _rename = false; }
 
 void ProfileCreateScreen::beginEdit(const std::string& name, uint8_t avatar) {
-  _name = name; _avatar = avatar; _edit = true;
+  _name = name; _avatar = avatar; _edit = true; _rename = false;
+}
+
+void ProfileCreateScreen::beginRename(const std::string& name) {
+  _name = name; _edit = true; _rename = true;  // name-only; CREATED is routed to the library
 }
 
 ui::Rect ProfileCreateScreen::keyRect(int i) const {
@@ -50,12 +54,14 @@ void ProfileCreateScreen::draw() {
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
-  label(g, SCREEN_W / 2, 3, _edit ? "Edit Player" : "New Player", C_ACCENT, textdatum_t::top_center, 2);
+  label(g, SCREEN_W / 2, 3, _rename ? "Rename bot" : _edit ? "Edit Player" : "New Player",
+        C_ACCENT, textdatum_t::top_center, 2);
+  button(g, {4, 1, 60, 20}, "Cancel", C_INK, C_PANEL);   // bail without creating
 
   drawNameField();
 
-  // avatar picker
-  for (int i = 0; i < assets::ROSTER_SIZE; i++) {
+  // avatar picker (a bot rename only changes the name)
+  if (!_rename) for (int i = 0; i < assets::ROSTER_SIZE; i++) {
     Rect r = avatarRect(i);
     bool sel = (i == _avatar);
     g.fillRoundRect(r.x, r.y, r.w, r.h, 4, sel ? C_PANEL_HI : C_PANEL);
@@ -79,7 +85,9 @@ app::Signal ProfileCreateScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
 
-  for (int i = 0; i < assets::ROSTER_SIZE; i++) {
+  if (ui::Rect{4, 1, 60, 20}.contains(tx, ty)) return app::Signal::BACK;  // Cancel
+
+  if (!_rename) for (int i = 0; i < assets::ROSTER_SIZE; i++) {
     if (avatarRect(i).contains(tx, ty)) { _avatar = i; draw(); return app::Signal::NONE; }
   }
   for (int i = 0; i < 28; i++) {

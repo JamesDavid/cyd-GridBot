@@ -13,6 +13,14 @@ enum class MatchType : uint8_t { RACE, SUMO };  // ZAP (FIRE verb) -> backlog
 enum class ArenaOutcome : uint8_t { RUNNING, BOT0, BOT1, DRAW };
 
 constexpr int ARENA_STEP_CAP = 300;
+// Sumo health: a zap that connects costs 1 HP; lose all HP (or get shoved off the ring) -> out.
+// HP slowly regenerates, so a match is a sustained brawl of several hits, not one shove.
+constexpr int SUMO_HP = 4;
+constexpr int SUMO_REGEN_TICKS = 28;  // +1 HP this often (if below max and still alive)
+// After landing a zap a bot must recover before it can zap again -- this stops one bot from
+// chaining 3 hits uncontested and gives the foe a window to re-engage and hit BACK, so the
+// health bars trade down together (a real back-and-forth brawl, not a one-sided beatdown).
+constexpr int SUMO_ZAP_COOLDOWN = 3;
 
 class Arena {
  public:
@@ -30,6 +38,7 @@ class Arena {
 
   const Pose& pose(int i) const { return _bot[i].it.pose(); }
   bool alive(int i) const { return _bot[i].alive; }
+  int hp(int i) const { return _bot[i].hp; }   // Sumo health (for the health bar)
   bool won(int i) const { return _bot[i].won; }
   ArenaOutcome outcome() const { return _outcome; }
   int ticks() const { return _ticks; }
@@ -42,6 +51,8 @@ class Arena {
     bool alive = true;
     bool won = false;
     bool done = false;  // program ended without winning
+    int hp = SUMO_HP;   // Sumo only
+    int zapCd = 0;      // ticks until this bot's zap is ready again (Sumo)
   };
   void foldLog();
 

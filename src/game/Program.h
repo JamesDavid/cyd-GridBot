@@ -6,6 +6,7 @@
 #include <vector>
 #include "game/Types.h"
 #include "game/Net.h"
+#include "game/RNet.h"
 
 namespace gb {
 
@@ -18,7 +19,9 @@ struct Node {
   Cond cond = WALL_AHEAD;  // N_IF, N_REPEAT_UNTIL
   uint8_t count = 2;       // N_REPEAT (2..5)
   uint8_t func  = 1;       // N_CALL  (1 or 2)
-  uint8_t brainIdx = 0;    // N_NEURO -> index into Program::brains
+  uint8_t brainIdx = 0;    // N_NEURO -> index into Program::brains (and rbrains, parallel)
+  bool pilot = false;      // N_NEURO: steer toward planned WAYPOINTS, not just the goal
+  bool rnn = false;        // N_NEURO: use the recurrent (memory) brain rbrains[brainIdx]
   std::vector<Node> body;  // N_REPEAT / N_REPEAT_UNTIL / N_IF
 
   static Node command(Cmd c)            { Node n; n.type = N_CMD; n.cmd = c; return n; }
@@ -27,6 +30,8 @@ struct Node {
   static Node ifCond(Cond c)            { Node n; n.type = N_IF; n.cond = c; return n; }
   static Node call(uint8_t f)           { Node n; n.type = N_CALL; n.func = f; return n; }
   static Node neuro(uint8_t idx)        { Node n; n.type = N_NEURO; n.brainIdx = idx; return n; }
+  static Node pilotBrain(uint8_t idx)   { Node n; n.type = N_NEURO; n.brainIdx = idx; n.pilot = true; return n; }
+  static Node rnnBrain(uint8_t idx)     { Node n; n.type = N_NEURO; n.brainIdx = idx; n.rnn = true; return n; }
 };
 
 using NodeList = std::vector<Node>;
@@ -34,16 +39,23 @@ using NodeList = std::vector<Node>;
 struct Program {
   NodeList main;
   NodeList f1, f2;
-  std::vector<Net> brains;  // trained brains for N_NEURO nodes (copied with the program)
+  std::vector<Net>  brains;   // feedforward brains for N_NEURO nodes (copied with the program)
+  std::vector<RNet> rbrains;  // recurrent (memory) brains, PARALLEL to brains; node.rnn picks
+  // Pilot route: tile indices (row*cols+col) the kid placed by hand. A pilot brain steers toward
+  // these in order BEFORE the auto-planner kicks in -- empty => fall back to the BFS auto-route.
+  std::vector<uint8_t> waypoints;
 
-  void clear() { main.clear(); f1.clear(); f2.clear(); brains.clear(); }
+  void clear() { main.clear(); f1.clear(); f2.clear(); brains.clear(); rbrains.clear(); waypoints.clear(); }
   bool empty() const { return main.empty() && f1.empty() && f2.empty(); }
 
-  // Add a fresh brain (configured for the maze: 10 sensors -> 8 hidden -> 5 actions),
-  // returning its index for a Node::neuro(idx).
+  // Add a fresh brain (10 sensors -> 8 hidden -> 5 actions). A feedforward Net AND a
+  // parallel (untrained) recurrent RNet are created at the same index, so a node can later
+  // flip between normal/rnn just by setting Node::rnn — no reallocation. Returns the index.
   uint8_t addBrain(uint32_t seed) {
     Net b; b.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, seed);
     brains.push_back(b);
+    RNet r; r.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, seed);
+    rbrains.push_back(r);
     return (uint8_t)(brains.size() - 1);
   }
 };

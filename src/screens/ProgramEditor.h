@@ -63,6 +63,7 @@ class ProgramEditor {
   void appendNodeToTarget(const gb::Node& n);
   void appendCommand(gb::Cmd c);
   void deleteSelected();
+  void moveSelected(int dir);   // reorder the selected line within its block (-1 up, +1 down)
   bool cornerUnlocked(int slot) const;  // 0=JUMP,1=REPEAT,2=CALL,3=SENSE
   ui::Rect funcTabRect(int i) const;
   int listTop() const;
