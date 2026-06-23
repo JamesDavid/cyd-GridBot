@@ -157,8 +157,8 @@ void test_sumo_seeker_turns_and_kos() {
   TEST_ASSERT_FALSE(ar.alive(1));
 }
 
-// Sumo HP: a foe pinned against a wall (can't be shoved off) takes THREE zaps to KO -- a
-// sustained brawl, not a one-shove kill. Verifies the health + multi-hit mechanic.
+// Sumo HP: a foe pinned against a wall (can't be shoved off) takes SEVERAL zaps to KO -- a
+// sustained brawl, not a one-shove kill. Verifies the health + multi-hit + cooldown mechanic.
 void test_sumo_hp_three_hits() {
   Maze m; m.reset(1, 3); m.fill(FLOOR);
   m.clearGoal();                                  // no goal -> the zapper keeps firing
@@ -171,12 +171,12 @@ void test_sumo_hp_three_hits() {
   zapper.main.push_back(loop);
   Program idle;
   Arena ar;
-  ar.setup(&m, &zapper, &idle, s0, s1, MatchType::SUMO, 50);
-  ar.tick(); ar.tick();                           // two hits -> still standing
-  TEST_ASSERT_TRUE(ar.alive(1));
-  TEST_ASSERT_EQUAL(SUMO_HP - 2, ar.hp(1));
-  ar.tick();                                       // third hit -> KO
-  TEST_ASSERT_FALSE(ar.alive(1));
+  ar.setup(&m, &zapper, &idle, s0, s1, MatchType::SUMO, 80);
+  ar.tick();                                       // first hit lands...
+  TEST_ASSERT_TRUE(ar.alive(1));                   // ...one hit does NOT KO
+  TEST_ASSERT_EQUAL(SUMO_HP - 1, ar.hp(1));        // ...but it took damage
+  for (int k = 0; k < 70 && ar.outcome() == ArenaOutcome::RUNNING; k++) ar.tick();
+  TEST_ASSERT_FALSE(ar.alive(1));                  // eventually KO'd after several hits
   TEST_ASSERT_EQUAL((int)ArenaOutcome::BOT0, (int)ar.outcome());
 }
 

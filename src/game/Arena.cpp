@@ -18,6 +18,7 @@ void Arena::setup(const Maze* maze, const Program* p0, const Program* p1,
     _bot[i].won = false;
     _bot[i].done = false;
     _bot[i].hp = SUMO_HP;
+    _bot[i].zapCd = 0;
   }
   _bot[0].it.load(p0, maze, s0, stepCap);
   _bot[1].it.load(p1, maze, s1, stepCap);
@@ -38,12 +39,14 @@ void Arena::foldLog() {
     fold((uint32_t)_bot[i].it.pose().facing);
     fold((uint32_t)(_bot[i].alive ? 1 : 0));
     fold((uint32_t)_bot[i].hp);
+    fold((uint32_t)_bot[i].zapCd);
   }
 }
 
 ArenaOutcome Arena::tick() {
   if (_outcome != ArenaOutcome::RUNNING) return _outcome;
   _ticks++;
+  for (int i = 0; i < 2; i++) if (_bot[i].zapCd > 0) _bot[i].zapCd--;  // recover the zap
 
   Pose before[2];
   Outcome out[2] = {OUT_OK, OUT_OK};
@@ -114,13 +117,14 @@ ArenaOutcome Arena::tick() {
   // the zapper's facing; into a PIT / off-board = out (Sumo, SPEC §18.2).
   for (int i = 0; i < 2; i++) {
     if (!zapping[i] || !_bot[i].alive) continue;
+    if (_type == MatchType::SUMO && _bot[i].zapCd > 0) continue;  // still recovering -> fizzle
     int j = 1 - i;
     if (!_bot[j].alive) continue;
     int dr, dc; facingDelta(_bot[i].it.pose().facing, dr, dc);
     int ar = _bot[i].it.pose().row + dr, ac = _bot[i].it.pose().col + dc;
     const Pose& ej = _bot[j].it.pose();
     if (ej.row == ar && ej.col == ac) {  // enemy is in the tile ahead -> HIT it
-      if (_type == MatchType::SUMO && --_bot[j].hp <= 0) _bot[j].alive = false;  // 3 hits KO
+      if (_type == MatchType::SUMO) { _bot[i].zapCd = SUMO_ZAP_COOLDOWN; if (--_bot[j].hp <= 0) _bot[j].alive = false; }
       int dest_r = ar + dr, dest_c = ac + dc;                                    // and shove it back
       if (!_maze->inBounds(dest_r, dest_c) || _maze->at(dest_r, dest_c) == PIT) {
         _bot[j].alive = false;                                                   // shoved off -> instant out
