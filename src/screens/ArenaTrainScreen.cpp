@@ -40,6 +40,13 @@ std::string ArenaTrainScreen::nextFighterName() const {
   return nm;
 }
 
+bool ArenaTrainScreen::hasFighter() const {
+  if (_profile)
+    for (auto& e : _profile->library)
+      if (!e.program.brains.empty()) return true;
+  return false;
+}
+
 void ArenaTrainScreen::buildOpponent(int idx) {
   _ai.clear();
   // Ordered EASY -> HARD so a kid's first Teach reliably beats the default (Bolt), for the
@@ -83,7 +90,9 @@ void ArenaTrainScreen::setupBoard() {
 
 void ArenaTrainScreen::begin(Profile* profile) {
   _profile = profile;
-  _matchType = MatchType::RACE;
+  // No fighter yet? Start in BATTLE mode -- a first-timer is here to make their first battle
+  // bot, and the hint banner walks them through it (Evolve -> Save).
+  _matchType = hasFighter() ? MatchType::RACE : MatchType::SUMO;
   setupBoard();
   _oppIdx = 0;
   buildOpponent(_oppIdx);
@@ -178,7 +187,7 @@ void ArenaTrainScreen::draw() {
     char chip[32]; snprintf(chip, sizeof(chip), "vs %s >", _oppName.c_str());
     button(g, R_OPP, chip, ui::rgb(120, 230, 245), C_PANEL);
   }
-  button(g, R_MODE, _matchType == MatchType::SUMO ? "Sumo >" : "Race >", C_FUNC, C_PANEL);
+  button(g, R_MODE, _matchType == MatchType::SUMO ? "Battle >" : "Race >", C_FUNC, C_PANEL);
   button(g, R_VIEW, _netView ? "show arena >" : "show brain >", C_ACCENT, C_PANEL);
 
   if (_netView) {
@@ -210,11 +219,14 @@ void ArenaTrainScreen::draw() {
       g.fillCircle(ox + c * tile + tile / 2, oy + r * tile + tile / 2,
                    head ? tile / 3 : tile / 6 + 1, _beatsAI ? C_GO : C_MOVE);
     }
-    char leg[40];
+    char leg[48];
     if (_saved && _savedIdx >= 0 && _savedIdx < (int)_profile->library.size())
       snprintf(leg, sizeof(leg), "saved as \"%s\" -> My Bots", _profile->library[_savedIdx].name.c_str());
+    else if (firstFighter() && !_animating)
+      snprintf(leg, sizeof(leg), "Tap EVOLVE to train, then SAVE to battle!");
     else snprintf(leg, sizeof(leg), "you  vs  %s", _oppName.c_str());
-    label(g, SCREEN_W / 2, BOTBAR_Y - 9, leg, _saved ? C_GO : C_DIM, textdatum_t::bottom_center);
+    label(g, SCREEN_W / 2, BOTBAR_Y - 9, leg,
+          _saved ? C_GO : (firstFighter() ? C_ACCENT : C_DIM), textdatum_t::bottom_center);
   }
 
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);

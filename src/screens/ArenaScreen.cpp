@@ -124,13 +124,13 @@ void ArenaScreen::drawGameType() {
   bool neuro = _profile && _profile->unlocks.neuro;
   if (_hotseat) {
     button(g, R_G1, "Race - first to the goal", C_GO, C_PANEL);
-    button(g, R_G2, neuro ? "Sumo - shove them off" : "Sumo - needs NeuroBot (Lv28)",
+    button(g, R_G2, neuro ? "Battle - shove them off" : "Battle - needs NeuroBot (Lv28)",
            neuro ? C_ACCENT : C_LOCK, C_PANEL);
     button(g, R_G3, "Puzzle Race - beat the clock", C_LOOP, C_PANEL);
     button(g, R_G4, "Seed Challenge - same board", C_SENSE, C_PANEL);
   } else {
     button(g, R_G1, "Race - first to the goal", C_GO, C_PANEL);
-    button(g, R_G2, neuro ? "Sumo - shove them off" : "Sumo - needs NeuroBot (Lv28)",
+    button(g, R_G2, neuro ? "Battle - shove them off" : "Battle - needs NeuroBot (Lv28)",
            neuro ? C_ACCENT : C_LOCK, C_PANEL);
     if (neuro)
       button(g, R_G3, "Train a fighter (NeuroBot)", ui::rgb(120, 230, 245), C_PANEL);
@@ -297,7 +297,7 @@ void ArenaScreen::drawBoard() {
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   char hdr[40];
-  snprintf(hdr, sizeof(hdr), "%s: %s vs %s", _type == MatchType::RACE ? "Race" : "Sumo",
+  snprintf(hdr, sizeof(hdr), "%s: %s vs %s", _type == MatchType::RACE ? "Race" : "Battle",
            _cands[_pick0].name.c_str(), _cands[_pick1].name.c_str());
   label(g, 6, 4, hdr, C_ACCENT);
   for (int r = 0; r < _maze.rows(); r++)
@@ -377,11 +377,19 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       if (R_BACK.contains(tx, ty)) { drawMenu(); break; }  // < Opponents
       if (R_G1.contains(tx, ty)) {  // Race (both branches)
         _type = MatchType::RACE; buildCandidates(false); _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
-      } else if (R_G2.contains(tx, ty)) {  // Sumo (both branches) — gated behind NeuroBot
-        if (_profile && _profile->unlocks.neuro) {
-          _type = MatchType::SUMO; buildCandidates(true);  // only NeuroBot fighters in Sumo
-          _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
-        } else hal::audio.fail();
+      } else if (R_G2.contains(tx, ty)) {  // Battle (both branches) — gated behind NeuroBot
+        if (!(_profile && _profile->unlocks.neuro)) { hal::audio.fail(); }
+        else {
+          bool hasFighter = false;
+          for (auto& e : _profile->library)
+            if (!e.program.brains.empty()) { hasFighter = true; break; }
+          if (hasFighter) {  // pick your trained fighter and go
+            _type = MatchType::SUMO; buildCandidates(true);
+            _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
+          } else {           // no fighter yet -> walk them into training their first one
+            return app::Signal::GOTO_ARENA_TRAIN;
+          }
+        }
       } else if (_hotseat && R_G3.contains(tx, ty)) {
         return app::Signal::GOTO_PUZZLE;
       } else if (_hotseat && R_G4.contains(tx, ty)) {

@@ -44,6 +44,8 @@ class ArenaTrainScreen : public app::IScreen {
   bool _beatsAI = false, _taught = false, _saved = false;
   int _savedIdx = -1;         // library slot this session's fighter went to (-1 = not saved yet)
   std::string nextFighterName() const;  // smallest free "Fighter vN" so each is distinct
+  bool hasFighter() const;              // does the kid already have a trained NeuroBot fighter?
+  bool firstFighter() const { return !hasFighter() && _savedIdx < 0; }  // show the onboarding hint
 
   // "watch it learn" view: the Brain-Cam network graph + an arena mini-map (you vs the
   // opponent), so a kid sees the opponent, their path, AND the network all update together.
