@@ -194,7 +194,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![NeuroLab](docs/img/neurolab-hub.png) |
 |:--|
-| **NeuroLab** — sixteen lessons, each small enough to *watch*: one neuron, backprop, perception, a hidden layer, many actions, **your robot's brain** (a tour of its real senses), evolution, data & labels, Q-learning, **Tuning** (turn the explore/step knobs, watch learning speed change), **transfer learning**, **Brain Cam**, **Pilot** (plan + steer), **Memory** (a recurrent brain), **Self-play** (train by beating yourself), and **The Right Tool** (match the method to the problem). |
+| **NeuroLab** — seventeen lessons, each small enough to *watch*: one neuron, backprop, perception, a hidden layer, many actions, **your robot's brain** (a tour of its real senses), **evolution** (population → fitness → selection → **crossover** → mutation: "the best robots make robot babies"), data & labels, Q-learning, **Tuning** (turn the explore/step knobs on a tabular grid), **Tune a real brain** (learn rate + rounds on a live MLP — watch the loss fall, or *thrash*), **transfer learning**, **Brain Cam**, **Pilot** (plan + steer), **Memory** (a recurrent brain), **Self-play** (train by beating yourself), and **The Right Tool** (match the method to the problem). |
 
 | ![Watch a neuron learn](docs/img/neuro-neuron.gif) |
 |:--|
@@ -242,7 +242,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![Train a fighter for the Arena](docs/img/neuro-arena-train.png) |
 |:--|
-| **Train a fighter for the Arena.** A **"Train a fighter"** mode off the Computer branch: **Teach** (imitate a hunter), **Q-Learn** (reward only — win/lose), or **Evolve** a brain to **win real arena matches**, and a **Memory (RNN)** toggle to give it a recurrent brain. A **"spar vs"** chip cycles your sparring partner easy→hard — the blind dasher **Bolt**, the wall-huggers **Coil** & **Spin** (left- and right-hand rule, so they take different routes), the hunter **Vex**, the perfect solver **Ace**, then **Self** (it spars against an evolving copy of *itself* — an arms race), then every bot in your **library** (incl. radio-traded ones) — so a first Teach reliably reads *"taught WINS!"* and you can climb to a real challenge. A live **learning-curve sparkline** shows whether it's actually improving. **Save** it and it joins your roster as **your bot** — and it **fine-tunes to each new battle board** at match start, so a trained fighter actually wins instead of over-fitting. |
+| **Train a fighter for the Arena.** A **"Train a fighter"** mode off the Computer branch: **Teach** (imitate a hunter), **Q-Learn** (reward only — win/lose), or **Evolve** a brain to **win real arena matches**, and a **Memory (RNN)** toggle to give it a recurrent brain. A **"spar vs"** chip cycles your sparring partner easy→hard — the blind dasher **Bolt**, the wall-huggers **Coil** & **Spin** (left- and right-hand rule, so they take different routes), the hunter **Vex**, the perfect solver **Ace**, then **Self** (it spars against an evolving copy of *itself* — an arms race), then every bot in your **library** (incl. radio-traded ones) — so a first Teach reliably reads *"taught WINS!"* and you can climb to a real challenge. A live **learning-curve sparkline** shows whether it's actually improving, and an optional **"Knobs" panel** tucks away three real hyperparameters — **learning rate**, **rounds**, and **explore** (mutation/epsilon) — for the kid who wants to feel what each does (paired with the *Tune a real brain* lesson). **Save** it and it joins your roster as **your bot** — and it **fine-tunes to each new battle board** at match start, so a trained fighter actually wins instead of over-fitting. |
 
 **The ML ideas a kid actually meets here** — not as jargon, but as things you *do* and *watch*:
 gradient-descent **backprop**; **multi-class** outputs (argmax picks the action); why a
@@ -345,14 +345,17 @@ readout + ZAP!/OUT! hit bursts, "Play again" rematch, trained fighters that adap
 board) · ✅ **battling at the Sense tier** — code a fighter with `if` conditions and save it,
 no neural training required · ✅ **local tournaments** — a **Cup** knock-out bracket and a
 round-robin **Ladder**, run deterministically and replayed on screen · ✅ the full **NeuroBot**
-mode (backprop / Q-learning / evolution / transfer / **Tuning** (explore/step knobs) / **Pilot**
-(plan + steer, now with **hand-placed waypoints**) / **Memory** (an RNN) / **Self-play** /
-**The Right Tool** lessons, Brain Cam with an argmax caption, a learning-curve sparkline, a
-trainable brain block with versioned saves) · ✅ neural Arena trainers — **Teach / Q-Learn /
-Evolve**, an RNN toggle, and a **Self** sparring partner for self-play · ✅ a **boot splash**
-(firmware version + repo) · ✅ **CodeLab** lessons in the real editor style · ✅ coin & gem
-collectibles + a shop · ✅ five **biomes**, a 17-badge gallery, jump-arc animation + a live
-step counter · ✅ a one-click **online flasher**.
+mode (backprop / Q-learning / evolution **with a breeding explainer** (crossover + "robot babies")
+/ transfer / **Tuning** (explore/step knobs) / **Tune a real brain** (learn rate + rounds on a
+live net) / **Pilot** (plan + steer, now with **hand-placed waypoints**) / **Memory** (an RNN) /
+**Self-play** / **The Right Tool** lessons, Brain Cam with an argmax caption, a learning-curve
+sparkline, a trainable brain block with versioned saves) · ✅ neural Arena trainers — **Teach /
+Q-Learn / Evolve**, an RNN toggle, a **Self** sparring partner for self-play, and an optional
+**Knobs panel** (learning rate / rounds / explore) · ✅ an idle **nametag screensaver** (a big
+name card for shared classroom devices) · ✅ a **boot splash** (firmware version + repo) ·
+✅ **CodeLab** lessons in the real editor style · ✅ coin & gem collectibles + a shop · ✅ five
+**biomes**, a 17-badge gallery, jump-arc animation + a live step counter · ✅ a one-click
+**online flasher**.
 
 Still on deck (full list in **[BACKLOG.md](BACKLOG.md)**):
 
