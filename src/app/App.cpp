@@ -484,6 +484,8 @@ void App::tick(uint32_t now) {
           case 11: _brainView.begin(&_profile); _brainView.enter(); _state = State::BRAIN_VIEW; break;  // Brain Cam
           case 12: _pilotLesson.begin(); _pilotLesson.enter(); _state = State::PILOT_LESSON; break;  // Pilot
           case 13: _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; break;  // Memory
+          case 14: if (!_selfPlayLesson) _selfPlayLesson = new screens::SelfPlayLessonScreen();
+                   _selfPlayLesson->begin(); _selfPlayLesson->enter(); _state = State::SELFPLAY_LESSON; break;  // Self-play
         }
       }
       break;
@@ -498,6 +500,10 @@ void App::tick(uint32_t now) {
     }
     case State::TUNE_LESSON: {
       if (_tuneLesson && _tuneLesson->tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      break;
+    }
+    case State::SELFPLAY_LESSON: {
+      if (_selfPlayLesson && _selfPlayLesson->tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
       break;
     }
     case State::EVO_LESSON: {
