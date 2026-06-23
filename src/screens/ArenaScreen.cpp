@@ -1,4 +1,5 @@
 #include "screens/ArenaScreen.h"
+#include <Arduino.h>   // millis() -> fresh local ring each match (no on-device RNG)
 #include "hal/Audio.h"
 #include "hal/Led.h"
 #include "assets/Assets.h"
@@ -230,10 +231,10 @@ void ArenaScreen::startMatch() {
   hal::audio.stopMusic();  // the board uses step-tick SFX; silence the battle theme
   bool sumo = (_type == MatchType::SUMO);
   if (sumo) {
-    // A big, open ring that's DIFFERENT every match (the nonce changes the seed). Local play
-    // so a local nonce is fine; a network Sumo would pass the SHARED seed here instead, and
-    // both devices would build the identical ring (the gen is deterministic from the seed).
-    uint32_t seed = (_profile ? _profile->seedBase : 7u) + 101u * (++_sumoNonce);
+    // A big, open ring that's fresh EVERY match -- mix the clock so it's not the same series
+    // each boot. Local play (vs-Computer / Hotseat) only, so millis() is fine; a network Sumo
+    // would pass the SHARED seed instead and both devices would build the identical ring.
+    uint32_t seed = (_profile ? _profile->seedBase : 7u) + (uint32_t)millis() + 101u * (++_sumoNonce);
     MazeGen::generateSumoRing(_maze, seed, _s0, _s1);
   } else {
     MazeGen::generateArena(_maze, _profile ? _profile->seedBase + 7u : 7u, _s0, _s1);

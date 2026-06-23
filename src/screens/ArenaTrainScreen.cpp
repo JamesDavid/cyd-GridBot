@@ -1,4 +1,5 @@
 #include "screens/ArenaTrainScreen.h"
+#include <Arduino.h>   // millis() -> vary the practice ring per session
 #include "hal/Audio.h"
 #include "assets/Assets.h"
 #include "game/MazeGen.h"
@@ -68,9 +69,16 @@ void ArenaTrainScreen::buildOpponent(int idx) {
 }
 
 void ArenaTrainScreen::setupBoard() {
-  MazeGen::generateArena(_maze, _profile ? _profile->seedBase + 31u : 31u, _s0, _s1);
+  if (_matchType == MatchType::SUMO) {
+    // Practice on the SAME kind of ring you'll battle on (the big open Sumo ring), and vary it
+    // per session so the fighter learns to HUNT in general rather than over-fitting one board
+    // -- otherwise a "trained winner" loses on the random battle ring.
+    uint32_t seed = (_profile ? _profile->seedBase : 31u) + (uint32_t)millis();
+    MazeGen::generateSumoRing(_maze, seed, _s0, _s1);
+  } else {
+    MazeGen::generateArena(_maze, _profile ? _profile->seedBase + 31u : 31u, _s0, _s1);
+  }
   _maze.setStart(_s0);  // the brain is bot 0, starting at s0
-  if (_matchType == MatchType::SUMO) _maze.clearGoal();  // Sumo = last bot standing, no goal
 }
 
 void ArenaTrainScreen::begin(Profile* profile) {
