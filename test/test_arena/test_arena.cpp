@@ -157,6 +157,29 @@ void test_sumo_seeker_turns_and_kos() {
   TEST_ASSERT_FALSE(ar.alive(1));
 }
 
+// Sumo HP: a foe pinned against a wall (can't be shoved off) takes THREE zaps to KO -- a
+// sustained brawl, not a one-shove kill. Verifies the health + multi-hit mechanic.
+void test_sumo_hp_three_hits() {
+  Maze m; m.reset(1, 3); m.fill(FLOOR);
+  m.clearGoal();                                  // no goal -> the zapper keeps firing
+  m.set(0, 2, WALL);                              // wall behind the victim -> can't be shoved off
+  Pose s0; s0.row = 0; s0.col = 0; s0.facing = EAST;  // zapper
+  Pose s1; s1.row = 0; s1.col = 1; s1.facing = EAST;  // victim, pinned against the wall
+  Program zapper;
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(Node::command(CMD_FIRE));
+  zapper.main.push_back(loop);
+  Program idle;
+  Arena ar;
+  ar.setup(&m, &zapper, &idle, s0, s1, MatchType::SUMO, 50);
+  ar.tick(); ar.tick();                           // two hits -> still standing
+  TEST_ASSERT_TRUE(ar.alive(1));
+  TEST_ASSERT_EQUAL(SUMO_HP - 2, ar.hp(1));
+  ar.tick();                                       // third hit -> KO
+  TEST_ASSERT_FALSE(ar.alive(1));
+  TEST_ASSERT_EQUAL((int)ArenaOutcome::BOT0, (int)ar.outcome());
+}
+
 void test_sumo_deterministic() {
   Program a = hunterProgram(), b = hunterProgram();
   Maze m; Pose s0, s1;
@@ -241,6 +264,7 @@ int main(int, char**) {
   RUN_TEST(test_sumo_brain_zap_shoves);
   RUN_TEST(test_sumo_ram_off_edge);
   RUN_TEST(test_sumo_seeker_turns_and_kos);
+  RUN_TEST(test_sumo_hp_three_hits);
   RUN_TEST(test_sumo_deterministic);
   return UNITY_END();
 }

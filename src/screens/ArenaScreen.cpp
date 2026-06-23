@@ -284,6 +284,14 @@ void ArenaScreen::drawBot(int i, const Pose& p, int avatar) {
   int tile, ox, oy; mazeGeometry(tile, ox, oy);
   int cx = ox + p.col * tile + tile / 2, cy = oy + p.row * tile + tile / 2;
   assets::drawCharacter(g, cx, cy, tile, avatar, p.facing);
+  // Sumo health bar above the bot: a pip per HP, green = left, grey = knocked off.
+  if (_type == MatchType::SUMO) {
+    int hp = _arena.hp(i), pw = (tile - 6) / SUMO_HP, hy = cy - tile / 2 + 1;
+    if (pw < 3) pw = 3;
+    int total = SUMO_HP * (pw + 1) - 1, hx = cx - total / 2;
+    for (int k = 0; k < SUMO_HP; k++)
+      g.fillRect(hx + k * (pw + 1), hy, pw, 3, k < hp ? C_GO : C_LOCK);
+  }
 }
 
 void ArenaScreen::drawBoard() {

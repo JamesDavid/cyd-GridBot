@@ -17,6 +17,7 @@ void Arena::setup(const Maze* maze, const Program* p0, const Program* p1,
     _bot[i].alive = true;
     _bot[i].won = false;
     _bot[i].done = false;
+    _bot[i].hp = SUMO_HP;
   }
   _bot[0].it.load(p0, maze, s0, stepCap);
   _bot[1].it.load(p1, maze, s1, stepCap);
@@ -36,6 +37,7 @@ void Arena::foldLog() {
     fold((uint32_t)_bot[i].it.pose().col);
     fold((uint32_t)_bot[i].it.pose().facing);
     fold((uint32_t)(_bot[i].alive ? 1 : 0));
+    fold((uint32_t)_bot[i].hp);
   }
 }
 
@@ -117,16 +119,23 @@ ArenaOutcome Arena::tick() {
     int dr, dc; facingDelta(_bot[i].it.pose().facing, dr, dc);
     int ar = _bot[i].it.pose().row + dr, ac = _bot[i].it.pose().col + dc;
     const Pose& ej = _bot[j].it.pose();
-    if (ej.row == ar && ej.col == ac) {  // enemy is in the tile ahead -> shove it
-      int dest_r = ar + dr, dest_c = ac + dc;
+    if (ej.row == ar && ej.col == ac) {  // enemy is in the tile ahead -> HIT it
+      if (_type == MatchType::SUMO && --_bot[j].hp <= 0) _bot[j].alive = false;  // 3 hits KO
+      int dest_r = ar + dr, dest_c = ac + dc;                                    // and shove it back
       if (!_maze->inBounds(dest_r, dest_c) || _maze->at(dest_r, dest_c) == PIT) {
-        _bot[j].alive = false;
-      } else if (_maze->isWalkable(dest_r, dest_c)) {
+        _bot[j].alive = false;                                                   // shoved off -> instant out
+      } else if (_bot[j].alive && _maze->isWalkable(dest_r, dest_c)) {
         Pose np = ej; np.row = (int8_t)dest_r; np.col = (int8_t)dest_c;
         _bot[j].it.setPose(np);
       }
     }
   }
+
+  // Health slowly regenerates, so a Sumo bout is a sustained brawl: you must land hits
+  // faster than the foe heals, not just tag it once.
+  if (_type == MatchType::SUMO && _ticks % SUMO_REGEN_TICKS == 0)
+    for (int i = 0; i < 2; i++)
+      if (_bot[i].alive && _bot[i].hp < SUMO_HP) _bot[i].hp++;
 
   foldLog();
 
