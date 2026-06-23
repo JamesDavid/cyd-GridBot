@@ -197,40 +197,59 @@ Condensed pages. Same shape as the sample: **Big idea · On screen · Ask · Wat
 - **Big idea:** no teacher, no code — the robot **tries the maze over and over** and value spreads back from the goal until it has a map of "good moves." It **explores** (tries things) then **exploits** (keeps the best).
 - **Ask:** "Notice the colours spread *backwards* from the battery. Why would the tile next to the goal become 'good' first?" **Words:** *reward, reinforcement learning, explore vs exploit, policy.*
 
-**7 · Evolution** — *breed the best.*
+**7 · Tuning** — *turn the knobs, change how it learns.*
+- **Big idea:** learning has **dials**, and the dial settings matter as much as the method. Two knobs sit on the Q-learning heatmap: **explore (ε)** — how often it tries something random instead of the best-known move — and **step (α)** — how big a nudge each lesson makes. Set explore to **0** and it gets **stuck** repeating one path and never finds the goal; turn explore **up** and value suddenly spreads and it solves. This is *hyperparameter tuning* — the part of ML that's more cooking than math.
+- **On screen:** the same Q heatmap, now with ▲/▼ steppers for ε and α; nudge them, hit reset/run, watch the colours spread faster, slower, or not at all.
+- **Ask:** "With explore at zero it never solves — why would *never trying anything new* trap it?" / "Turn the step knob way up. Does faster always mean better, or does it get jittery?" **Watch for:** there's a *sweet spot* — too little exploring and it's stuck, too much and it never settles; too small a step and it crawls, too big and it overshoots. **Words:** *hyperparameter, explore/exploit (ε), learning rate (α), tuning.*
+> **For the classroom:** this is the lesson that exposes the levers Appendix A says are usually hidden. Have students *predict* the effect of each knob before turning it, then test. AI4K12 *Learning*; great bridge to "why does training real AI take so much trial and error?"
+
+**8 · Evolution** — *breed the best.*
 - **Big idea:** start with a crowd of random brains; the ones that get furthest **breed**; repeat. No teacher, no gradient — just survival.
 - **Ask:** "Nothing is being 'taught' here. How does it still get better?" **Words:** *evolution, fitness, selection, mutation.*
 
-**8 · Transfer** — *reuse skills, new maze.*
+**9 · Transfer** — *reuse skills, new maze.*
 - **Big idea:** train on maze A, then on a **brand-new maze B it already does okay** — it learned *general* skills, not that one maze. A quick fine-tune masters B. (And it watches for the opposite failure — **over-fitting**, memorising one maze.)
 - **Ask:** "How can it be partway through a maze it has *never seen*?" **Words:** *transfer, fine-tune, generalise, over-fit.*
 
-**9 · Brain Cam** — *watch a brain think.*
+**10 · Brain Cam** — *watch a brain think.*
 - **Big idea:** an X-ray of a live network. Tap **Teach** and watch **backprop animate** — the weight-lines recolour as it learns, the loss bar falls. Tap any **neuron to zoom** into its weights. Flip **plain ↔ rnn**, change the **map** (it transfers), and **Save** a trained brain to your library.
-- **Ask:** "Tap a neuron. What do those numbers mean? Watch them change while it learns." **Words:** *backprop, activation, weight.* The clearest answer to "what is it actually doing?"
+- **Ask:** "Tap a neuron. What do those numbers mean? Watch them change while it learns." A caption notes the **argmax**: the brain has five outputs and simply **does the strongest one**. **Words:** *backprop, activation, weight, argmax.* The clearest answer to "what is it actually doing?"
 
-**10 · Pilot** — *plan + steer (the self-driving split).*
+**11 · Pilot** — *plan + steer (the self-driving split).*
 - **Big idea:** a reactive brain only senses what's nearby, so it gets stuck. Add a **route planner** that lays down waypoints; now the brain just **steers dot-to-dot** and solves it. **The planner decides *where*; the brain decides *how*** — exactly how a self-driving stack splits the *map route* from the *neural net that handles the road*.
-- **Ask:** "Which job is the map doing? Which job is the brain doing? Why can't either do it alone?" **Words:** *planner, controller, waypoint, hierarchy.*
+- **Ask:** "Which job is the map doing? Which job is the brain doing? Why can't either do it alone?" **Words:** *planner, controller, waypoint, hierarchy.* *(In the **Train a fighter** Pilot trainer the kid can even **hand-place the waypoints** — tap tiles to draw the route the brain then learns to follow.)*
 
-**11 · Memory (RNN)** — *a brain that remembers.*
+**12 · Memory (RNN)** — *a brain that remembers.*
 - **Big idea:** a plain brain decides from *senses now*, so in a dead-end it forgets it's been there and **loops**. A **recurrent** brain feeds its hidden layer **back into itself** (memory), so it remembers its trail and **backs out**. The only change is one feedback path.
 - **Ask:** "Same maze, same teacher — why does only the one with memory escape?" **Words:** *memory, recurrent, state.* (Pilot added an *outside* planner; the RNN grows memory *inside* the brain.)
 
-**12 · Perception** — *raw squares → meaning.*
+**13 · Perception** — *raw squares → meaning.*
 - **Big idea:** every other lesson **hands** the brain clean senses ("wall ahead = 1"). But where do those come from? A **perception net looks at the raw squares** the robot can see and *decides* "wall ahead? yes/no." Turning raw input into meaning is the part real robots spend the most effort on.
 - **On screen:** the robot's-eye view (raw squares ahead/left/right) feeding a little net that lights up the answer; tap **Next view** to try more.
 - **Ask:** "The robot just sees coloured squares. How does it get from *squares* to the word *'wall'*?" **Watch for:** in a self-driving car this is the hard 90% — cameras give pixels, a net turns them into "car / lane / person." **Words:** *perception, raw input, feature.*
 
-**13 · Data & labels** — *learn from examples.*
+**14 · Data & labels** — *learn from examples.*
 - **Big idea:** **Teach** doesn't invent the right move — it **copies an expert**. Each example = *what it saw* + *the right move* (a **label**). The loop: run → find where it **failed** → add examples there → train again. More and better examples = a smarter brain. **The data is the real work.**
 - **On screen:** an example counter ticks up as it learns; a new maze exposes situations it never saw; adding examples there fixes it.
 - **Ask:** "Where did the 'right answers' come from? What happens if the examples are bad or unfair?" **Watch for:** this is *imitation learning* and the *data engine* — and the doorway to a values conversation about biased data. **Words:** *data, label, example, imitation.*
 
+**15 · Self-play** — *get better by beating yourself.*
+- **Big idea:** how do you train a champion when there's **no expert to copy and no perfect answer key** — just "did I win?" You make the brain **fight a frozen copy of itself**. Every time a challenger out-fights the current champion, it **takes the crown**, and the *next* challenger has to beat that tougher version. The opponent keeps getting harder *because you keep getting better* — an **arms race** with no teacher at all. (This is the core trick behind AlphaGo / AlphaZero.)
+- **On screen:** an **"upgrades" meter** climbs each time a new best dethrones the champ; sometimes "champ held on" — the bar that *doesn't* move is the point: the bar got harder to move.
+- **Ask:** "There's no teacher and no answer key here — so what is it learning *from*?" / "Why does it get harder to earn an upgrade the longer it runs?" **Watch for:** the opponent isn't fixed — it's *you, a moment ago*. Beating a moving target is what makes it strong. **Words:** *self-play, champion, arms race, co-evolution.*
+> **For the classroom:** contrast directly with *Data & labels* (imitation needs an expert) and *Q-learning* (reward needs a goal). Self-play needs **neither a teacher nor a hand-set reward** — only an opponent, which it generates itself. AI4K12 *Learning*. Pairs with the **Self** sparring partner in the Arena trainer.
+
+**16 · The Right Tool** — *match the method to the problem (capstone).*
+- **Big idea:** the whole curriculum in one question: **there is no single best method — there's a best method *for this problem.*** A 4-question quiz puts the choices side by side — *memory* for a maze you have to remember, a *plain reflex* brain for a fast battle, *Teach* when you already know the right answer, *Q-learn* when all you have is win/lose. Picking the wrong tool (memory for a reflex fight, a teacher when you have no answer key) is how real ML projects go wrong.
+- **On screen:** four scenarios; tap the method you'd use; instant green/red with a one-line *why*.
+- **Ask:** "Why would *memory* actually **hurt** a fast reflex battle?" *(it's slower and the past doesn't matter — extra baggage.)* / "When is there simply no expert to copy, so Teach can't work?" **Watch for:** this ties the knot between *Q-learning*, *Memory*, *Data*, and *Self-play* — each was right *somewhere*. **Words:** *inductive bias, fit-for-purpose, when-methods-fail.*
+> **For the classroom:** the natural end-of-unit assessment. Have students justify each answer aloud — the *reasoning* is the learning, not the colour. AI4K12 *Learning / Reasoning*. A great "what did we actually learn?" wrap-up.
+
 ### Arena — *put a trained brain to work*
 
-Not a lesson, but where training pays off. **Home → Arena → vs Computer → Train a fighter.** Teach or Evolve a brain to win matches, sparring up a difficulty ladder (**Bolt → Coil → Spin → Vex → Ace**), **Save** it, then pick it as **your bot** in a Race. It even fine-tunes to each new battle board so it actually wins.
+Not a lesson, but where training pays off. **Home → Arena → vs Computer → Train a fighter.** **Teach**, **Q-Learn**, or **Evolve** a brain (with an optional **Memory/RNN** toggle) to win matches, sparring up a difficulty ladder (**Bolt → Coil → Spin → Vex → Ace → Self**), watching a live **learning-curve** sparkline, then **Save** it and pick it as **your bot** in a Race or Sumo. It even fine-tunes to each new battle board so it actually wins. The last rung, **Self**, is the *Self-play* lesson in action — it spars against an evolving copy of itself.
 - **Ask:** "You trained a brain to solve mazes — now it's fighting. Same brain, different job. How?"
+- **Tournaments.** **vs Computer → Tournament** runs a field of your saved fighters as either a **Cup** (single-elimination bracket) or a **Ladder** (round-robin) — every match deterministic and replayed on screen, so the bracket is real, not random. The natural capstone after kids have trained a few fighters; pair it with the radio **class tournament** in §7.
 
 ### Talking about it (the Societal Impact strand)
 
@@ -283,9 +302,10 @@ None of these make the lessons *wrong* — they make them *legible*. Saying them
 | CodeLab Debug | — | 2-AP-17, 3A-AP-21 (testing & debugging) |
 | NeuroLab One neuron / Many actions / Hidden layer | Learning | 3A-AP-15 (models); AI4K12 LO "ML" |
 | NeuroLab Robot brain / Perception | Perception | AI4K12 "Computers perceive via sensors" |
-| NeuroLab Q-learning / Evolution | Learning | AI4K12 "Learning from data/experience" |
+| NeuroLab Q-learning / Tuning / Evolution | Learning | AI4K12 "Learning from data/experience" |
 | NeuroLab Transfer / Data & labels | Learning | AI4K12 "training data"; data-ethics LOs |
 | NeuroLab Pilot / Memory | Representation & Reasoning + Learning | AI4K12 "reasoning & search" |
+| NeuroLab Self-play / The Right Tool | Learning | AI4K12 "Learning"; method selection / inductive bias |
 | *Talking about it* prompts | Societal Impact | 2-IC-20, 3A-IC-24 (impacts, bias) |
 
 *(CSTA codes are guidance, not certification — adapt to your grade band.)*
@@ -308,6 +328,8 @@ None of these make the lessons *wrong* — they make them *legible*. Saying them
 | **argmax** | pick the strongest choice | take the highest-scoring output |
 | **reward** | points for doing well | the RL objective signal |
 | **policy** | its plan for what to do | learned action-selection mapping |
+| **hyperparameter** | a knob you set before training (how much to explore, how big a step) | a setting that controls learning, not learned by it |
+| **self-play** | get better by beating an old copy of yourself | training against a frozen/co-evolving version of the agent |
 | **transfer** | reuse skills on something new | fine-tuning a pre-trained model |
 | **generalise** | works on stuff it never saw | performs on held-out data |
 | **over-fit** | memorised, can't handle new | fits training data, fails to generalise |

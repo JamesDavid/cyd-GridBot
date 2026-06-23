@@ -91,6 +91,9 @@ void ArenaScreen::buildCandidates(bool sumo) {
   // start, then drives them — battle an actual trained brain.
   _cands.push_back({"Neura",  Program{}, 2, "a trained brain",  true, false, true});
   _cands.push_back({"Cortex", Program{}, 4, "an evolved brain", true, false, true});
+  // Volt: a trained NEURAL FIGHTER -- the neural counterpart to code-Vex. In Battle its brain is
+  // distilled into a hunter (turn-to-foe + zap), so you can pit your bot against a learned hunter.
+  _cands.push_back({"Volt",   Program{}, 1, "a trained fighter", true, false, true});
 }
 
 int ArenaScreen::houseBotIndex(const char* name) const {
@@ -397,11 +400,17 @@ static void adaptNeuroBot(Program& p, const Maze& m, const Pose& start) {
 void ArenaScreen::setupMatchBot(int pick, const Pose& start, bool sumo) {
   Candidate& c = _cands[pick];
   if (sumo) {
-    // Keep each bot's OWN behaviour so matchups stay asymmetric (Rusty charges, Bolt
-    // dashes, Vex hunts, the kid's trained brain hunts) -- identical programs from the
-    // mirror-image starts would just tie. Only the "built at match start" bots (Ace,
-    // Neura, Cortex) have an empty program here; give them a hunter so they engage.
-    if (c.prog.main.empty() && c.prog.brains.empty()) c.prog = hunterProgram();
+    // Keep each bot's OWN behaviour so matchups stay asymmetric (Rusty charges, Bolt dashes, Vex
+    // hunts...). The NEURAL fighters (Neura/Cortex/Volt) get a distilled HUNTER BRAIN -- a real
+    // trained net, the neural counterpart to code-Vex -- so battling them shows a learned hunter.
+    if (c.neuro && c.prog.brains.empty()) {
+      c.prog.clear();
+      uint8_t bi = c.prog.addBrain(7u + (uint32_t)c.avatar * 13u);
+      distillHunter(c.prog.brains[bi], 7u + (uint32_t)c.avatar * 13u, 2000);
+      Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(bi)); c.prog.main.push_back(loop);
+    } else if (c.prog.main.empty() && c.prog.brains.empty()) {
+      c.prog = hunterProgram();   // Ace / empties: a code hunter so they engage
+    }
     return;
   }
   if (c.smart) solveMazeFrom(_maze, start, true, c.prog);

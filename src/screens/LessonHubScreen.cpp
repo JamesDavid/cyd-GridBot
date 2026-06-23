@@ -6,7 +6,7 @@ using namespace ui;
 namespace screens {
 
 struct LessonInfo { const char* title; const char* sub; uint16_t col; };
-static const int N_LESSONS = 13;
+static const int N_LESSONS = 16;
 static const int PER_PAGE = 5;
 static const int N_PAGES = (N_LESSONS + PER_PAGE - 1) / PER_PAGE;
 static const LessonInfo LESSONS[N_LESSONS] = {
@@ -19,10 +19,13 @@ static const LessonInfo LESSONS[N_LESSONS] = {
   {"7. Evolution", "breed the best (random)", C_FUNC},
   {"8. Data & labels", "tag examples, train to them", C_SENSE},
   {"9. Q-learning", "smarter: learn from reward", C_SENSE},
-  {"10. Transfer", "reuse skills, new maze", ui::rgb(120, 230, 245)},
-  {"11. Brain Cam", "watch a brain think", ui::rgb(120, 230, 245)},
-  {"12. Pilot", "plan + steer (like FSD)", C_ACCENT},
-  {"13. Memory", "an RNN remembers", C_ACCENT},
+  {"10. Tuning", "turn the knobs (explore/step)", C_SENSE},
+  {"11. Transfer", "reuse skills, new maze", ui::rgb(120, 230, 245)},
+  {"12. Brain Cam", "watch a brain think", ui::rgb(120, 230, 245)},
+  {"13. Pilot", "plan + steer (like FSD)", C_ACCENT},
+  {"14. Memory", "an RNN remembers", C_ACCENT},
+  {"15. Self-play", "train by beating yourself", C_FUNC},
+  {"16. Right tool", "match the method to the problem", C_TURN},
 };
 
 // Roomy rows now that there are only 5 per page.

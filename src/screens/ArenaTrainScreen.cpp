@@ -28,8 +28,9 @@ static const Rect R_EVO   = {58,  (int16_t)(BOTBAR_Y + 2), 56, 32};
 static const Rect R_QLRN  = {116, (int16_t)(BOTBAR_Y + 2), 64, 32};
 static const Rect R_SAVE  = {182, (int16_t)(BOTBAR_Y + 2), 70, 32};
 static const Rect R_BACK  = {254, (int16_t)(BOTBAR_Y + 2), 60, 32};
-static constexpr int N_HOUSE_OPP = 7;  // Bolt, Coil, Spin, Vex, Ace, Neura, Cortex (easy -> hard)
-static const char* const HOUSE_OPP[N_HOUSE_OPP] = {"Bolt", "Coil", "Spin", "Vex", "Ace", "Neura", "Cortex"};
+static constexpr int N_HOUSE_OPP = 8;  // Bolt, Coil, Spin, Vex, Ace, Neura, Cortex, Self (self-play)
+static const char* const HOUSE_OPP[N_HOUSE_OPP] = {"Bolt", "Coil", "Spin", "Vex", "Ace", "Neura", "Cortex", "Self"};
+static constexpr int OPP_SELF = 7;     // spar your own evolving champion (self-play)
 
 // The sparring roster = house bots + every bot in your library (incl. radio-traded
 // friends' bots and fighters you saved). Train against code OR neuro opponents.
@@ -83,6 +84,9 @@ void ArenaTrainScreen::buildOpponent(int idx) {
       distillSolver(_ai.brains[bi], mm, true, 500);
     }
     Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(bi)); _ai.main.push_back(loop);
+  } else if (idx == OPP_SELF) {    // "Self": spar a copy of YOUR current brain (self-play). Evolve
+    _oppName = "Self";             // refreshes this to the champion each generation (an arms race).
+    setSelfOpponent(_brain);
   } else {                         // your library: code OR neuro, incl. radio-traded bots
     int li = idx - N_HOUSE_OPP;
     if (_profile && li >= 0 && li < (int)_profile->library.size()) {
@@ -90,6 +94,13 @@ void ArenaTrainScreen::buildOpponent(int idx) {
       _ai = _profile->library[li].program;
     } else { _oppName = "Ace"; }
   }
+}
+
+void ArenaTrainScreen::setSelfOpponent(const gb::Net& b) {
+  _ai.clear();
+  uint8_t bi = _ai.addBrain(1);
+  _ai.brains[bi] = b;                              // a frozen copy of the current champion
+  Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(bi)); _ai.main.push_back(loop);
 }
 
 ui::Rect ArenaTrainScreen::oppRowRect(int i) const {
@@ -115,7 +126,7 @@ void ArenaTrainScreen::drawOppList() {
     int ty = r.y + (r.h - 8) / 2;
     label(g, r.x + 8, ty, oppNameFor(i).c_str(), house ? C_INK : C_GO);
     const char* tag = (i <= 2) ? "code" : (i == 3) ? "hunts & zaps" : (i == 4) ? "maze solver"
-                      : (i == 5 || i == 6) ? "neural brain" : "your bot";
+                      : (i == 5 || i == 6) ? "neural brain" : (i == OPP_SELF) ? "self-play (Evolve)" : "your bot";
     label(g, r.x + r.w - 8, ty, tag, C_DIM, textdatum_t::top_right);
   }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
@@ -448,6 +459,9 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         }
         _taught = true;
       } else {
+        // SELF-PLAY: refresh the sparring partner to the current champion BEFORE scoring, so each
+        // generation must beat the best-so-far -- an arms race that bootstraps without a fixed foe.
+        if (_oppIdx == OPP_SELF) setSelfOpponent(_evo.best());
         _evo.breed(); _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType); _brain = _evo.best();
         _taught = false;
       }

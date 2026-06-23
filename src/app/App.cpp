@@ -1,4 +1,5 @@
 #include "app/App.h"
+#include <Arduino.h>   // delay() for the boot splash
 #include "hal/Display.h"
 #include "hal/Touch.h"
 #include "hal/Audio.h"
@@ -12,6 +13,9 @@
 #include "game/Achievements.h"
 
 using namespace ui;
+
+#define GB_VERSION "1.0"   // firmware version (shown on the boot splash)
+#define GB_REPO "github.com/JamesDavid/cyd-GridBot"
 
 namespace app {
 
@@ -34,7 +38,20 @@ void App::begin() {
   hal::audio.begin();
   hal::led.begin();
   store::profiles.begin();
+  drawSplash();
+  delay(1900);            // a moment to read the splash, then into player select
   gotoSelect();
+}
+
+// Boot splash: the title + firmware version/build + repo URL (a tidy "what is this + where" card).
+void App::drawSplash() {
+  auto& g = hal::display.gfx();
+  g.fillScreen(C_BG);
+  label(g, SCREEN_W / 2, 64, "GridBot", C_ACCENT, textdatum_t::middle_center, 4);
+  label(g, SCREEN_W / 2, 104, "learn to code + train AI", C_MOVE, textdatum_t::middle_center);
+  char v[40]; snprintf(v, sizeof(v), "firmware %s  -  %s", GB_VERSION, __DATE__);
+  label(g, SCREEN_W / 2, 158, v, C_DIM, textdatum_t::middle_center);
+  label(g, SCREEN_W / 2, 178, GB_REPO, C_INK, textdatum_t::middle_center);
 }
 
 void App::gotoSelect() {
@@ -478,10 +495,15 @@ void App::tick(uint32_t now) {
           case 6:  _evoLesson.begin(); _evoLesson.enter(); _state = State::EVO_LESSON; break;  // Evolution (random, simple)
           case 7:  _transferLesson.begin(1); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;  // Data & labels (mode 1)
           case 8:  _qLesson.begin(); _qLesson.enter(); _state = State::Q_LESSON; break;        // Q-learning (reward)
-          case 9:  _transferLesson.begin(0); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;  // Transfer
-          case 10: _brainView.begin(&_profile); _brainView.enter(); _state = State::BRAIN_VIEW; break;  // Brain Cam
-          case 11: _pilotLesson.begin(); _pilotLesson.enter(); _state = State::PILOT_LESSON; break;  // Pilot
-          case 12: _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; break;  // Memory
+          case 9:  if (!_tuneLesson) _tuneLesson = new screens::TuneLessonScreen();
+                   _tuneLesson->begin(); _tuneLesson->enter(); _state = State::TUNE_LESSON; break;  // Tuning (knobs)
+          case 10: _transferLesson.begin(0); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;  // Transfer
+          case 11: _brainView.begin(&_profile); _brainView.enter(); _state = State::BRAIN_VIEW; break;  // Brain Cam
+          case 12: _pilotLesson.begin(); _pilotLesson.enter(); _state = State::PILOT_LESSON; break;  // Pilot
+          case 13: _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; break;  // Memory
+          case 14: if (!_selfPlayLesson) _selfPlayLesson = new screens::SelfPlayLessonScreen();
+                   _selfPlayLesson->begin(); _selfPlayLesson->enter(); _state = State::SELFPLAY_LESSON; break;  // Self-play
+          case 15: _methodLesson.begin(); _methodLesson.enter(); _state = State::METHOD_LESSON; break;  // Right tool
         }
       }
       break;
@@ -492,6 +514,18 @@ void App::tick(uint32_t now) {
     }
     case State::Q_LESSON: {
       if (_qLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      break;
+    }
+    case State::TUNE_LESSON: {
+      if (_tuneLesson && _tuneLesson->tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      break;
+    }
+    case State::SELFPLAY_LESSON: {
+      if (_selfPlayLesson && _selfPlayLesson->tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      break;
+    }
+    case State::METHOD_LESSON: {
+      if (_methodLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
       break;
     }
     case State::EVO_LESSON: {

@@ -19,6 +19,9 @@
 #include "screens/NeuroLessonScreen.h"
 #include "screens/LessonHubScreen.h"
 #include "screens/QLessonScreen.h"
+#include "screens/TuneLessonScreen.h"
+#include "screens/SelfPlayLessonScreen.h"
+#include "screens/MethodLessonScreen.h"
 #include "screens/EvoLessonScreen.h"
 #include "screens/NeuroTrainScreen.h"
 #include "screens/ArenaTrainScreen.h"
@@ -39,6 +42,7 @@ namespace app {
 class App {
  public:
   void begin();
+  void drawSplash();   // boot splash: title + firmware version + repo URL, shown briefly
   void tick(uint32_t now);
   void debugGoToLevel(uint32_t level);    // playtest aid (serial 'G <n>')
   void debugFastPlay(uint32_t target);    // auto-solve+win levels up to target ('P <n>')
@@ -51,7 +55,7 @@ class App {
 
  private:
   enum class State : uint8_t { SELECT, CREATE, HOME, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE,
-                               NEURO_HUB, NEURO_LESSON, Q_LESSON, EVO_LESSON, NEURO_TRAIN, ARENA_TRAIN,
+                               NEURO_HUB, NEURO_LESSON, Q_LESSON, TUNE_LESSON, SELFPLAY_LESSON, METHOD_LESSON, EVO_LESSON, NEURO_TRAIN, ARENA_TRAIN,
                                LESSONS_MENU, CODE_LAB, CODE_LESSON, TRANSFER_LESSON, BRAIN_VIEW, BRAIN_MAP,
                                PILOT_LESSON, RNN_LESSON, PERCEPTION_LESSON, BACKPROP_LESSON, LIBRARY };
 
@@ -86,6 +90,9 @@ class App {
   screens::NeuroLessonScreen _neuro;
   screens::LessonHubScreen _lessonHub;
   screens::QLessonScreen _qLesson;
+  screens::TuneLessonScreen* _tuneLesson = nullptr;  // heap (its QLearn table is ~1.3KB; static DRAM is tight)
+  screens::SelfPlayLessonScreen* _selfPlayLesson = nullptr;  // heap (holds a Net)
+  screens::MethodLessonScreen _methodLesson;
   screens::EvoLessonScreen _evoLesson;
   screens::NeuroTrainScreen _neuroTrain;
   screens::ArenaTrainScreen _arenaTrain;

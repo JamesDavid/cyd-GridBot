@@ -141,11 +141,11 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![Arena menu](docs/img/arena-menu.png) |
 |:--|
-| **Arena** (unlocks after the sensing tier). **Opponent first, then game.** Pick who you're playing — **vs Computer**, **Hotseat** (two kids, one device), or **Radio** (two CYDs) — then the game. Computer offers **Race** / **Sumo** / **Train a fighter**; Hotseat adds **Puzzle Race** and **Seed Challenge**. |
+| **Arena** (battling unlocks at the **Sense** tier — once you can write `if` conditions you can code a fighter; neural *training* unlocks later). **Opponent first, then game.** Pick who you're playing — **vs Computer**, **Hotseat** (two kids, one device), or **Radio** (two CYDs) — then the game. Computer offers **Race** / **Sumo** / **Train a fighter** / **Tournament** (a **Cup** knock-out bracket or a round-robin **Ladder** of your saved fighters, run deterministically and replayed match-by-match on screen); Hotseat adds **Puzzle Race** and **Seed Challenge**. |
 
 | ![Pick an opponent](docs/img/arena-pick.png) |
 |:--|
-| **Battle-bots with personalities.** Face off against **Rusty** ("charges blindly"), **Bolt** ("fast & straight"), **Vex** ("hunts & zaps"), **Ace** ("solves the maze" — a real navigator), or the pre-trained NeuroBots **Neura** ("a trained brain") and **Cortex** ("an evolved brain"). The roster **scrolls**, and any bot you save to your **library** — including ones **traded over the radio** — joins it as **your bot** to battle *or* train against. |
+| **Battle-bots with personalities.** Face off against **Rusty** ("charges blindly"), **Bolt** ("fast & straight"), **Vex** ("hunts & zaps"), **Ace** ("solves the maze" — a real navigator), or the trained NeuroBots **Neura**, **Cortex**, and **Volt** — each a real **neural fighter** (a distilled hunter brain). The roster **scrolls**, and any bot you save to your **library** — including ones **traded over the radio** — joins it as **your bot** to battle *or* train against. **vs-Computer lets you pick BOTH your bot and your foe** (Vex highlighted as the default), and a big **HP readout** + **ZAP!/OUT! hit bursts** make the brawl easy to read. |
 
 | ![Arena match](docs/img/arena.gif) |
 |:--|
@@ -194,7 +194,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![NeuroLab](docs/img/neurolab-hub.png) |
 |:--|
-| **NeuroLab** — ten lessons, each small enough to *watch*: one neuron, many actions, a hidden layer, **your robot's brain** (a tour of its real senses), Q-learning, evolution, **transfer learning**, **Brain Cam**, **Pilot** (plan + steer), and **Memory** (a recurrent brain). |
+| **NeuroLab** — sixteen lessons, each small enough to *watch*: one neuron, backprop, perception, a hidden layer, many actions, **your robot's brain** (a tour of its real senses), evolution, data & labels, Q-learning, **Tuning** (turn the explore/step knobs, watch learning speed change), **transfer learning**, **Brain Cam**, **Pilot** (plan + steer), **Memory** (a recurrent brain), **Self-play** (train by beating yourself), and **The Right Tool** (match the method to the problem). |
 
 | ![Watch a neuron learn](docs/img/neuro-neuron.gif) |
 |:--|
@@ -242,7 +242,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![Train a fighter for the Arena](docs/img/neuro-arena-train.png) |
 |:--|
-| **Train a fighter for the Arena.** A **"Train a fighter"** mode off the Computer branch: **Teach** or **Evolve** a brain to **win real arena matches**. A **"spar vs"** chip cycles your sparring partner easy→hard — the blind dasher **Bolt**, the wall-huggers **Coil** & **Spin** (left- and right-hand rule, so they take different routes), the hunter **Vex**, and the perfect solver **Ace**, then every bot in your **library** (incl. radio-traded ones) — so a first Teach reliably reads *"taught WINS!"* and you can climb to a real challenge. **Save** it and it joins your roster as **your bot** — and it **fine-tunes to each new battle board** at match start, so a trained fighter actually wins instead of over-fitting. |
+| **Train a fighter for the Arena.** A **"Train a fighter"** mode off the Computer branch: **Teach** (imitate a hunter), **Q-Learn** (reward only — win/lose), or **Evolve** a brain to **win real arena matches**, and a **Memory (RNN)** toggle to give it a recurrent brain. A **"spar vs"** chip cycles your sparring partner easy→hard — the blind dasher **Bolt**, the wall-huggers **Coil** & **Spin** (left- and right-hand rule, so they take different routes), the hunter **Vex**, the perfect solver **Ace**, then **Self** (it spars against an evolving copy of *itself* — an arms race), then every bot in your **library** (incl. radio-traded ones) — so a first Teach reliably reads *"taught WINS!"* and you can climb to a real challenge. A live **learning-curve sparkline** shows whether it's actually improving. **Save** it and it joins your roster as **your bot** — and it **fine-tunes to each new battle board** at match start, so a trained fighter actually wins instead of over-fitting. |
 
 **The ML ideas a kid actually meets here** — not as jargon, but as things you *do* and *watch*:
 gradient-descent **backprop**; **multi-class** outputs (argmax picks the action); why a
@@ -325,7 +325,7 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
   test, which hands you fair rematches and replays for free.
 - **Neural nets on a no-PSRAM ESP32** — a tiny MLP + backprop, Q-learning, evolution, and
   distillation in a few KB, with a learned brain embedded as an interpreter node and trained
-  on-device fast enough to animate. **79 host tests** cover the engine.
+  on-device fast enough to animate. **97 host tests** cover the engine.
 
 **Still open / known limits**
 - ESP-NOW radio battle/trade is built but **hardware-pending** — needs two physical boards.
@@ -340,20 +340,30 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
 **Recently shipped:** ✅ a gentle, guaranteed-win **onboarding** (forward-only L1, real
 first-time hints, locked-block tooltips) · ✅ **program carry-over** across levels (write one
 solver, keep winning) · ✅ a **zap block** (the robot icon) so code bots fight Sumo · ✅ a
-kid-friendly **Arena** (opponent-first menu, beatable AI, "Play again" rematch, trained
-fighters that adapt to each board) · ✅ the full **NeuroBot** mode (backprop / Q-learning /
-evolution / transfer / **Pilot** (plan + steer) / **Memory** (an RNN) lessons, Brain Cam, a
-trainable brain block with versioned saves) ·
-✅ **CodeLab** lessons in the real editor style · ✅ coin & gem collectibles + a shop ·
-✅ five **biomes**, a 17-badge gallery, jump-arc animation + a live step counter ·
-✅ a one-click **online flasher**.
+kid-friendly **Arena** (opponent-first menu, beatable AI, **pick both bot and foe**, HP
+readout + ZAP!/OUT! hit bursts, "Play again" rematch, trained fighters that adapt to each
+board) · ✅ **battling at the Sense tier** — code a fighter with `if` conditions and save it,
+no neural training required · ✅ **local tournaments** — a **Cup** knock-out bracket and a
+round-robin **Ladder**, run deterministically and replayed on screen · ✅ the full **NeuroBot**
+mode (backprop / Q-learning / evolution / transfer / **Tuning** (explore/step knobs) / **Pilot**
+(plan + steer, now with **hand-placed waypoints**) / **Memory** (an RNN) / **Self-play** /
+**The Right Tool** lessons, Brain Cam with an argmax caption, a learning-curve sparkline, a
+trainable brain block with versioned saves) · ✅ neural Arena trainers — **Teach / Q-Learn /
+Evolve**, an RNN toggle, and a **Self** sparring partner for self-play · ✅ a **boot splash**
+(firmware version + repo) · ✅ **CodeLab** lessons in the real editor style · ✅ coin & gem
+collectibles + a shop · ✅ five **biomes**, a 17-badge gallery, jump-arc animation + a live
+step counter · ✅ a one-click **online flasher**.
 
 Still on deck (full list in **[BACKLOG.md](BACKLOG.md)**):
 
 - More **mode types** — relay, co-op, king-of-the-hill — building on Race / Sumo / Puzzle Race.
-- **Daily shared-seed challenges** and a leaderboard; library-bot **tournaments**.
+- **Networked tournaments** (bar/classroom mode) — the local Cup engine is done; the multi-peer
+  ESP-NOW lobby that gathers every device's fighters into a shared bracket and replays matches
+  from a shared seed needs **2+ boards to verify**.
+- **Daily shared-seed challenges** and a leaderboard.
 - Deeper ML topics (regularization/overfitting, reward shaping, batching) building on the
-  existing **draw-the-path**, **Pilot** (planner+follower), and **RNN memory** trainers.
+  existing **Tuning**, **draw-the-path**, **Pilot** (planner+follower), **Self-play**, and
+  **RNN memory** trainers.
 - **Verify the radio link** on two boards; an optional **mini-map** in the Code view; **Undo**
   in the editor (reorder already ships as Up/Dn).
 
@@ -363,7 +373,7 @@ Still on deck (full list in **[BACKLOG.md](BACKLOG.md)**):
 
 Working firmware, verified on a real CYD — the campaign (all unlock tiers), the arena,
 lessons, NeuroBot training, the pixel editor, and achievements all run on hardware. Built
-phase-by-phase from `SPEC.md` following `IMPLEMENTATION_STEPS.md`; **79 host unit tests** plus
+phase-by-phase from `SPEC.md` following `IMPLEMENTATION_STEPS.md`; **97 host unit tests** plus
 an on-device self-test gate every change.
 
 **License: [PolyForm Noncommercial 1.0.0](LICENSE).** Free for personal, hobby, research, and
