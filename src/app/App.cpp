@@ -478,10 +478,12 @@ void App::tick(uint32_t now) {
           case 6:  _evoLesson.begin(); _evoLesson.enter(); _state = State::EVO_LESSON; break;  // Evolution (random, simple)
           case 7:  _transferLesson.begin(1); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;  // Data & labels (mode 1)
           case 8:  _qLesson.begin(); _qLesson.enter(); _state = State::Q_LESSON; break;        // Q-learning (reward)
-          case 9:  _transferLesson.begin(0); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;  // Transfer
-          case 10: _brainView.begin(&_profile); _brainView.enter(); _state = State::BRAIN_VIEW; break;  // Brain Cam
-          case 11: _pilotLesson.begin(); _pilotLesson.enter(); _state = State::PILOT_LESSON; break;  // Pilot
-          case 12: _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; break;  // Memory
+          case 9:  if (!_tuneLesson) _tuneLesson = new screens::TuneLessonScreen();
+                   _tuneLesson->begin(); _tuneLesson->enter(); _state = State::TUNE_LESSON; break;  // Tuning (knobs)
+          case 10: _transferLesson.begin(0); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;  // Transfer
+          case 11: _brainView.begin(&_profile); _brainView.enter(); _state = State::BRAIN_VIEW; break;  // Brain Cam
+          case 12: _pilotLesson.begin(); _pilotLesson.enter(); _state = State::PILOT_LESSON; break;  // Pilot
+          case 13: _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; break;  // Memory
         }
       }
       break;
@@ -492,6 +494,10 @@ void App::tick(uint32_t now) {
     }
     case State::Q_LESSON: {
       if (_qLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      break;
+    }
+    case State::TUNE_LESSON: {
+      if (_tuneLesson && _tuneLesson->tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
       break;
     }
     case State::EVO_LESSON: {
