@@ -245,13 +245,17 @@ void ArenaTrainScreen::drawNet() {
       g.fillRect(x, y, mt - 1, mt - 1, col);
       if (_maze.isGoal(r, c)) g.fillCircle(x + mt / 2, y + mt / 2, mt / 3 + 1, C_ACCENT);
     }
-  for (int i = 0; i < _oppLen; i++) {
+  // reveal the hunt step-by-step here too (bright head + trail), in sync with the arena view
+  int show = _animating ? _animFrame : 9999;
+  for (int i = 0; i < _oppLen && i <= show; i++) {
     int r = _oppPath[i] / cols, c = _oppPath[i] % cols;
-    g.fillCircle(ox + c * mt + mt / 2, oy + r * mt + mt / 2, 1, C_BAD);
+    bool head = (_animating && i == show);
+    g.fillCircle(ox + c * mt + mt / 2, oy + r * mt + mt / 2, head ? mt / 3 + 1 : 1, C_BAD);
   }
-  for (int i = 0; i < _pathLen; i++) {
+  for (int i = 0; i < _pathLen && i <= show; i++) {
     int r = _path[i] / cols, c = _path[i] % cols;
-    g.fillCircle(ox + c * mt + mt / 2, oy + r * mt + mt / 2, 1, _beatsAI ? C_GO : C_MOVE);
+    bool head = (_animating && i == show);
+    g.fillCircle(ox + c * mt + mt / 2, oy + r * mt + mt / 2, head ? mt / 3 + 1 : 1, _beatsAI ? C_GO : C_MOVE);
   }
 
   // status strip just above the toolbar
