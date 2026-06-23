@@ -204,9 +204,10 @@ void BrainViewScreen::drawWeb() {
     char v[40]; snprintf(v, sizeof(v), "saved as \"%s\" -> My Bots", _profile->library.back().name.c_str());
     label(g, 6, sy, v, C_GO);
   } else {
-    char v[28]; snprintf(v, sizeof(v), "decides: %s", BRAIN_OUTLBL[_action]);
+    // the ringed output is the STRONGEST one -- that argmax IS the chosen move (one out of many)
+    char v[40]; snprintf(v, sizeof(v), "strongest output = %s", BRAIN_OUTLBL[_action]);
     label(g, 6, sy, v, ui::rgb(120, 230, 245));
-    label(g, 150, sy, _epoch ? "tap a neuron to zoom" : "tap Teach to train", C_DIM);
+    label(g, 200, sy, _epoch ? "(argmax picks the move)" : "tap Teach to train", C_DIM);
   }
 }
 

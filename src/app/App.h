@@ -42,6 +42,7 @@ namespace app {
 class App {
  public:
   void begin();
+  void drawSplash();   // boot splash: title + firmware version + repo URL, shown briefly
   void tick(uint32_t now);
   void debugGoToLevel(uint32_t level);    // playtest aid (serial 'G <n>')
   void debugFastPlay(uint32_t target);    // auto-solve+win levels up to target ('P <n>')

@@ -1,4 +1,5 @@
 #include "app/App.h"
+#include <Arduino.h>   // delay() for the boot splash
 #include "hal/Display.h"
 #include "hal/Touch.h"
 #include "hal/Audio.h"
@@ -12,6 +13,9 @@
 #include "game/Achievements.h"
 
 using namespace ui;
+
+#define GB_VERSION "1.0"   // firmware version (shown on the boot splash)
+#define GB_REPO "github.com/JamesDavid/cyd-GridBot"
 
 namespace app {
 
@@ -34,7 +38,20 @@ void App::begin() {
   hal::audio.begin();
   hal::led.begin();
   store::profiles.begin();
+  drawSplash();
+  delay(1900);            // a moment to read the splash, then into player select
   gotoSelect();
+}
+
+// Boot splash: the title + firmware version/build + repo URL (a tidy "what is this + where" card).
+void App::drawSplash() {
+  auto& g = hal::display.gfx();
+  g.fillScreen(C_BG);
+  label(g, SCREEN_W / 2, 64, "GridBot", C_ACCENT, textdatum_t::middle_center, 4);
+  label(g, SCREEN_W / 2, 104, "learn to code + train AI", C_MOVE, textdatum_t::middle_center);
+  char v[40]; snprintf(v, sizeof(v), "firmware %s  -  %s", GB_VERSION, __DATE__);
+  label(g, SCREEN_W / 2, 158, v, C_DIM, textdatum_t::middle_center);
+  label(g, SCREEN_W / 2, 178, GB_REPO, C_INK, textdatum_t::middle_center);
 }
 
 void App::gotoSelect() {
