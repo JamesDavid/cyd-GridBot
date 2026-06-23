@@ -476,8 +476,10 @@ static const char* condName(Cond c) {
     case WALL_AHEAD: return "wall";
     case PIT_AHEAD: return "pit";
     case AT_GOAL: return "goal";
-    case ENEMY_AHEAD: return "enemy";
-    case ENEMY_NEAR: return "near";
+    case ENEMY_AHEAD: return "foe ^";
+    case ENEMY_NEAR: return "foe near";
+    case ENEMY_LEFT: return "foe <";
+    case ENEMY_RIGHT: return "foe >";
     case BLOCKED_AHEAD: return "wall/pit";
   }
   return "?";
@@ -770,10 +772,18 @@ void GameScreen::handleListTap(int x, int y) {
             sn->type = (sn->type == N_REPEAT_UNTIL) ? N_IF : N_REPEAT_UNTIL;
             hal::audio.blip(); drawProgramList(); return;
           }
-          if (condRect(yy).contains(x, y)) {       // wall -> pit -> wall/pit -> goal -> wall
-            sn->cond = (sn->cond == WALL_AHEAD) ? PIT_AHEAD
-                     : (sn->cond == PIT_AHEAD) ? BLOCKED_AHEAD
-                     : (sn->cond == BLOCKED_AHEAD) ? AT_GOAL : WALL_AHEAD;
+          if (condRect(yy).contains(x, y)) {       // wall -> pit -> wall/pit -> goal -> [foe senses] -> wall
+            bool foes = _profile && _profile->unlocks.neuro;  // enemy senses appear once Battle exists
+            Cond c = sn->cond;
+            if (c == WALL_AHEAD) c = PIT_AHEAD;
+            else if (c == PIT_AHEAD) c = BLOCKED_AHEAD;
+            else if (c == BLOCKED_AHEAD) c = AT_GOAL;
+            else if (c == AT_GOAL) c = foes ? ENEMY_AHEAD : WALL_AHEAD;
+            else if (c == ENEMY_AHEAD) c = ENEMY_NEAR;
+            else if (c == ENEMY_NEAR) c = ENEMY_LEFT;
+            else if (c == ENEMY_LEFT) c = ENEMY_RIGHT;
+            else c = WALL_AHEAD;
+            sn->cond = c;
             hal::audio.blip(); drawProgramList(); return;
           }
         } else if (sn->type == N_CALL) {

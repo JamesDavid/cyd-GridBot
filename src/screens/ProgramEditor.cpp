@@ -40,8 +40,10 @@ static const char* condName(Cond c) {
     case WALL_AHEAD: return "wall";
     case PIT_AHEAD: return "pit";
     case AT_GOAL: return "goal";
-    case ENEMY_AHEAD: return "enemy";
-    case ENEMY_NEAR: return "near";
+    case ENEMY_AHEAD: return "foe ^";
+    case ENEMY_NEAR: return "foe near";
+    case ENEMY_LEFT: return "foe <";
+    case ENEMY_RIGHT: return "foe >";
     case BLOCKED_AHEAD: return "wall/pit";
   }
   return "?";
@@ -422,14 +424,16 @@ ProgramEditor::Action ProgramEditor::handleListTap(int x, int y) {
             hal::audio.blip(); drawProgramList(); return Action::NONE;
           }
           if (condRect(yy).contains(x, y)) {
-            // wall -> pit -> goal -> enemy -> near -> wall. The two enemy senses are
-            // arena conditions, but we expose them in maze mode too so a kid can write
-            // and test their battle-bot's logic here (they simply read false with no foe).
+            // wall -> pit -> wall/pit -> goal -> foe ahead -> foe near -> foe left -> foe right
+            // -> wall. The foe senses are arena conditions, exposed here too so a kid can write
+            // and test a battle-bot's hunting logic (they simply read false with no foe).
             sn->cond = (sn->cond == WALL_AHEAD) ? PIT_AHEAD
                      : (sn->cond == PIT_AHEAD) ? BLOCKED_AHEAD
                      : (sn->cond == BLOCKED_AHEAD) ? AT_GOAL
                      : (sn->cond == AT_GOAL) ? ENEMY_AHEAD
-                     : (sn->cond == ENEMY_AHEAD) ? ENEMY_NEAR : WALL_AHEAD;
+                     : (sn->cond == ENEMY_AHEAD) ? ENEMY_NEAR
+                     : (sn->cond == ENEMY_NEAR) ? ENEMY_LEFT
+                     : (sn->cond == ENEMY_LEFT) ? ENEMY_RIGHT : WALL_AHEAD;
             hal::audio.blip(); drawProgramList(); return Action::NONE;
           }
         } else if (sn->type == N_CALL) {

@@ -64,16 +64,15 @@ void ArenaScreen::begin(Profile* profile) {
 
 void ArenaScreen::buildCandidates(bool sumo) {
   _cands.clear();
-  // The kid's OWN saved bots first. In SUMO only their trained NEUROBOT fighters belong (a
-  // code dasher or a maze-brain just gets shoved off); Race takes any saved program. The list
-  // scrolls, and newest are last, so a just-trained fighter is always reachable.
+  // ALL of the kid's OWN saved bots -- a TRAINED NeuroBot fighter OR a hand-CODED battle bot
+  // (now that the editor exposes the foe senses + zap, a kid can write their own seeker). The
+  // list scrolls; newest are last, so a just-made fighter is always reachable.
   if (_profile) {
     for (auto& e : _profile->library)
-      if (!sumo || !e.program.brains.empty())
-        _cands.push_back({e.name, e.program, _profile->avatar, "your bot", false, false});
+      _cands.push_back({e.name, e.program, _profile->avatar, "your bot", false, false});
   }
-  // House bots. The pure dashers (Rusty/Bolt) are Race-only filler -- in Sumo they'd just lose,
-  // so they're hidden. The real FIGHTERS show in both (and one is the Sumo opponent).
+  // House bots. The pure dashers (Rusty/Bolt) are Race-only filler -- in Battle they'd just
+  // lose, so they're hidden. The real FIGHTERS show in both (and one is the Battle opponent).
   if (!sumo) {
     _cands.push_back({"Rusty", alwaysForwardProgram(), 5, "charges blindly", true, false});
     _cands.push_back({"Bolt",  dashProgram(),          6, "fast & straight", true, false});
@@ -124,13 +123,13 @@ void ArenaScreen::drawGameType() {
   bool neuro = _profile && _profile->unlocks.neuro;
   if (_hotseat) {
     button(g, R_G1, "Race - first to the goal", C_GO, C_PANEL);
-    button(g, R_G2, neuro ? "Battle - shove them off" : "Battle - needs NeuroBot (Lv28)",
+    button(g, R_G2, neuro ? "Battle" : "Battle - needs NeuroBot (Lv28)",
            neuro ? C_ACCENT : C_LOCK, C_PANEL);
     button(g, R_G3, "Puzzle Race - beat the clock", C_LOOP, C_PANEL);
     button(g, R_G4, "Seed Challenge - same board", C_SENSE, C_PANEL);
   } else {
     button(g, R_G1, "Race - first to the goal", C_GO, C_PANEL);
-    button(g, R_G2, neuro ? "Battle - shove them off" : "Battle - needs NeuroBot (Lv28)",
+    button(g, R_G2, neuro ? "Battle" : "Battle - needs NeuroBot (Lv28)",
            neuro ? C_ACCENT : C_LOCK, C_PANEL);
     if (neuro)
       button(g, R_G3, "Train a fighter (NeuroBot)", ui::rgb(120, 230, 245), C_PANEL);
@@ -379,16 +378,11 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         _type = MatchType::RACE; buildCandidates(false); _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
       } else if (R_G2.contains(tx, ty)) {  // Battle (both branches) — gated behind NeuroBot
         if (!(_profile && _profile->unlocks.neuro)) { hal::audio.fail(); }
-        else {
-          bool hasFighter = false;
-          for (auto& e : _profile->library)
-            if (!e.program.brains.empty()) { hasFighter = true; break; }
-          if (hasFighter) {  // pick your trained fighter and go
-            _type = MatchType::SUMO; buildCandidates(true);
-            _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
-          } else {           // no fighter yet -> walk them into training their first one
-            return app::Signal::GOTO_ARENA_TRAIN;
-          }
+        else if (!_profile->library.empty()) {  // pick a trained OR coded battle bot
+          _type = MatchType::SUMO; buildCandidates(true);
+          _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
+        } else {                                 // nothing yet -> walk them into making one
+          return app::Signal::GOTO_ARENA_TRAIN;
         }
       } else if (_hotseat && R_G3.contains(tx, ty)) {
         return app::Signal::GOTO_PUZZLE;

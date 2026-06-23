@@ -40,13 +40,6 @@ std::string ArenaTrainScreen::nextFighterName() const {
   return nm;
 }
 
-bool ArenaTrainScreen::hasFighter() const {
-  if (_profile)
-    for (auto& e : _profile->library)
-      if (!e.program.brains.empty()) return true;
-  return false;
-}
-
 void ArenaTrainScreen::buildOpponent(int idx) {
   _ai.clear();
   // Ordered EASY -> HARD so a kid's first Teach reliably beats the default (Bolt), for the
@@ -90,11 +83,13 @@ void ArenaTrainScreen::setupBoard() {
 
 void ArenaTrainScreen::begin(Profile* profile) {
   _profile = profile;
-  // No fighter yet? Start in BATTLE mode -- a first-timer is here to make their first battle
-  // bot, and the hint banner walks them through it (Evolve -> Save).
-  _matchType = hasFighter() ? MatchType::RACE : MatchType::SUMO;
+  // Nothing saved yet? Start in BATTLE mode AND spar Vex (idx 3) -- the exact opponent they'll
+  // face in a real Battle -- so a "wins!" in training means they win their first battle. The
+  // hint banner walks them through it (Evolve -> Save).
+  bool first = _profile && _profile->library.empty();
+  _matchType = first ? MatchType::SUMO : MatchType::RACE;
   setupBoard();
-  _oppIdx = 0;
+  _oppIdx = first ? 3 : 0;   // 3 = Vex (the seeker that's the vs-Computer Battle opponent)
   buildOpponent(_oppIdx);
   _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
   _taught = false; _saved = false; _savedIdx = -1;
