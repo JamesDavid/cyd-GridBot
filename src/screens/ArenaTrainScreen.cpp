@@ -8,6 +8,7 @@
 #include "game/Distill.h"
 #include "game/Bots.h"
 #include "game/Sensors.h"
+#include "store/ProfileStore.h"
 #include "screens/BrainGraph.h"
 
 using namespace ui;
@@ -291,11 +292,13 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(0)); prog.main.push_back(loop);
       if (_savedIdx >= 0 && _savedIdx < (int)_profile->library.size()) {
         _profile->library[_savedIdx].program = prog;   // update this session's fighter (no dupe)
+        store::profiles.save(*_profile);                // persist NOW, not just on the way out
         _saved = true; hal::audio.badge(); draw();
       } else if (_profile->library.size() < (size_t)LIBRARY_MAX) {
         LibEntry e; e.source = LIB_ARENA; e.name = autoLibName(*_profile, LIB_ARENA, 0); e.program = prog;
         _profile->library.push_back(e);
         _savedIdx = (int)_profile->library.size() - 1;
+        store::profiles.save(*_profile);                // persist NOW, not just on the way out
         _saved = true; hal::audio.badge(); draw();
       } else { hal::audio.fail(); }
     }

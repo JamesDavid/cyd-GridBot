@@ -66,10 +66,10 @@ void ArenaScreen::buildCandidates() {
   // The kid's OWN bots first — any program saved to the library in the campaign
   // (Save>Lib) fights here. THIS is how you battle a custom program (SPEC §18.4).
   if (_profile) {
-    for (auto& e : _profile->library) {
-      if (_cands.size() >= 3) break;
+    // ALL of the kid's saved bots (the list scrolls) -- newest are last, so a just-trained
+    // fighter must be reachable, not capped off after the first few.
+    for (auto& e : _profile->library)
       _cands.push_back({e.name, e.program, _profile->avatar, "your bot", false, false});
-    }
   }
   // House battle-bots: themed names + characters to go up against.
   _cands.push_back({"Rusty", alwaysForwardProgram(), 5, "charges blindly", true, false});
