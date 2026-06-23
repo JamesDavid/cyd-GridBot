@@ -497,13 +497,15 @@ void App::tick(uint32_t now) {
           case 8:  _qLesson.begin(); _qLesson.enter(); _state = State::Q_LESSON; break;        // Q-learning (reward)
           case 9:  if (!_tuneLesson) _tuneLesson = new screens::TuneLessonScreen();
                    _tuneLesson->begin(); _tuneLesson->enter(); _state = State::TUNE_LESSON; break;  // Tuning (knobs)
-          case 10: _transferLesson.begin(0); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;  // Transfer
-          case 11: _brainView.begin(&_profile); _brainView.enter(); _state = State::BRAIN_VIEW; break;  // Brain Cam
-          case 12: _pilotLesson.begin(); _pilotLesson.enter(); _state = State::PILOT_LESSON; break;  // Pilot
-          case 13: _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; break;  // Memory
-          case 14: if (!_selfPlayLesson) _selfPlayLesson = new screens::SelfPlayLessonScreen();
+          case 10: if (!_tuneNetLesson) _tuneNetLesson = new screens::TuneNetLessonScreen();
+                   _tuneNetLesson->begin(); _tuneNetLesson->enter(); _state = State::TUNENET_LESSON; break;  // Tune a real brain
+          case 11: _transferLesson.begin(0); _transferLesson.enter(); _state = State::TRANSFER_LESSON; break;  // Transfer
+          case 12: _brainView.begin(&_profile); _brainView.enter(); _state = State::BRAIN_VIEW; break;  // Brain Cam
+          case 13: _pilotLesson.begin(); _pilotLesson.enter(); _state = State::PILOT_LESSON; break;  // Pilot
+          case 14: _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; break;  // Memory
+          case 15: if (!_selfPlayLesson) _selfPlayLesson = new screens::SelfPlayLessonScreen();
                    _selfPlayLesson->begin(); _selfPlayLesson->enter(); _state = State::SELFPLAY_LESSON; break;  // Self-play
-          case 15: _methodLesson.begin(); _methodLesson.enter(); _state = State::METHOD_LESSON; break;  // Right tool
+          case 16: _methodLesson.begin(); _methodLesson.enter(); _state = State::METHOD_LESSON; break;  // Right tool
         }
       }
       break;
@@ -518,6 +520,10 @@ void App::tick(uint32_t now) {
     }
     case State::TUNE_LESSON: {
       if (_tuneLesson && _tuneLesson->tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      break;
+    }
+    case State::TUNENET_LESSON: {
+      if (_tuneNetLesson && _tuneNetLesson->tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
       break;
     }
     case State::SELFPLAY_LESSON: {
