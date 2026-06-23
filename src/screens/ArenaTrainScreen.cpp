@@ -195,16 +195,20 @@ void ArenaTrainScreen::draw() {
         if (_maze.isGoal(r, c)) assets::drawGoalToken(g, x + tile / 2, y + tile / 2, tile, 0);
       }
     // the opponent runs ITS code from its start (red route); your brain runs from its start
-    // (blue/green route) -- so you see them racing, not training solo.
+    // (blue/green route). While training we REVEAL the route step-by-step (a bright bot head
+    // leading a trail) so you watch them hunt; otherwise the whole route is shown.
     g.drawRect(ox + _s1.col * tile, oy + _s1.row * tile, tile - 1, tile - 1, C_BAD);
-    for (int i = 0; i < _oppLen; i++) {
+    int show = _animating ? _animFrame : 9999;
+    for (int i = 0; i < _oppLen && i <= show; i++) {
       int r = _oppPath[i] / _maze.cols(), c = _oppPath[i] % _maze.cols();
-      g.fillCircle(ox + c * tile + tile / 2, oy + r * tile + tile / 2, tile / 7 + 1, C_BAD);
+      bool head = (_animating && i == show);
+      g.fillCircle(ox + c * tile + tile / 2, oy + r * tile + tile / 2, head ? tile / 3 : tile / 7 + 1, C_BAD);
     }
-    for (int i = 0; i < _pathLen; i++) {
+    for (int i = 0; i < _pathLen && i <= show; i++) {
       int r = _path[i] / _maze.cols(), c = _path[i] % _maze.cols();
-      g.fillCircle(ox + c * tile + tile / 2, oy + r * tile + tile / 2, tile / 6 + 1,
-                   _beatsAI ? C_GO : C_MOVE);
+      bool head = (_animating && i == show);
+      g.fillCircle(ox + c * tile + tile / 2, oy + r * tile + tile / 2,
+                   head ? tile / 3 : tile / 6 + 1, _beatsAI ? C_GO : C_MOVE);
     }
     char leg[40];
     if (_saved && _savedIdx >= 0 && _savedIdx < (int)_profile->library.size())
@@ -263,14 +267,25 @@ void ArenaTrainScreen::drawNet() {
 }
 
 app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
-  // Animated Evolve: one generation per step, so the network recolours and the path improves
-  // against the opponent live (especially clear in the brain view).
-  if (_animating && now - _animAt >= 130) {
-    _animAt = now;
-    _evo.breed(); _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType); _brain = _evo.best();
-    _taught = false; _saved = false; evaluateAndTrace();
-    if (--_animLeft <= 0) _animating = false;
-    draw();
+  // Animated Evolve. The hunt plays back FAST (a bright bot head advancing along its route,
+  // looping) so you SEE the fighters chasing and shoving; meanwhile a generation evolves in
+  // the background every so often, so the path + network visibly improve as it learns.
+  if (_animating) {
+    bool redraw = false;
+    if (now - _genAt >= 110) {                 // background: one generation
+      _genAt = now;
+      _evo.breed(); _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType); _brain = _evo.best();
+      _taught = false; _saved = false; evaluateAndTrace();   // recompute the hunt for the new brain
+      if (--_animLeft <= 0) { _animating = false; _animFrame = 9999; }  // done -> show the full trail
+      redraw = true;
+    }
+    if (_animating && now - _animAt >= 38) {   // foreground: reveal one more hunt step (sped up)
+      _animAt = now;
+      int maxlen = _pathLen > _oppLen ? _pathLen : _oppLen;
+      if (++_animFrame > maxlen) _animFrame = 0;   // loop the hunt while it keeps learning
+      redraw = true;
+    }
+    if (redraw) draw();
   }
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
@@ -291,7 +306,7 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       _taught = true; _saved = false; evaluateAndTrace(); hal::audio.blip(); draw();
     }
   } else if (R_EVO.contains(tx, ty)) {
-    _animating = true; _animLeft = 16; _animAt = now;  // watch it learn, gen by gen
+    _animating = true; _animLeft = 16; _animAt = now; _genAt = now; _animFrame = 0;  // watch it hunt & learn
     hal::audio.blip();
   } else if (R_SAVE.contains(tx, ty)) {
     if (!_profile) { hal::audio.fail(); }

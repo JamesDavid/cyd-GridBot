@@ -50,7 +50,9 @@ class ArenaTrainScreen : public app::IScreen {
   bool _netView = false;
   bool _animating = false;    // Evolve animates generation-by-generation
   int  _animLeft = 0;         // generations left in the current animation
-  uint32_t _animAt = 0;       // last animation-step time (throttle)
+  uint32_t _animAt = 0;       // last hunt-frame time (throttle)
+  uint32_t _genAt = 0;        // last generation-step time (evolves in the background)
+  int  _animFrame = 0;        // how many steps of the hunt to reveal (sped-up live playback)
   float _in[gb::SENSOR_COUNT_FOR_BRAIN] = {0};
   float _hid[gb::NET_MAX_HID] = {0};
   float _out[gb::NET_MAX_OUT] = {0};
