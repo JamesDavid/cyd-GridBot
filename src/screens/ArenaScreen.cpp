@@ -199,17 +199,32 @@ static void adaptNeuroBot(Program& p, const Maze& m, const Pose& start) {
   distillSolver(p.brains[0], mm, true, 500);
 }
 
+// Set up one bot's program for the match. RACE: navigate to the goal (solve/distill/adapt).
+// SUMO: there is no goal to race to, so bots must HUNT each other — give every bot the
+// hunter (forward + zap-when-enemy-ahead), except a kid's own saved NeuroBot fighter, whose
+// trained brain we keep so its Sumo training actually drives it.
+void ArenaScreen::setupMatchBot(int pick, const Pose& start, bool sumo) {
+  Candidate& c = _cands[pick];
+  if (sumo) {
+    // Keep each bot's OWN behaviour so matchups stay asymmetric (Rusty charges, Bolt
+    // dashes, Vex hunts, the kid's trained brain hunts) -- identical programs from the
+    // mirror-image starts would just tie. Only the "built at match start" bots (Ace,
+    // Neura, Cortex) have an empty program here; give them a hunter so they engage.
+    if (c.prog.main.empty() && c.prog.brains.empty()) c.prog = hunterProgram();
+    return;
+  }
+  if (c.smart) solveMazeFrom(_maze, start, true, c.prog);
+  else if (c.neuro) buildNeuroBot(c.prog, _maze, start, 7u + (uint32_t)c.avatar * 13u);
+  else adaptNeuroBot(c.prog, _maze, start);
+}
+
 void ArenaScreen::startMatch() {
   hal::audio.stopMusic();  // the board uses step-tick SFX; silence the battle theme
   MazeGen::generateArena(_maze, _profile ? _profile->seedBase + 7u : 7u, _s0, _s1);
-  // Smart bots solve the board; house NeuroBots distill fresh; a kid's saved NeuroBot
-  // fighter is fine-tuned to this board — all at match start.
-  if (_cands[_pick0].smart) solveMazeFrom(_maze, _s0, true, _cands[_pick0].prog);
-  else if (_cands[_pick0].neuro) buildNeuroBot(_cands[_pick0].prog, _maze, _s0, 7u + (uint32_t)_cands[_pick0].avatar * 13u);
-  else adaptNeuroBot(_cands[_pick0].prog, _maze, _s0);
-  if (_cands[_pick1].smart) solveMazeFrom(_maze, _s1, true, _cands[_pick1].prog);
-  else if (_cands[_pick1].neuro) buildNeuroBot(_cands[_pick1].prog, _maze, _s1, 7u + (uint32_t)_cands[_pick1].avatar * 13u);
-  else adaptNeuroBot(_cands[_pick1].prog, _maze, _s1);
+  bool sumo = (_type == MatchType::SUMO);
+  if (sumo) _maze.clearGoal();   // Sumo = last bot standing: no goal, so bots fight not race
+  setupMatchBot(_pick0, _s0, sumo);
+  setupMatchBot(_pick1, _s1, sumo);
   const Program& p0 = _cands[_pick0].prog;
   const Program& p1 = _cands[_pick1].prog;
   _arena.setup(&_maze, &p0, &p1, _s0, _s1, _type);

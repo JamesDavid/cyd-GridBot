@@ -33,6 +33,7 @@ class ArenaScreen : public app::IScreen {
   bool pickScrollTap(int x, int y);  // handle a tap in the scrollbar zone
   int houseBotIndex(const char* name) const;
   void drawHandoff();
+  void setupMatchBot(int pick, const gb::Pose& start, bool sumo);
   void startMatch();
   void drawBoard();
   void mazeGeometry(int& tile, int& ox, int& oy);

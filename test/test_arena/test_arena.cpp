@@ -122,6 +122,26 @@ void test_sumo_brain_zap_shoves() {
   TEST_ASSERT_FALSE(ar.alive(1));
 }
 
+// Sumo: walking forward INTO an enemy pinned against the edge shoves it off -> rammer wins.
+// This is the fix for "sumo matches always Draw" -- contact now decides, not just a rare zap.
+void test_sumo_ram_off_edge() {
+  Maze m;
+  m.reset(1, 3);
+  m.fill(FLOOR);
+  Pose s0; s0.row = 0; s0.col = 1; s0.facing = EAST;   // rammer, walks forward
+  Pose s1; s1.row = 0; s1.col = 2; s1.facing = EAST;   // victim, against the right edge
+  Program rammer;
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(Node::command(CMD_FWD));
+  rammer.main.push_back(loop);
+  Program idle;
+  Arena ar;
+  ar.setup(&m, &rammer, &idle, s0, s1, MatchType::SUMO, 50);
+  ArenaOutcome o = ar.run();
+  TEST_ASSERT_EQUAL((int)ArenaOutcome::BOT0, (int)o);   // rammer wins (no Draw)
+  TEST_ASSERT_FALSE(ar.alive(1));
+}
+
 void test_sumo_deterministic() {
   Program a = hunterProgram(), b = hunterProgram();
   Maze m; Pose s0, s1;
@@ -204,6 +224,7 @@ int main(int, char**) {
   RUN_TEST(test_arena_replay_independent_of_instances);
   RUN_TEST(test_sumo_zap_into_pit);
   RUN_TEST(test_sumo_brain_zap_shoves);
+  RUN_TEST(test_sumo_ram_off_edge);
   RUN_TEST(test_sumo_deterministic);
   return UNITY_END();
 }

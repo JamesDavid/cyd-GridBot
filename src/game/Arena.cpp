@@ -60,14 +60,35 @@ ArenaOutcome Arena::tick() {
   }
 
   // Resolution pass (SPEC §18.1), moves first.
-  // 1) Both bots target the SAME tile -> both bounce back.
+  // 1) Both bots target the SAME tile.
   if (_bot[0].alive && _bot[1].alive) {
     const Pose& a = _bot[0].it.pose();
     const Pose& b = _bot[1].it.pose();
     if (a.row == b.row && a.col == b.col) {
-      _bot[0].it.setPose(before[0]);
-      _bot[1].it.setPose(before[1]);
-      for (int i = 0; i < 2; i++) if (out[i] == OUT_WIN || out[i] == OUT_FELL) out[i] = OUT_OK;
+      // In Sumo, walking INTO the enemy is a shove (real sumo): the bot that moved pushes
+      // the one that stayed put one tile onward — off-board / into a PIT = out. Head-on
+      // (both moved into the tile) just bounces. This makes contact decisive, not a stalemate.
+      bool m0 = (before[0].row != a.row || before[0].col != a.col);
+      bool m1 = (before[1].row != b.row || before[1].col != b.col);
+      int mover = (_type == MatchType::SUMO && (m0 != m1)) ? (m0 ? 0 : 1) : -1;
+      if (mover >= 0) {
+        int sit = 1 - mover, dr, dc;
+        facingDelta(_bot[mover].it.pose().facing, dr, dc);
+        int pr = before[sit].row + dr, pc = before[sit].col + dc;
+        if (!_maze->inBounds(pr, pc) || _maze->at(pr, pc) == PIT) {
+          _bot[sit].alive = false;                 // shoved off the board / into a pit
+        } else if (_maze->isWalkable(pr, pc)) {
+          Pose np = _bot[sit].it.pose(); np.row = (int8_t)pr; np.col = (int8_t)pc;
+          _bot[sit].it.setPose(np);                // shoved back a tile; mover takes its spot
+        } else {
+          _bot[mover].it.setPose(before[mover]);   // wall behind the enemy -> mover bounces
+        }
+        if (out[mover] == OUT_WIN) out[mover] = OUT_OK;
+      } else {
+        _bot[0].it.setPose(before[0]);             // head-on or Race -> both bounce
+        _bot[1].it.setPose(before[1]);
+        for (int i = 0; i < 2; i++) if (out[i] == OUT_WIN || out[i] == OUT_FELL) out[i] = OUT_OK;
+      }
     }
   }
 
@@ -114,11 +135,27 @@ ArenaOutcome Arena::tick() {
   }
   if (_outcome != ArenaOutcome::RUNNING) return _outcome;
 
-  // Both unable to continue -> draw (step cap or both out/done).
+  // Time's up (or neither can move). Race draws; Sumo breaks the tie by RING CONTROL -- the
+  // bot nearer the arena centre wins (real sumo never just stops at a draw). Exact tie -> draw.
   bool active0 = _bot[0].alive && !_bot[0].done && !_bot[0].it.finished();
   bool active1 = _bot[1].alive && !_bot[1].done && !_bot[1].it.finished();
-  if (!active0 && !active1) _outcome = ArenaOutcome::DRAW;
-  if (_ticks >= _stepCap) _outcome = ArenaOutcome::DRAW;
+  bool over = (!active0 && !active1) || _ticks >= _stepCap;
+  if (over && _outcome == ArenaOutcome::RUNNING) {
+    if (_type == MatchType::SUMO && _bot[0].alive && _bot[1].alive) {
+      int cr = _maze->rows() / 2, cc = _maze->cols() / 2;
+      auto dist = [&](int i) {
+        const Pose& p = _bot[i].it.pose();
+        int dr = p.row - cr, dc = p.col - cc;
+        return (dr < 0 ? -dr : dr) + (dc < 0 ? -dc : dc);
+      };
+      int d0 = dist(0), d1 = dist(1);
+      if (d0 < d1) { _bot[0].won = true; _outcome = ArenaOutcome::BOT0; }
+      else if (d1 < d0) { _bot[1].won = true; _outcome = ArenaOutcome::BOT1; }
+      else _outcome = ArenaOutcome::DRAW;
+    } else {
+      _outcome = ArenaOutcome::DRAW;
+    }
+  }
   return _outcome;
 }
 
