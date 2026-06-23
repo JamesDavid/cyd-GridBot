@@ -69,6 +69,15 @@ class App {
   void loadProfileInto(const std::string& id);
   void saveProfile();
 
+  // Idle nametag screensaver (classroom fun): after a quiet minute on a resting screen, the
+  // display becomes a big name card (avatar + name + stars); any touch wakes back to it.
+  void drawNametag();          // paint the full-screen name card
+  bool saverEligible() const;  // true only on calm menu states (never mid-game/training)
+  void wake();                 // redraw the current screen after the saver is dismissed
+  uint32_t _lastInput = 0;     // millis of the last touch
+  bool _saver = false;         // the nametag is currently showing
+  static constexpr uint32_t SAVER_MS = 60000;  // idle timeout (1 min)
+
   State _state = State::SELECT;
   gb::Profile _profile;
   uint32_t _introLevel = 1;

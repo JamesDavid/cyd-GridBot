@@ -11,6 +11,7 @@
 #include "game/Bots.h"
 #include "game/Interpreter.h"
 #include "game/Achievements.h"
+#include "assets/Assets.h"
 
 using namespace ui;
 
@@ -264,9 +265,53 @@ void App::debugFastPlay(uint32_t target) {
   gotoIntro(_profile.level);
 }
 
+// The idle nametag screensaver -- a big classroom name card. Only on calm menu screens, so it
+// never interrupts a running game/battle/training animation (those redraw without a touch).
+bool App::saverEligible() const {
+  switch (_state) {
+    case State::HOME: case State::STATS: case State::BADGES: case State::SHOP:
+    case State::LIBRARY: case State::NEURO_HUB: case State::LESSONS_MENU:
+      return true;
+    default: return false;
+  }
+}
+
+void App::drawNametag() {
+  auto& g = hal::display.gfx();
+  g.fillScreen(C_BG);
+  assets::drawCharacter(g, SCREEN_W / 2, 92, 92, _profile.avatar, gb::SOUTH);  // a big robot
+  label(g, SCREEN_W / 2, 168, _profile.name.c_str(), assets::roster(_profile.avatar).bodyColor,
+        textdatum_t::middle_center, 4);
+  char s[24]; snprintf(s, sizeof(s), "*%u stars", (unsigned)_profile.stats.starsTotal);
+  label(g, SCREEN_W / 2, 202, s, C_ACCENT, textdatum_t::middle_center);
+  label(g, SCREEN_W / 2, 226, "tap to wake", C_DIM, textdatum_t::middle_center);
+}
+
+void App::wake() {
+  switch (_state) {
+    case State::HOME:         _home.enter(); break;
+    case State::STATS:        _stats.enter(); break;
+    case State::BADGES:       _badges.enter(); break;
+    case State::SHOP:         _shop.enter(); break;
+    case State::LIBRARY:      _library.enter(); break;
+    case State::NEURO_HUB:    _lessonHub.enter(); break;
+    case State::LESSONS_MENU: _lessonsMenu.enter(); break;
+    default: break;
+  }
+}
+
 void App::tick(uint32_t now) {
   hal::audio.update(now);  // advance the background melody (no-op if not playing)
   hal::TouchPoint tp = hal::touch.read();
+
+  // Idle nametag screensaver: track the last touch; arm after a quiet minute on a calm screen;
+  // any touch wakes back to where you were (and is swallowed so it doesn't also act as a tap).
+  if (tp.pressed) _lastInput = now;
+  if (_saver) {
+    if (tp.pressed) { _saver = false; wake(); }
+    return;
+  }
+  if (saverEligible() && now - _lastInput > SAVER_MS) { _saver = true; drawNametag(); return; }
 
   switch (_state) {
     case State::SELECT: {
