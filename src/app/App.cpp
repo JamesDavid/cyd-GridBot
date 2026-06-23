@@ -486,6 +486,7 @@ void App::tick(uint32_t now) {
           case 13: _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; break;  // Memory
           case 14: if (!_selfPlayLesson) _selfPlayLesson = new screens::SelfPlayLessonScreen();
                    _selfPlayLesson->begin(); _selfPlayLesson->enter(); _state = State::SELFPLAY_LESSON; break;  // Self-play
+          case 15: _methodLesson.begin(); _methodLesson.enter(); _state = State::METHOD_LESSON; break;  // Right tool
         }
       }
       break;
@@ -504,6 +505,10 @@ void App::tick(uint32_t now) {
     }
     case State::SELFPLAY_LESSON: {
       if (_selfPlayLesson && _selfPlayLesson->tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
+      break;
+    }
+    case State::METHOD_LESSON: {
+      if (_methodLesson.tick(now, tp) == Signal::BACK) { _lessonHub.enter(); _state = State::NEURO_HUB; }
       break;
     }
     case State::EVO_LESSON: {
