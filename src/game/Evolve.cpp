@@ -101,7 +101,7 @@ static void mutate(Net& n, uint32_t& rng, float rate, float scale) {
   }
 }
 
-void Evolve::breed() {
+void Evolve::breed(float rate, float scale) {
   // In place (no big stack array — must fit the ESP32's small task stack):
   // selection-sort the top EVO_KEEP survivors to the FRONT...
   for (int a = 0; a < EVO_KEEP; a++) {
@@ -116,7 +116,7 @@ void Evolve::breed() {
   for (int i = EVO_KEEP; i < EVO_POP; i++) {
     int parent = (lcg(rng) >> 8) % EVO_KEEP;
     pop[i] = pop[parent];
-    mutate(pop[i], rng, 0.15f, 0.6f);
+    mutate(pop[i], rng, rate, scale);
   }
   gen++;
 }

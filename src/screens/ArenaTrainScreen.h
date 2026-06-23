@@ -37,6 +37,15 @@ class ArenaTrainScreen : public app::IScreen {
   ui::Rect oppRowRect(int i) const;
   int  saveFighterToLibrary();  // persist the current brain as a fighter; returns its library index
   bool _oppPick = false;        // showing the opponent picker overlay
+  // Optional "advanced" knobs overlay -- live training hyperparameters, tucked behind a button
+  // so they're never in a beginner's way. LR + Rounds feed the backprop engines (Teach/Q-Learn);
+  // Explore feeds Evolve's mutation scale and Q-Learn's epsilon. Defaults = the tuned baseline.
+  bool  _advanced = false;      // showing the knobs overlay
+  float _lr       = 0.30f;      // learning rate (Teach + Q-Learn); RNN uses a damped third of it
+  int   _rounds   = 1;          // training-length multiplier (Evolve gens / Teach epochs / Q chunks)
+  float _explore  = 1.0f;       // exploration: x Evolve mutation scale, x Q-Learn epsilon
+  bool  knobsDefault() const { return _lr == 0.30f && _rounds == 1 && _explore == 1.0f; }
+  void  drawAdvanced();         // the full-screen knobs overlay
   bool _launchFight = false;    // Back was used to jump straight into a battle
   void setupBoard();            // (re)generate the arena; Sumo clears the goal (last-standing)
   void setMode(gb::MatchType t);// switch Race<->Sumo: reboard, rebuild opponent, restart evo
@@ -83,7 +92,7 @@ class ArenaTrainScreen : public app::IScreen {
   void drawNet();             // network graph + arena mini-map + status
   // Learning curve: how good the brain is (0..1) sampled each training step, so a kid (or an ML
   // engineer over a beer) sees fitness CLIMB as it learns -- the metric overlay the Brain Cam wanted.
-  static constexpr int CURVE_N = 48;
+  static constexpr int CURVE_N = 40;   // sparkline samples (trimmed from 48 to free static DRAM)
   float _curve[CURVE_N] = {0};
   int   _curveLen = 0;
   float _score = 0.0f;        // current brain's score vs the opponent (HP margin / goal progress)

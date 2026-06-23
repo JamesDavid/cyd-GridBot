@@ -46,13 +46,17 @@ bool distillHunterRnn(RNet& brain, uint32_t seed, int episodes);
 // decays SMOOTHLY across all of it -- the UI runs Q-Learn as several animated chunks, and a fresh
 // epsilon ramp per chunk would keep re-randomising the policy and never converge. Defaults make a
 // single call self-contained (decay over its own `episodes`).
-bool qTrainHunter(Net& brain, uint32_t seed, int episodes, int globalDone = 0, int globalTotal = 0);
+// `epsScale` (default 1.0) multiplies the exploration rate -- the Arena trainer's "Explore" knob:
+// >1 tries more random moves (slower to converge, escapes ruts), 0 = greedy from the start.
+bool qTrainHunter(Net& brain, uint32_t seed, int episodes, int globalDone = 0, int globalTotal = 0,
+                  float epsScale = 1.0f);
 
 // RECURRENT Q-learning: the same reward MDP as qTrainHunter, but the policy is a memory brain
 // (RNet) and each episode is learned by unrolled semi-gradient TD (RNet::trainEpisodeQ). Slower
 // and noisier than the feedforward version (BPTT + bootstrapping), but it's true reward-driven
 // training of a recurrent fighter. In place; `globalDone`/`globalTotal` decay epsilon across chunks.
-bool qTrainHunterRnn(RNet& brain, uint32_t seed, int episodes, int globalDone = 0, int globalTotal = 0);
+bool qTrainHunterRnn(RNet& brain, uint32_t seed, int episodes, int globalDone = 0, int globalTotal = 0,
+                     float epsScale = 1.0f);
 
 // RECURRENT Q-learning for RACE (maze-solving) -- where memory actually pays off (remember
 // dead-ends). Reward = reach the goal (+1), fall in a pit (0), with BFS-distance shaping toward
@@ -61,13 +65,15 @@ bool qTrainHunterRnn(RNet& brain, uint32_t seed, int episodes, int globalDone = 
 // `board`/`start` (optional): train on THIS exact maze (e.g. the trainer's current race board, so
 // the result actually wins that match) instead of generated campaign levels. Null => levels 1..levels.
 bool qTrainMazeRnn(RNet& brain, uint32_t seedBase, int levels, int episodes, int globalDone = 0,
-                   int globalTotal = 0, const Maze* board = nullptr, const Pose* start = nullptr);
+                   int globalTotal = 0, const Maze* board = nullptr, const Pose* start = nullptr,
+                   float epsScale = 1.0f);
 
 // FEEDFORWARD maze Q-learning -- the Net counterpart of qTrainMazeRnn (semi-gradient TD, no BPTT),
 // so the campaign maze trainer can offer reward-driven learning for a plain brain too. Same reward
 // MDP (goal +1, pit 0, BFS-distance shaping). `board`/`start` train on a specific maze.
 bool qTrainMaze(Net& brain, uint32_t seedBase, int levels, int episodes, int globalDone = 0,
-                int globalTotal = 0, const Maze* board = nullptr, const Pose* start = nullptr);
+                int globalTotal = 0, const Maze* board = nullptr, const Pose* start = nullptr,
+                float epsScale = 1.0f);
 
 // Train a RECURRENT brain (BPTT) to imitate the memory-using explorer across campaign
 // mazes 1..levels — a generally-capable memory brain to drop into a program. In place,

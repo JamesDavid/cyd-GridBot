@@ -34,7 +34,10 @@ struct Evolve {
   // score every brain as a fighter vs the AI (for the Arena trainer)
   void evaluateArena(const Maze& m, const Pose& s0, const Pose& s1, const Program& ai,
                      int maxSteps = 200, MatchType type = MatchType::RACE);
-  void breed();                       // selection + mutation -> next generation
+  // selection + mutation -> next generation. `rate`/`scale` tune mutation (how many weights
+  // change, and by how much); defaults match the classic combat trainer. The Arena trainer's
+  // "Explore" knob raises `scale` to mutate harder (more variety, less stable).
+  void breed(float rate = 0.15f, float scale = 0.6f);
   void step(const Maze& m, int maxSteps = 120) { evaluate(m, nullptr, maxSteps); breed(); }
 
   int   bestIdx() const;

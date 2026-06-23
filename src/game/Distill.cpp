@@ -263,7 +263,7 @@ static int chebyshev(const Pose& a, const Pose& b) {
   return dr > dc ? dr : dc;
 }
 
-bool qTrainHunter(Net& brain, uint32_t seed, int episodes, int globalDone, int globalTotal) {
+bool qTrainHunter(Net& brain, uint32_t seed, int episodes, int globalDone, int globalTotal, float epsScale) {
   if (globalTotal <= 0) globalTotal = episodes;
   Rng rng(seed);
   Maze m; Pose s0, s1;
@@ -299,7 +299,7 @@ bool qTrainHunter(Net& brain, uint32_t seed, int episodes, int globalDone, int g
              (foe.row == me.row && foe.col == me.col));
     EnemyView ev; ev.pose = &foe;
     float prog = (float)(globalDone + e) / (float)globalTotal;          // 0..1 across the WHOLE run
-    float eps = 0.05f + 0.30f * (1.0f - prog);                          // explore a lot early, exploit late
+    float eps = 0.05f + 0.30f * epsScale * (1.0f - prog);               // explore a lot early, exploit late
     for (int step = 0; step < 28; step++) {
       senseEgo(m, me, &ev, in);
       brain.forward(in, out);
@@ -379,7 +379,7 @@ static float qStep(const Maze& m, const Pose& me, const Pose& foe, int act, Pose
   return r;
 }
 
-bool qTrainHunterRnn(RNet& brain, uint32_t seed, int episodes, int globalDone, int globalTotal) {
+bool qTrainHunterRnn(RNet& brain, uint32_t seed, int episodes, int globalDone, int globalTotal, float epsScale) {
   if (globalTotal <= 0) globalTotal = episodes;
   Rng rng(seed);
   Maze m; Pose s0, s1;
@@ -401,7 +401,7 @@ bool qTrainHunterRnn(RNet& brain, uint32_t seed, int episodes, int globalDone, i
     } while (!m.inBounds(foe.row, foe.col) || m.at(foe.row, foe.col) == WALL || (foe.row == me.row && foe.col == me.col));
     EnemyView ev; ev.pose = &foe;
     brain.resetState();
-    float eps = 0.05f + 0.30f * (1.0f - (float)(globalDone + e) / (float)globalTotal);
+    float eps = 0.05f + 0.30f * epsScale * (1.0f - (float)(globalDone + e) / (float)globalTotal);
     int T = 0; bool lastTerminal = false;
     for (int step = 0; step < 28 && T < RNET_MAX_T; step++) {
       float* x = gEpiX + T * SENSOR_COUNT;
@@ -429,7 +429,7 @@ bool qTrainHunterRnn(RNet& brain, uint32_t seed, int episodes, int globalDone, i
 }
 
 bool qTrainMaze(Net& brain, uint32_t seedBase, int levels, int episodes, int globalDone,
-                int globalTotal, const Maze* board, const Pose* start) {
+                int globalTotal, const Maze* board, const Pose* start, float epsScale) {
   if (globalTotal <= 0) globalTotal = episodes;
   if (levels < 1) levels = 1;
   if (episodes < 1) return false;
@@ -441,7 +441,7 @@ bool qTrainMaze(Net& brain, uint32_t seedBase, int levels, int episodes, int glo
     Maze m; Pose p;
     if (board) { m = *board; p = start ? *start : m.startPose(); }
     else { MazeGen::generate(m, seedBase, 1 + (e % levels)); p = m.startPose(); }
-    float eps = 0.05f + 0.30f * (1.0f - (float)(globalDone + e) / (float)globalTotal);
+    float eps = 0.05f + 0.30f * epsScale * (1.0f - (float)(globalDone + e) / (float)globalTotal);
     int oldD = distanceToGoal(m, p.row, p.col);
     for (int step = 0; step < 48; step++) {
       senseEgo(m, p, nullptr, in);
@@ -477,7 +477,7 @@ bool qTrainMaze(Net& brain, uint32_t seedBase, int levels, int episodes, int glo
 }
 
 bool qTrainMazeRnn(RNet& brain, uint32_t seedBase, int levels, int episodes, int globalDone,
-                   int globalTotal, const Maze* board, const Pose* start) {
+                   int globalTotal, const Maze* board, const Pose* start, float epsScale) {
   if (globalTotal <= 0) globalTotal = episodes;
   if (levels < 1) levels = 1;
   if (episodes < 1) return false;
@@ -491,7 +491,7 @@ bool qTrainMazeRnn(RNet& brain, uint32_t seedBase, int levels, int episodes, int
     if (board) { m = *board; p = start ? *start : m.startPose(); }   // train on THE board (wins it)
     else { MazeGen::generate(m, seedBase, 1 + (e % levels)); p = m.startPose(); }
     brain.resetState();
-    float eps = 0.05f + 0.30f * (1.0f - (float)(globalDone + e) / (float)globalTotal);
+    float eps = 0.05f + 0.30f * epsScale * (1.0f - (float)(globalDone + e) / (float)globalTotal);
     int oldD = distanceToGoal(m, p.row, p.col);
     int T = 0;
     for (int step = 0; step < RNET_MAX_T; step++) {
