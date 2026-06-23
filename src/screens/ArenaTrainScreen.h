@@ -31,6 +31,7 @@ class ArenaTrainScreen : public app::IScreen {
   void evaluateAndTrace();
   int  oppCount() const;        // sparring roster size (house bots + your library)
   void buildOpponent(int idx);  // load opponent `idx` into _ai (+ name into _oppName)
+  void setSelfOpponent(const gb::Net& b);  // _ai := a copy of brain `b` (self-play sparring partner)
   std::string oppNameFor(int idx) const;  // display name for a roster slot (no side effects)
   void drawOppList();           // the tap-to-pick opponent menu (replaces cycling)
   ui::Rect oppRowRect(int i) const;
