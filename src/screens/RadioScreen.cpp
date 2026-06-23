@@ -179,7 +179,16 @@ app::Signal RadioScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     _last = now;
     Pose b0 = _arena.pose(0), b1 = _arena.pose(1);
     ArenaOutcome o = _arena.tick();
-    drawCell(b0.row, b0.col); drawCell(b1.row, b1.col);
+    // redraw each vacated cell + its neighbours: the robot's facing arrow overhangs the next tile,
+    // so clearing only the one cell leaves yellow specks as it moves.
+    auto erase = [&](int r, int c) {
+      for (int dr = -1; dr <= 1; dr++)
+        for (int dc = -1; dc <= 1; dc++) {
+          int rr = r + dr, cc = c + dc;
+          if (rr >= 0 && rr < _maze.rows() && cc >= 0 && cc < _maze.cols()) drawCell(rr, cc);
+        }
+    };
+    erase(b0.row, b0.col); erase(b1.row, b1.col);
     bool me0 = net::radio.iAmBot0();
     drawBot(0, _arena.pose(0), me0 ? _myAvatar : _theirAvatar);
     drawBot(1, _arena.pose(1), me0 ? _theirAvatar : _myAvatar);

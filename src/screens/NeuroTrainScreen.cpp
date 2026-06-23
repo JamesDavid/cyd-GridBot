@@ -18,21 +18,23 @@ static const Rect R_BASE  = {6,   (int16_t)(BAND_Y + 2), 118, 18};  // load a br
 static const Rect R_GAUNT = {128, (int16_t)(BAND_Y + 2), 90,  18};  // Generalist challenge trainer
 static const Rect R_SAVEV = {222, (int16_t)(BAND_Y + 2), 92,  18};  // save a versioned copy
 // normal toolbar (6): distill solver / draw a path / neuroevolve / planner+follow / save / leave
-static const Rect R_TEACH = {4,   (int16_t)(BOTBAR_Y + 2), 48, 32};
-static const Rect R_DRAW  = {54,  (int16_t)(BOTBAR_Y + 2), 44, 32};
-static const Rect R_TRAIN = {100, (int16_t)(BOTBAR_Y + 2), 52, 32};
-static const Rect R_PILOT = {154, (int16_t)(BOTBAR_Y + 2), 48, 32};
-static const Rect R_USE   = {204, (int16_t)(BOTBAR_Y + 2), 44, 32};
-static const Rect R_BACK  = {250, (int16_t)(BOTBAR_Y + 2), 64, 32};
+static const Rect R_TEACH = {4,   (int16_t)(BOTBAR_Y + 2), 42, 32};
+static const Rect R_DRAW  = {48,  (int16_t)(BOTBAR_Y + 2), 36, 32};
+static const Rect R_TRAIN = {86,  (int16_t)(BOTBAR_Y + 2), 46, 32};
+static const Rect R_QL    = {134, (int16_t)(BOTBAR_Y + 2), 44, 32};  // Q-Learn (reward) for the maze
+static const Rect R_PILOT = {180, (int16_t)(BOTBAR_Y + 2), 42, 32};
+static const Rect R_USE   = {224, (int16_t)(BOTBAR_Y + 2), 46, 32};
+static const Rect R_BACK  = {272, (int16_t)(BOTBAR_Y + 2), 42, 32};
 // draw-mode toolbar: learn from the drawn path / clear it / leave draw mode
 static const Rect R_LEARN  = {6,   (int16_t)(BOTBAR_Y + 2), 110, 32};
 static const Rect R_DCLEAR = {122, (int16_t)(BOTBAR_Y + 2), 90, 32};
 static const Rect R_DCANCEL= {218, (int16_t)(BOTBAR_Y + 2), 96, 32};
 // rnn-mode toolbar: BPTT-train memory / pilot toggle / save to block / leave
-static const Rect R_RTEACH = {6,   (int16_t)(BOTBAR_Y + 2), 86, 32};
-static const Rect R_RPILOT = {98,  (int16_t)(BOTBAR_Y + 2), 70, 32};
-static const Rect R_RUSE   = {174, (int16_t)(BOTBAR_Y + 2), 66, 32};
-static const Rect R_RBACK  = {246, (int16_t)(BOTBAR_Y + 2), 68, 32};
+static const Rect R_RTEACH = {6,   (int16_t)(BOTBAR_Y + 2), 70, 32};
+static const Rect R_RQL    = {80,  (int16_t)(BOTBAR_Y + 2), 52, 32};  // recurrent maze Q-Learn
+static const Rect R_RPILOT = {136, (int16_t)(BOTBAR_Y + 2), 52, 32};
+static const Rect R_RUSE   = {192, (int16_t)(BOTBAR_Y + 2), 56, 32};
+static const Rect R_RBACK  = {252, (int16_t)(BOTBAR_Y + 2), 62, 32};
 
 void NeuroTrainScreen::rebuildBrainLibs() {
   _brainLibs.clear();
@@ -130,6 +132,7 @@ void NeuroTrainScreen::tracePath() {
   Node nb = Node::neuro(0); nb.rnn = _rnnMode; nb.pilot = _pilotMode;  // any of the 4 modes
   loop.body.push_back(nb);
   prog.main.push_back(loop);
+  if (_pilotMode && _prog) prog.waypoints = _prog->waypoints;  // follow the kid's hand-placed route
   Interpreter it; it.load(&prog, _maze, _maze->startPose(), 64);
   _pathLen = 0; _won = false;
   for (int s = 0; s < 64; s++) {
@@ -214,6 +217,7 @@ void NeuroTrainScreen::draw() {
     g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
     if (_rnnMode) {
       button(g, R_RTEACH, "Teach mem", C_GO, C_PANEL);
+      button(g, R_RQL, "Q-Lrn", C_MOVE, C_PANEL);
       button(g, R_RPILOT, "Pilot", _pilotMode ? C_GO : ui::rgb(255, 170, 60), C_PANEL);
       button(g, R_RUSE, _saved ? "saved!" : "Use it", _saved ? C_DIM : ui::rgb(120, 230, 245), C_PANEL);
       button(g, R_RBACK, "Back", C_INK, C_PANEL);
@@ -221,6 +225,7 @@ void NeuroTrainScreen::draw() {
       button(g, R_TEACH, "Teach", C_GO, C_PANEL);
       button(g, R_DRAW, "Draw", C_ACCENT, C_PANEL);
       button(g, R_TRAIN, "Evolve", C_FUNC, C_PANEL);
+      button(g, R_QL, "Q-Lrn", C_MOVE, C_PANEL);
       button(g, R_PILOT, "Pilot", _pilotMode ? C_GO : ui::rgb(255, 170, 60), C_PANEL);
       button(g, R_USE, _saved ? "saved!" : "Use it", _saved ? C_DIM : ui::rgb(120, 230, 245), C_PANEL);
       button(g, R_BACK, "Back", C_INK, C_PANEL);
@@ -252,6 +257,20 @@ void NeuroTrainScreen::draw() {
         label(g, x + tile / 2, y + tile / 2, num, C_BG, textdatum_t::middle_center);
       }
     }
+  } else if (_wpMode) {
+    // YOUR pilot route: numbered waypoints joined by lines, the follower will steer corner-to-corner
+    int px = 0, py = 0;
+    for (int i = 0; i < _wpLen; i++) {
+      int r = _wpPath[i] / _maze->cols(), c = _wpPath[i] % _maze->cols();
+      int cx = ox + c * tile + tile / 2, cy = oy + r * tile + tile / 2;
+      if (i > 0) g.drawLine(px, py, cx, cy, C_MOVE);
+      g.fillCircle(cx, cy, tile / 3, C_ACCENT);
+      char num[4]; snprintf(num, sizeof(num), "%d", i + 1);
+      label(g, cx, cy, num, C_BG, textdatum_t::middle_center);
+      px = cx; py = cy;
+    }
+    label(g, SCREEN_W / 2, BOTBAR_Y - 12, _wpLen ? "Tap to add, Use route to train" : "Tap tiles to set your route",
+          C_DIM, textdatum_t::bottom_center);
   } else {
     for (int i = 0; i < _pathLen; i++) {
       int r = _path[i] / _maze->cols(), c = _path[i] % _maze->cols();
@@ -260,16 +279,21 @@ void NeuroTrainScreen::draw() {
     }
   }
 
-  if (!_drawMode) drawNeuronWidget(_widgetAt);  // flashing input/hidden/output dots
+  if (!_drawMode && !_wpMode) drawNeuronWidget(_widgetAt);  // flashing input/hidden/output dots
 
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   if (_drawMode) {
     button(g, R_LEARN, "Learn it", C_GO, C_PANEL);       // distill from the drawn path
     button(g, R_DCLEAR, "Clear", C_ACCENT, C_PANEL);
     button(g, R_DCANCEL, "Cancel", C_INK, C_PANEL);
+  } else if (_wpMode) {                                  // placing pilot waypoints
+    button(g, R_LEARN, _wpLen ? "Use route" : "Auto", C_GO, C_PANEL);  // empty route -> auto-plan
+    button(g, R_DCLEAR, "Clear", C_ACCENT, C_PANEL);
+    button(g, R_DCANCEL, "Cancel", C_INK, C_PANEL);
   } else if (_rnnMode) {                                  // recurrent brain: BPTT + pilot + use
     bool uPilot = _profile && _profile->unlocks.nPilot;
     button(g, R_RTEACH, "Teach mem", C_GO, C_PANEL);     // BPTT-train the memory brain (tap to improve)
+    button(g, R_RQL, "Q-Lrn", C_MOVE, C_PANEL);          // recurrent reward learning on this maze
     button(g, R_RPILOT, "Pilot", !uPilot ? C_LOCK : (_pilotMode ? C_GO : ui::rgb(255, 170, 60)), C_PANEL);
     button(g, R_RUSE, _saved ? "saved!" : "Use it", _saved ? C_DIM : ui::rgb(120, 230, 245), C_PANEL);
     button(g, R_RBACK, "Back", C_INK, C_PANEL);
@@ -280,6 +304,7 @@ void NeuroTrainScreen::draw() {
     button(g, R_TEACH, "Teach", C_GO, C_PANEL);          // distill the solver (reliable) — the base tool
     button(g, R_DRAW, "Draw", uDraw ? C_ACCENT : C_LOCK, C_PANEL);   // imitation from a drawn path
     button(g, R_TRAIN, "Evolve", uEvo ? C_FUNC : C_LOCK, C_PANEL);   // neuroevolution (no teacher)
+    button(g, R_QL, "Q-Lrn", uEvo ? C_MOVE : C_LOCK, C_PANEL);       // reward learning (no teacher), like Arena
     button(g, R_PILOT, "Pilot", !uPilot ? C_LOCK : (_pilotMode ? C_GO : ui::rgb(255, 170, 60)), C_PANEL);
     button(g, R_USE, _saved ? "saved!" : "Use it", _saved ? C_DIM : ui::rgb(120, 230, 245), C_PANEL);
     button(g, R_BACK, "Back", C_INK, C_PANEL);
@@ -321,6 +346,20 @@ void NeuroTrainScreen::handleDrawTap(int r, int c) {
   }
   if (!ok) { hal::audio.fail(); return; }
   if (_drawLen < (int)sizeof(_drawPath)) { _drawPath[_drawLen++] = (uint8_t)t; hal::audio.blip(); draw(); }
+}
+
+// Pilot waypoints: tap any tile to add the next corner of YOUR route (no adjacency rule -- the
+// follower steers between them); tap the last one again to undo it.
+void NeuroTrainScreen::handleWpTap(int r, int c) {
+  int t = r * _maze->cols() + c;
+  if (_wpLen > 0 && _wpPath[_wpLen - 1] == (uint8_t)t) { _wpLen--; hal::audio.blip(); draw(); return; }
+  if (_wpLen < (int)sizeof(_wpPath)) { _wpPath[_wpLen++] = (uint8_t)t; hal::audio.blip(); draw(); }
+}
+
+void NeuroTrainScreen::enterWaypointMode() {
+  _wpMode = true; _brainView = false;             // place waypoints on the maze, not the graph
+  _wpLen = 0;
+  if (_prog) for (uint8_t t : _prog->waypoints) if (_wpLen < (int)sizeof(_wpPath)) _wpPath[_wpLen++] = t;
 }
 
 // A tiny network (2 inputs -> 3 hidden -> 2 outputs) tucked in the top bar. The layers
@@ -376,14 +415,36 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     return app::Signal::NONE;
   }
 
+  if (_wpMode) {                                   // ---- placing pilot waypoints ----
+    if (R_LEARN.contains(tx, ty)) {                // "Use route" (or "Auto" when empty)
+      if (_prog) _prog->waypoints.assign(_wpPath, _wpPath + _wpLen);  // empty => interpreter auto-plans
+      setNodePilot(true); _pilotMode = true;
+      if (!_rnnMode) pilotTrain(_brain, _profile ? _profile->seedBase : 0u, 14, 18);  // train the FF follower
+      _wpMode = false; _taught = false; _saved = false; _savedCopy = false; _gauntletScore = -1;
+      _pulseUntil = now + 1500; tracePath(); hal::audio.badge(); draw();
+    } else if (R_DCLEAR.contains(tx, ty)) {
+      _wpLen = 0; hal::audio.blip(); draw();
+    } else if (R_DCANCEL.contains(tx, ty)) {
+      _wpMode = false; hal::audio.blip(); draw();
+    } else {
+      int r, c;
+      if (tileAtPixel(tx, ty, r, c)) handleWpTap(r, c);
+    }
+    return app::Signal::NONE;
+  }
+
   if (_rnnMode) {                                  // ---- recurrent (memory) brain toolbar ----
     if (R_RTEACH.contains(tx, ty)) {               // BPTT-train the memory brain (tap to improve)
       rnnTrainGeneral(_rbrain, _profile ? _profile->seedBase : 0u, 16, 40);
       _taught = true; _saved = false; _pulseUntil = now + 1500; tracePath(); hal::audio.blip(); draw();
+    } else if (R_RQL.contains(tx, ty)) {           // recurrent reward Q-learning on THIS maze
+      Pose st = _maze->startPose();
+      qTrainMazeRnn(_rbrain, _profile ? _profile->seedBase : 0u, 1, 1500, 0, 1500, _maze, &st);
+      _rbrain.trained = true;
+      _taught = true; _saved = false; _pulseUntil = now + 1500; tracePath(); hal::audio.blip(); draw();
     } else if (R_RPILOT.contains(tx, ty)) {        // pilot works for an rnn brain too
       if (_profile && !_profile->unlocks.nPilot) { hal::audio.fail(); return app::Signal::NONE; }
-      _pilotMode = !_pilotMode; setNodePilot(_pilotMode);
-      _saved = false; tracePath(); hal::audio.blip(); draw();
+      enterWaypointMode(); hal::audio.blip(); draw();   // place your route first (Use route = train)
     } else if (R_RUSE.contains(tx, ty)) {          // store the memory brain into the block
       if (_prog && _idx < (int)_prog->rbrains.size()) _prog->rbrains[_idx] = _rbrain;
       setNodeRnn(true);
@@ -430,16 +491,20 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   } else if (R_DRAW.contains(tx, ty)) {   // hand-draw a path to learn from (imitation learning)
     if (_profile && !_profile->unlocks.nDraw) { hal::audio.fail(); return app::Signal::NONE; }
     _drawMode = true; seedDrawStart(); hal::audio.blip(); draw();
-  } else if (R_PILOT.contains(tx, ty)) {  // planner + follower: learn to steer to waypoints
+  } else if (R_PILOT.contains(tx, ty)) {  // planner + follower: place YOUR route, then train the steerer
     if (_profile && !_profile->unlocks.nPilot) { hal::audio.fail(); return app::Signal::NONE; }
-    pilotTrain(_brain, _profile ? _profile->seedBase : 0u, 14, 18);
-    setNodePilot(true);                   // the program's brain block becomes a pilot
-    _pilotMode = true; _taught = false; _saved = false; _savedCopy = false; _gauntletScore = -1;
-    tracePath(); hal::audio.blip(); draw();
+    enterWaypointMode(); hal::audio.blip(); draw();   // "Use route" trains the follower (empty = auto-plan)
   } else if (R_TRAIN.contains(tx, ty)) {
     if (_profile && !_profile->unlocks.nEvolve) { hal::audio.fail(); return app::Signal::NONE; }
     for (int gg = 0; gg < 5; gg++) { _evo.breed(); _evo.evaluate(*_maze, nullptr, 110); }
     _brain = _evo.best(); _taught = false; _saved = false; _savedCopy = false; _gauntletScore = -1;
+    _pilotMode = false; setNodePilot(false); _pulseUntil = now + 1500;
+    tracePath(); hal::audio.blip(); draw();
+  } else if (R_QL.contains(tx, ty)) {           // reward-driven Q-learning on THIS maze (no teacher)
+    if (_profile && !_profile->unlocks.nEvolve) { hal::audio.fail(); return app::Signal::NONE; }
+    Pose st = _maze->startPose();
+    qTrainMaze(_brain, _profile ? _profile->seedBase : 0u, 1, 3000, 0, 3000, _maze, &st);
+    _taught = true; _saved = false; _savedCopy = false; _gauntletScore = -1;
     _pilotMode = false; setNodePilot(false); _pulseUntil = now + 1500;
     tracePath(); hal::audio.blip(); draw();
   } else if (R_USE.contains(tx, ty)) {

@@ -431,8 +431,9 @@ void GameScreen::flatten(NodeList& list, int depth, std::vector<Row>& out, uint1
 }
 
 int GameScreen::listTop() const {
-  bool tabs = _profile && _profile->unlocks.func;
-  return ROW_Y0 + (tabs ? 26 : 0);
+  // the tab/library row shows from Sense (Save>Lib, for coded battle bots); F1/F2 join at Functions
+  bool row = _profile && _profile->unlocks.sense;
+  return ROW_Y0 + (row ? 26 : 0);
 }
 
 ui::Rect GameScreen::funcTabRect(int i) const {
@@ -543,8 +544,11 @@ void GameScreen::drawProgramList() {
     }
   }
 
-  // MAIN | F1 | F2 | Save | Load once functions/library unlock (SPEC §10, §11.1)
-  if (_profile && _profile->unlocks.func) {
+  // Function tabs (MAIN|F1|F2) unlock at Functions (L20); the library Save/Load (S>L|L<L) unlock at
+  // Sense (L15) so a kid can save a hand-CODED battle bot to My Bots and field it in Battle.
+  bool fn = _profile && _profile->unlocks.func;
+  bool lib = _profile && _profile->unlocks.sense;
+  if (fn) {
     const char* tabs[3] = {"MAIN", "F1", "F2"};
     NodeList* lists[3] = {&_prog.main, &_prog.f1, &_prog.f2};
     for (int i = 0; i < 3; i++) {
@@ -552,8 +556,11 @@ void GameScreen::drawProgramList() {
       bool on = (_editList == lists[i]);
       button(g, r, tabs[i], on ? C_ACCENT : C_DIM, on ? C_PANEL_HI : C_PANEL);
     }
-    button(g, funcTabRect(3), "S>L", C_GO, C_PANEL);
-    button(g, funcTabRect(4), "L<L", C_FUNC, C_PANEL);
+  }
+  if (lib) {
+    int sl = fn ? 3 : 0, ll = fn ? 4 : 1;   // sit after the tabs when those are present
+    button(g, funcTabRect(sl), "S>L", C_GO, C_PANEL);
+    button(g, funcTabRect(ll), "L<L", C_FUNC, C_PANEL);
   }
 
   int top = listTop();
@@ -723,8 +730,10 @@ void GameScreen::handlePadTap(int x, int y) {
 }
 
 void GameScreen::handleListTap(int x, int y) {
-  // function-body tabs + library Save/Load
-  if (_profile && _profile->unlocks.func) {
+  // function-body tabs (L20) + library Save/Load (L15, for coded battle bots)
+  bool fn = _profile && _profile->unlocks.func;
+  bool lib = _profile && _profile->unlocks.sense;
+  if (fn) {
     NodeList* lists[3] = {&_prog.main, &_prog.f1, &_prog.f2};
     for (int i = 0; i < 3; i++) {
       if (funcTabRect(i).contains(x, y)) {
@@ -732,8 +741,11 @@ void GameScreen::handleListTap(int x, int y) {
         drawProgramList(); return;
       }
     }
-    if (funcTabRect(3).contains(x, y)) { hal::audio.blip(); saveToLibrary(); return; }
-    if (funcTabRect(4).contains(x, y)) { hal::audio.blip(); loadFromLibrary(); return; }
+  }
+  if (lib) {
+    int sl = fn ? 3 : 0, ll = fn ? 4 : 1;
+    if (funcTabRect(sl).contains(x, y)) { hal::audio.blip(); saveToLibrary(); return; }
+    if (funcTabRect(ll).contains(x, y)) { hal::audio.blip(); loadFromLibrary(); return; }
   }
   if (x < LIST_X) return;
   int top = listTop();
@@ -773,7 +785,7 @@ void GameScreen::handleListTap(int x, int y) {
             hal::audio.blip(); drawProgramList(); return;
           }
           if (condRect(yy).contains(x, y)) {       // wall -> pit -> wall/pit -> goal -> [foe senses] -> wall
-            bool foes = _profile && _profile->unlocks.neuro;  // enemy senses appear once Battle exists
+            bool foes = _profile && _profile->unlocks.sense;  // enemy senses appear with Battle (Sense, L15)
             Cond c = sn->cond;
             if (c == WALL_AHEAD) c = PIT_AHEAD;
             else if (c == PIT_AHEAD) c = BLOCKED_AHEAD;

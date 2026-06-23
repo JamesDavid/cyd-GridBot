@@ -41,8 +41,11 @@ struct Program {
   NodeList f1, f2;
   std::vector<Net>  brains;   // feedforward brains for N_NEURO nodes (copied with the program)
   std::vector<RNet> rbrains;  // recurrent (memory) brains, PARALLEL to brains; node.rnn picks
+  // Pilot route: tile indices (row*cols+col) the kid placed by hand. A pilot brain steers toward
+  // these in order BEFORE the auto-planner kicks in -- empty => fall back to the BFS auto-route.
+  std::vector<uint8_t> waypoints;
 
-  void clear() { main.clear(); f1.clear(); f2.clear(); brains.clear(); rbrains.clear(); }
+  void clear() { main.clear(); f1.clear(); f2.clear(); brains.clear(); rbrains.clear(); waypoints.clear(); }
   bool empty() const { return main.empty() && f1.empty() && f2.empty(); }
 
   // Add a fresh brain (10 sensors -> 8 hidden -> 5 actions). A feedforward Net AND a

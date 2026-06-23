@@ -52,6 +52,11 @@ class NeuroTrainScreen : public app::IScreen {
   bool _drawMode = false;      // kid is hand-drawing the path to learn from
   uint8_t _drawPath[64];       // ordered tile indices of the drawn route
   int _drawLen = 0;
+  bool _wpMode = false;        // kid is placing PILOT waypoints (their own route for the follower)
+  uint8_t _wpPath[40];         // ordered waypoint tile indices
+  int _wpLen = 0;
+  void handleWpTap(int r, int c);  // drop/undo a waypoint
+  void enterWaypointMode();        // open the route-placing screen (loads any existing waypoints)
   int _gauntletScore = -1;     // last Generalist-challenge result (levels cleared), -1 = not run
   bool _pilotMode = false;     // preview/save the brain as a planner-fed pilot
   bool _rnnMode = false;       // this brain block is recurrent (memory) — train/run the RNet

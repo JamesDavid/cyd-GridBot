@@ -17,19 +17,31 @@ using namespace gb;
 
 namespace screens {
 
-static const Rect R_OPP   = {6,   (int16_t)(BAND_Y + 2), 120, 18}; // tap to change sparring partner
-static const Rect R_MODE  = {130, (int16_t)(BAND_Y + 2), 76,  18}; // Race <-> Sumo
-static const Rect R_VIEW  = {212, (int16_t)(BAND_Y + 2), 102, 18}; // toggle arena <-> brain view
-static const Rect R_TEACH = {6,   (int16_t)(BOTBAR_Y + 2), 70, 32};
-static const Rect R_EVO   = {80,  (int16_t)(BOTBAR_Y + 2), 78, 32};
-static const Rect R_SAVE  = {162, (int16_t)(BOTBAR_Y + 2), 88, 32};
+static const Rect R_OPP   = {6,   (int16_t)(BAND_Y + 2), 92,  18}; // tap to change sparring partner
+static const Rect R_MODE  = {102, (int16_t)(BAND_Y + 2), 54,  18}; // Race <-> Sumo
+static const Rect R_BTYPE = {160, (int16_t)(BAND_Y + 2), 50,  18}; // brain type: feedforward <-> RNN
+static const Rect R_VIEW  = {214, (int16_t)(BAND_Y + 2), 100, 18}; // toggle arena <-> brain view
+// Three training engines side by side (Teach = imitate, Evolve = select, Q-Learn = reward),
+// then Save + Back. Compact so all five fit the 320px bar.
+static const Rect R_TEACH = {4,   (int16_t)(BOTBAR_Y + 2), 52, 32};
+static const Rect R_EVO   = {58,  (int16_t)(BOTBAR_Y + 2), 56, 32};
+static const Rect R_QLRN  = {116, (int16_t)(BOTBAR_Y + 2), 64, 32};
+static const Rect R_SAVE  = {182, (int16_t)(BOTBAR_Y + 2), 70, 32};
 static const Rect R_BACK  = {254, (int16_t)(BOTBAR_Y + 2), 60, 32};
-static constexpr int N_HOUSE_OPP = 5;  // Bolt, Coil, Spin, Vex, Ace (easy -> hard)
+static constexpr int N_HOUSE_OPP = 7;  // Bolt, Coil, Spin, Vex, Ace, Neura, Cortex (easy -> hard)
+static const char* const HOUSE_OPP[N_HOUSE_OPP] = {"Bolt", "Coil", "Spin", "Vex", "Ace", "Neura", "Cortex"};
 
 // The sparring roster = house bots + every bot in your library (incl. radio-traded
 // friends' bots and fighters you saved). Train against code OR neuro opponents.
 int ArenaTrainScreen::oppCount() const {
   return N_HOUSE_OPP + (_profile ? (int)_profile->library.size() : 0);
+}
+
+std::string ArenaTrainScreen::oppNameFor(int idx) const {
+  if (idx >= 0 && idx < N_HOUSE_OPP) return HOUSE_OPP[idx];
+  int li = idx - N_HOUSE_OPP;
+  if (_profile && li >= 0 && li < (int)_profile->library.size()) return _profile->library[li].name;
+  return "Ace";
 }
 
 std::string ArenaTrainScreen::nextFighterName() const {
@@ -59,6 +71,18 @@ void ArenaTrainScreen::buildOpponent(int idx) {
       _ai.clear();
       Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::command(CMD_FWD)); _ai.main.push_back(loop);
     }
+  } else if (idx == 5 || idx == 6) {   // "Neura"/"Cortex": NEURAL opponents (a trained brain)
+    // In Battle they're trained hunters (distilled); in Race they're maze solvers -- so a kid can
+    // spar a real neural net, not just code bots. Two seeds -> two distinct brains.
+    _oppName = HOUSE_OPP[idx];
+    uint8_t bi = _ai.addBrain((idx == 5 ? 11u : 29u) + (_profile ? _profile->seedBase : 0u));
+    if (_matchType == MatchType::SUMO) {
+      distillHunter(_ai.brains[bi], (idx == 5 ? 11u : 29u), 2000);
+    } else {
+      Maze mm = _maze; mm.setStart(_s1);
+      distillSolver(_ai.brains[bi], mm, true, 500);
+    }
+    Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(bi)); _ai.main.push_back(loop);
   } else {                         // your library: code OR neuro, incl. radio-traded bots
     int li = idx - N_HOUSE_OPP;
     if (_profile && li >= 0 && li < (int)_profile->library.size()) {
@@ -66,6 +90,36 @@ void ArenaTrainScreen::buildOpponent(int idx) {
       _ai = _profile->library[li].program;
     } else { _oppName = "Ace"; }
   }
+}
+
+ui::Rect ArenaTrainScreen::oppRowRect(int i) const {
+  int n = oppCount(); if (n < 1) n = 1;
+  int top = BAND_Y + 4, avail = BAND_H - 8;
+  int rowh = avail / n; if (rowh > 24) rowh = 24; if (rowh < 12) rowh = 12;
+  return {8, (int16_t)(top + i * rowh), (int16_t)(SCREEN_W - 16), (int16_t)(rowh - 2)};
+}
+
+// The tap-to-pick opponent menu (replaces one-at-a-time cycling): house bots (code + neural),
+// then your own library fighters. The current pick is highlighted; tap any row to spar it.
+void ArenaTrainScreen::drawOppList() {
+  auto& g = hal::display.gfx();
+  g.fillScreen(C_BG);
+  g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
+  label(g, 6, 3, "Pick opponent", C_ACCENT, textdatum_t::top_left, 2);
+  int n = oppCount();
+  for (int i = 0; i < n; i++) {
+    Rect r = oppRowRect(i);
+    bool sel = (i == _oppIdx), house = (i < N_HOUSE_OPP);
+    g.fillRoundRect(r.x, r.y, r.w, r.h, 4, sel ? C_PANEL_HI : C_PANEL);
+    g.drawRoundRect(r.x, r.y, r.w, r.h, 4, sel ? C_ACCENT : (house ? C_PANEL_HI : C_GO));
+    int ty = r.y + (r.h - 8) / 2;
+    label(g, r.x + 8, ty, oppNameFor(i).c_str(), house ? C_INK : C_GO);
+    const char* tag = (i <= 2) ? "code" : (i == 3) ? "hunts & zaps" : (i == 4) ? "maze solver"
+                      : (i == 5 || i == 6) ? "neural brain" : "your bot";
+    label(g, r.x + r.w - 8, ty, tag, C_DIM, textdatum_t::top_right);
+  }
+  g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
+  button(g, R_BACK, "Cancel", C_INK, C_PANEL);
 }
 
 void ArenaTrainScreen::setupBoard() {
@@ -92,40 +146,55 @@ void ArenaTrainScreen::begin(Profile* profile) {
   _oppIdx = first ? 3 : 0;   // 3 = Vex (the seeker that's the vs-Computer Battle opponent)
   buildOpponent(_oppIdx);
   _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
-  _taught = false; _saved = false; _savedIdx = -1;
+  _rnn = false; _qLearning = false;   // RNN brain (rbrain()) is allocated lazily on first toggle
+  _taught = false; _saved = false; _savedIdx = -1; _curveLen = 0;
   evaluateAndTrace();
 }
 
 // Switch Race <-> Sumo: different board (Sumo has no goal), different fitness, fresh training.
 void ArenaTrainScreen::setMode(MatchType t) {
   _matchType = t;
-  _animating = false;
+  _animating = false; _qLearning = false;
   setupBoard();
   buildOpponent(_oppIdx);
   _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
-  _taught = false; _saved = false; _savedIdx = -1;
+  if (_rnn) rbrain().config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);  // fresh brain of the current type
+  _taught = false; _saved = false; _savedIdx = -1; _curveLen = 0;
   evaluateAndTrace();
 }
 
 void ArenaTrainScreen::enter() { draw(); }
 
 void ArenaTrainScreen::evaluateAndTrace() {
-  if (!_taught) { _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType); _brain = _evo.best(); }
-  Program bp; bp.brains.push_back(_brain);
-  Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(0)); bp.main.push_back(loop);
+  // Evolve is feedforward-only: refresh _brain from the population unless we're in RNN mode or the
+  // brain was directly trained (Teach/Q-Learn set _taught so their result isn't overwritten).
+  if (!_rnn && !_taught) { _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType); _brain = _evo.best(); }
+  Program bp;
+  Node loop = Node::repeatUntil(AT_GOAL);
+  if (_rnn) { bp.rbrains.push_back(rbrain()); loop.body.push_back(Node::rnnBrain(0)); }
+  else      { bp.brains.push_back(_brain);   loop.body.push_back(Node::neuro(0)); }
+  bp.main.push_back(loop);
   int cols = _maze.cols();
 
   if (_matchType == MatchType::SUMO) {
     // Trace the REAL fight: step both bots so you see them hunt and shove (not solo wandering).
-    Arena ar; ar.setup(&_maze, &bp, &_ai, _s0, _s1, MatchType::SUMO, 80);
+    // Use the SAME 150-tick cap as a real Battle so the trainer's "wins!" predicts the actual
+    // outcome -- a slower hunter that KOs the foe at tick ~100 would falsely read as a loss at 80.
+    const int CAP = 150;
+    Arena ar; ar.setup(&_maze, &bp, &_ai, _s0, _s1, MatchType::SUMO, CAP);
     _pathLen = 0; _oppLen = 0;
-    for (int s = 0; s < 80; s++) {
+    for (int s = 0; s < CAP; s++) {
       Pose a = ar.pose(0), b = ar.pose(1);
       if (_pathLen < 64) _path[_pathLen++] = (uint8_t)(a.row * cols + a.col);
       if (_oppLen  < 64) _oppPath[_oppLen++] = (uint8_t)(b.row * cols + b.col);
       if (ar.tick() != ArenaOutcome::RUNNING) break;
     }
-    _beatsAI = (ar.outcome() == ArenaOutcome::BOT0);
+    ArenaOutcome o = ar.outcome();
+    _beatsAI = (o == ArenaOutcome::BOT0);
+    // score 0..1: a clean win = 1, a loss = 0, an unresolved bout by the HP margin around 0.5
+    _score = (o == ArenaOutcome::BOT0) ? 1.0f : (o == ArenaOutcome::BOT1) ? 0.0f
+             : 0.5f + 0.5f * (float)(ar.hp(0) - ar.hp(1)) / (float)SUMO_HP;
+    if (_score < 0) _score = 0; else if (_score > 1) _score = 1;
   } else {
     // RACE: the brain's solo run to the goal + the opponent's solo run, then a verdict match.
     Interpreter it; it.load(&bp, &_maze, _s0, 64);
@@ -144,15 +213,56 @@ void ArenaTrainScreen::evaluateAndTrace() {
       if (oit.finished()) break;
       oit.step();
     }
+    Pose fin = it.pose();                              // the brain's final position this trace
     Arena ar; ar.setup(&_maze, &bp, &_ai, _s0, _s1, MatchType::RACE); ar.run();
     _beatsAI = (ar.outcome() == ArenaOutcome::BOT0);
+    // score 0..1: beat the opponent to the goal = 1, else how close it got (BFS distance)
+    int dist = distanceToGoal(_maze, fin.row, fin.col);
+    int far = _maze.rows() + _maze.cols();
+    _score = _beatsAI ? 1.0f : (dist <= 0) ? 0.85f : 1.0f - (float)dist / (float)(far > 0 ? far : 1);
+    if (_score < 0) _score = 0; else if (_score > 0.95f && !_beatsAI) _score = 0.95f;
   }
   inferBrain();   // refresh the network-graph activations to match the (re)trained brain
 }
 
+void ArenaTrainScreen::pushCurve() {
+  if (_curveLen < CURVE_N) _curve[_curveLen++] = _score;
+  else { for (int i = 1; i < CURVE_N; i++) _curve[i - 1] = _curve[i]; _curve[CURVE_N - 1] = _score; }
+}
+
+// A little sparkline of the brain's score climbing as it trains -- the "is it actually learning?"
+// metric. Baseline at 0.5 (a coin-flip), the curve rides above it as the brain improves.
+void ArenaTrainScreen::drawCurve(int x, int y, int w, int h) {
+  auto& g = hal::display.gfx();
+  g.fillRoundRect(x, y, w, h, 3, C_PANEL);
+  g.drawFastHLine(x + 2, y + h - 1 - (int)((h - 4) * 0.5f), w - 4, C_FLOOR2);  // 0.5 baseline
+  label(g, x + 3, y + 1, "learning", C_DIM);
+  if (_curveLen < 2) return;
+  int px = x + 2, py = 0;
+  for (int i = 0; i < _curveLen; i++) {
+    float v = _curve[i]; if (v < 0) v = 0; else if (v > 1) v = 1;
+    int cx = x + 2 + (w - 4) * i / (_curveLen - 1);
+    int cy = y + h - 2 - (int)((h - 10) * v);
+    if (i > 0) g.drawLine(px, py, cx, cy, C_GO);
+    g.fillCircle(cx, cy, 1, C_ACCENT);
+    px = cx; py = cy;
+  }
+}
+
+gb::RNet& ArenaTrainScreen::rbrain() {
+  if (!_rbrain) { _rbrain = new gb::RNet(); _rbrain->config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23); }
+  return *_rbrain;
+}
+
 void ArenaTrainScreen::inferBrain() {
   senseEgo(_maze, _s0, nullptr, _in);
-  _brain.forward(_in, _out, _hid);
+  if (_rnn) {
+    rbrain().resetState();
+    rbrain().step(_in, _out);
+    for (int j = 0; j < gb::NET_MAX_HID; j++) _hid[j] = (j < rbrain().nHid) ? rbrain().h[j] : 0.0f;
+  } else {
+    _brain.forward(_in, _out, _hid);
+  }
   _action = 0;
   for (int k = 1; k < 5; k++) if (_out[k] > _out[_action]) _action = k;
 }
@@ -168,21 +278,23 @@ void ArenaTrainScreen::mazeGeom(int& tile, int& ox, int& oy) const {
 }
 
 void ArenaTrainScreen::draw() {
+  if (_oppPick) { drawOppList(); return; }   // the opponent picker takes over the whole screen
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Train a fighter", C_FUNC, textdatum_t::top_left, 2);
   char hd[28];
-  if (_taught) snprintf(hd, sizeof(hd), "taught  %s", _beatsAI ? "wins!" : "vs");
-  else         snprintf(hd, sizeof(hd), "gen %d  %s", _evo.gen, _beatsAI ? "wins!" : "vs");
-  label(g, SCREEN_W - 6, 6, hd, _beatsAI ? C_GO : C_DIM, textdatum_t::top_right);
+  if (_animating && _qLearning) snprintf(hd, sizeof(hd), "Q-learn %d/%d", _qChunks - _animLeft, _qChunks);
+  else if (_taught) snprintf(hd, sizeof(hd), "taught  %s", _beatsAI ? "wins!" : "vs");
+  else              snprintf(hd, sizeof(hd), "gen %d  %s", _evo.gen, _beatsAI ? "wins!" : "vs");
+  label(g, SCREEN_W - 6, 6, hd, (_animating && _qLearning) ? C_MOVE : (_beatsAI ? C_GO : C_DIM), textdatum_t::top_right);
 
-  // tappable sparring-partner chip (arena view only — the mini-map takes that space in net view)
-  if (!_netView) {
-    char chip[32]; snprintf(chip, sizeof(chip), "vs %s >", _oppName.c_str());
-    button(g, R_OPP, chip, ui::rgb(120, 230, 245), C_PANEL);
-  }
+  // tappable sparring-partner chip, shown in BOTH views (the mini-map sits in the row below it):
+  // switching opponents keeps the same brain, so you can transfer-learn against foe after foe.
+  char chip[32]; snprintf(chip, sizeof(chip), "vs %s >", _oppName.c_str());
+  button(g, R_OPP, chip, ui::rgb(120, 230, 245), C_PANEL);
   button(g, R_MODE, _matchType == MatchType::SUMO ? "Battle >" : "Race >", C_FUNC, C_PANEL);
+  button(g, R_BTYPE, _rnn ? "RNN >" : "FF >", _rnn ? C_MOVE : C_DIM, C_PANEL);  // brain type to train
   button(g, R_VIEW, _netView ? "show arena >" : "show brain >", C_ACCENT, C_PANEL);
 
   if (_netView) {
@@ -222,20 +334,27 @@ void ArenaTrainScreen::draw() {
     else snprintf(leg, sizeof(leg), "you  vs  %s", _oppName.c_str());
     label(g, SCREEN_W / 2, BOTBAR_Y - 9, leg,
           _saved ? C_GO : (firstFighter() ? C_ACCENT : C_DIM), textdatum_t::bottom_center);
+    if (_curveLen >= 1 && ox > 50) drawCurve(4, oy, ox - 8, 44);   // learning curve in the left margin
   }
 
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
-  button(g, R_TEACH, "Teach", _matchType == MatchType::SUMO ? C_DIM : C_GO, C_PANEL);  // race-only
-  button(g, R_EVO, _animating ? "..." : "Evolve", C_FUNC, C_PANEL);
-  button(g, R_SAVE, _saved ? "saved!" : "Save fighter", _saved ? C_DIM : C_ACCENT, C_PANEL);
-  button(g, R_BACK, "Back", C_INK, C_PANEL);
+  bool sumo = (_matchType == MatchType::SUMO);
+  button(g, R_TEACH, "Teach", C_GO, C_PANEL);  // Race: distil a solver; Battle: distil a hunter (FF or RNN)
+  // Evolve and Q-Learn are feedforward-only engines -> greyed when the RNN brain type is selected.
+  button(g, R_EVO, (_animating && !_qLearning) ? "..." : "Evolve", _rnn ? C_DIM : C_FUNC, C_PANEL);
+  // Q-Learn (reward): FF hunts in Battle; RNN learns mazes in Race (memory helps) and CAN be tried
+  // on Battle too (where it flounders -- a deliberate "match the method to the problem" lesson).
+  bool qOk = sumo || _rnn;   // only FF+Race has no Q engine
+  button(g, R_QLRN, (_animating && _qLearning) ? "..." : "Q-Learn", qOk ? C_MOVE : C_DIM, C_PANEL);
+  button(g, R_SAVE, _saved ? "saved!" : "Save", _saved ? C_DIM : C_ACCENT, C_PANEL);
+  button(g, R_BACK, "Fight! >", C_GO, C_PANEL);   // save the fighter and jump into a battle
 }
 
 // The "watch it learn" panel: the brain's network graph (weights recolour as it trains) plus
 // a small arena mini-map so the opponent (red) and your path (green) are visible alongside it.
 void ArenaTrainScreen::drawNet() {
   auto& g = hal::display.gfx();
-  drawBrainGraph(g, &_brain, nullptr, false, _in, _hid, _out, _action, -1, 18);  // shifted down to centre
+  drawBrainGraph(g, &_brain, &rbrain(), _rnn, _in, _hid, _out, _action, -1, 18);  // FF or RNN; shifted to centre
 
   // arena mini-map, below the view chip and left of the input labels (so nothing overlaps)
   int cols = _maze.cols(), rows = _maze.rows();
@@ -265,6 +384,8 @@ void ArenaTrainScreen::drawNet() {
     g.fillCircle(ox + c * mt + mt / 2, oy + r * mt + mt / 2, head ? mt / 3 + 1 : 1, _beatsAI ? C_GO : C_MOVE);
   }
 
+  drawCurve(mx0, my0 + box + 5, box + 6, 38);   // learning curve, just below the mini-map
+
   // status strip just above the toolbar
   g.fillRect(0, BOTBAR_Y - 14, SCREEN_W, 12, C_BG);
   char st[48];
@@ -272,9 +393,32 @@ void ArenaTrainScreen::drawNet() {
                                                    : (_beatsAI ? "WINS!" : "racing");
   if (_saved && _savedIdx >= 0 && _savedIdx < (int)_profile->library.size())
     snprintf(st, sizeof(st), "saved as \"%s\" -> My Bots", _profile->library[_savedIdx].name.c_str());
+  else if (_animating && _qLearning) snprintf(st, sizeof(st), "Q-learning... (reward: hunt %s, then zap)", _oppName.c_str());
   else if (_animating) snprintf(st, sizeof(st), "learning... gen %d  (you green vs %s red)", _evo.gen, _oppName.c_str());
   else snprintf(st, sizeof(st), "you(green) vs %s(red): %s", _oppName.c_str(), verb);
   label(g, 6, BOTBAR_Y - 13, st, _saved ? C_GO : (_beatsAI ? C_GO : C_DIM));
+}
+
+// Persist the current brain (feedforward _brain or recurrent rbrain) as a library fighter.
+// Updates this session's entry in place if already saved; else appends a new "Fighter vN".
+// Returns the library index, or -1 if it can't be saved.
+int ArenaTrainScreen::saveFighterToLibrary() {
+  if (!_profile) return -1;
+  Program prog;
+  Node loop = Node::repeatUntil(AT_GOAL);
+  if (_rnn) { prog.rbrains.push_back(rbrain()); loop.body.push_back(Node::rnnBrain(0)); }
+  else      { prog.brains.push_back(_brain);    loop.body.push_back(Node::neuro(0)); }
+  prog.main.push_back(loop);
+  if (_savedIdx >= 0 && _savedIdx < (int)_profile->library.size()) {
+    _profile->library[_savedIdx].program = prog;   // update this session's fighter (no dupe)
+  } else if (_profile->library.size() < (size_t)LIBRARY_MAX) {
+    LibEntry e; e.source = LIB_ARENA; e.name = autoLibName(*_profile, LIB_ARENA, 0); e.program = prog;
+    _profile->library.push_back(e);
+    _savedIdx = (int)_profile->library.size() - 1;
+  } else return -1;
+  store::profiles.save(*_profile);                  // persist NOW, not just on the way out
+  _saved = true;
+  return _savedIdx;
 }
 
 app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
@@ -283,11 +427,33 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   // the background every so often, so the path + network visibly improve as it learns.
   if (_animating) {
     bool redraw = false;
-    if (now - _genAt >= 110) {                 // background: one generation
+    if (now - _genAt >= 110) {                 // background: one learning step
       _genAt = now;
-      _evo.breed(); _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType); _brain = _evo.best();
-      _taught = false; _saved = false; evaluateAndTrace();   // recompute the hunt for the new brain
-      if (--_animLeft <= 0) { _animating = false; _animFrame = 9999; }  // done -> show the full trail
+      if (_qLearning) {
+        // one chunk of Q-learning; exploration decays GLOBALLY across all chunks so it converges.
+        // FF: feedforward hunt (Battle). RNN: recurrent maze Q (Race) -- memory escapes dead-ends.
+        // The brain is trained directly, so keep _taught=true (don't let evaluateAndTrace overwrite).
+        uint32_t base = _profile ? _profile->seedBase : 7u;
+        int done = (_qChunks - _animLeft) * 1000, total = _qChunks * 1000;
+        if (_rnn && _matchType == MatchType::SUMO) {
+          // recurrent Q on the reactive BATTLE hunt -- intentionally available so a kid can SEE it
+          // flounder (memory is noise here); the contrast with FF Q-Learn is the lesson.
+          qTrainHunterRnn(rbrain(), base + 101u * (uint32_t)_animLeft, 1000, done, total);
+        } else if (_rnn) {
+          // recurrent maze Q -- train on THIS race board (with its start) so it wins the verdict,
+          // like the feedforward Teach does. Memory lets it escape dead-ends -- here it WORKS.
+          qTrainMazeRnn(rbrain(), base, 1, 1000, done, total, &_maze, &_s0);
+        } else {
+          qTrainHunter(_brain, base + 101u * (uint32_t)_animLeft, 1000, done, total);
+        }
+        _taught = true;
+      } else {
+        _evo.breed(); _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType); _brain = _evo.best();
+        _taught = false;
+      }
+      _saved = false; evaluateAndTrace();        // recompute the hunt for the new brain
+      pushCurve();                               // record this step's score onto the learning curve
+      if (--_animLeft <= 0) { _animating = false; _qLearning = false; _animFrame = 9999; }  // done -> full trail
       redraw = true;
     }
     if (_animating && now - _animAt >= 38) {   // foreground: reveal one more hunt step (sped up)
@@ -300,43 +466,72 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   }
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
+  // Opponent picker overlay: tap a row to spar it (keeps the trained brain -> transfer learning),
+  // or Cancel/tap-away to close.
+  if (_oppPick) {
+    for (int i = 0; i < oppCount(); i++) {
+      if (oppRowRect(i).contains(tx, ty)) {
+        _oppIdx = i; buildOpponent(_oppIdx);
+        _saved = false; _curveLen = 0; evaluateAndTrace(); _oppPick = false; hal::audio.blip(); draw();
+        return app::Signal::NONE;
+      }
+    }
+    _oppPick = false; hal::audio.blip(); draw();   // Cancel / tapped away
+    return app::Signal::NONE;
+  }
   if (R_VIEW.contains(tx, ty)) {
     _netView = !_netView; hal::audio.blip(); draw();
   } else if (R_MODE.contains(tx, ty)) {  // Race <-> Sumo
     setMode(_matchType == MatchType::RACE ? MatchType::SUMO : MatchType::RACE);
     hal::audio.blip(); draw();
-  } else if (!_netView && R_OPP.contains(tx, ty)) {
-    _oppIdx = (_oppIdx + 1) % oppCount();  // next sparring partner
-    buildOpponent(_oppIdx);
-    _saved = false; evaluateAndTrace(); hal::audio.blip(); draw();
+  } else if (R_OPP.contains(tx, ty)) {
+    _oppPick = true; hal::audio.blip(); draw();   // open the pick-list (replaces cycling)
   } else if (R_TEACH.contains(tx, ty)) {
-    if (_matchType == MatchType::SUMO) { hal::audio.fail(); }  // no race teacher for combat; Evolve
-    else {
-      _animating = false;
-      distillSolver(_brain, _maze, true, 700);  // a strong racer beats most AIs
-      _taught = true; _saved = false; evaluateAndTrace(); hal::audio.blip(); draw();
+    _animating = false;
+    uint32_t seed = _profile ? _profile->seedBase : 7u;
+    if (_rnn) {
+      // recurrent brain: BPTT over chase episodes (Battle) or maze runs (Race) -- a memory fighter
+      if (_matchType == MatchType::SUMO) distillHunterRnn(rbrain(), seed, 1500);
+      else rnnTrainGeneral(rbrain(), seed, _profile ? (_profile->level < 8 ? _profile->level : 8) : 6, 4);
+      rbrain().trained = true;
+    } else if (_matchType == MatchType::SUMO) {
+      distillHunter(_brain, seed, 2000);          // instant hunt-and-zap fighter
+    } else {
+      distillSolver(_brain, _maze, true, 700);    // a strong racer beats most AIs
     }
+    _taught = true; _saved = false; _curveLen = 0; evaluateAndTrace(); pushCurve(); hal::audio.blip(); draw();
+  } else if (R_BTYPE.contains(tx, ty)) {
+    // flip feedforward <-> RNN: it's a fresh brain of the new type, so clear training state
+    _rnn = !_rnn;
+    _animating = false; _qLearning = false; _curveLen = 0;
+    _taught = false; _saved = false; _savedIdx = -1;
+    if (_rnn) rbrain().config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
+    else      _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
+    evaluateAndTrace(); hal::audio.blip(); draw();
   } else if (R_EVO.contains(tx, ty)) {
-    _animating = true; _animLeft = 16; _animAt = now; _genAt = now; _animFrame = 0;  // watch it hunt & learn
-    hal::audio.blip();
-  } else if (R_SAVE.contains(tx, ty)) {
-    if (!_profile) { hal::audio.fail(); }
+    if (_rnn) { hal::audio.fail(); }  // Evolve is feedforward-only
     else {
-      Program prog; prog.brains.push_back(_brain);
-      Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(0)); prog.main.push_back(loop);
-      if (_savedIdx >= 0 && _savedIdx < (int)_profile->library.size()) {
-        _profile->library[_savedIdx].program = prog;   // update this session's fighter (no dupe)
-        store::profiles.save(*_profile);                // persist NOW, not just on the way out
-        _saved = true; hal::audio.badge(); draw();
-      } else if (_profile->library.size() < (size_t)LIBRARY_MAX) {
-        LibEntry e; e.source = LIB_ARENA; e.name = autoLibName(*_profile, LIB_ARENA, 0); e.program = prog;
-        _profile->library.push_back(e);
-        _savedIdx = (int)_profile->library.size() - 1;
-        store::profiles.save(*_profile);                // persist NOW, not just on the way out
-        _saved = true; hal::audio.badge(); draw();
-      } else { hal::audio.fail(); }
+      _qLearning = false; _curveLen = 0;
+      _animating = true; _animLeft = 16; _animAt = now; _genAt = now; _animFrame = 0;  // watch it hunt & learn
+      hal::audio.blip();
     }
+  } else if (R_QLRN.contains(tx, ty)) {
+    bool ffRace = (_matchType == MatchType::RACE && !_rnn);     // the one combo with no Q engine
+    if (ffRace) { hal::audio.fail(); }
+    else {
+      // reward-driven training, animated in chunks so the kid watches it learn without a long
+      // freeze. Fresh brain each run. FF battle = 8 chunks; any RNN = 4 (BPTT is heavier).
+      if (_rnn) { rbrain().config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23); _qChunks = 4; }
+      else      { _brain.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);   _qChunks = 8; }
+      _qLearning = true; _curveLen = 0;
+      _animating = true; _animLeft = _qChunks; _animAt = now; _genAt = now; _animFrame = 0;
+      hal::audio.blip();
+    }
+  } else if (R_SAVE.contains(tx, ty)) {
+    if (saveFighterToLibrary() >= 0) { hal::audio.badge(); draw(); } else hal::audio.fail();
   } else if (R_BACK.contains(tx, ty)) {
+    // "Fight! >": stash the fighter and jump straight into a battle vs the current opponent.
+    if (_profile && saveFighterToLibrary() >= 0) { _launchFight = true; hal::audio.blip(); }
     return app::Signal::BACK;
   }
   return app::Signal::NONE;

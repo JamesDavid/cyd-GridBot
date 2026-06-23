@@ -182,8 +182,17 @@ Outcome Interpreter::step() {
         if (!_prog || (!useRnn && n.brainIdx >= _prog->brains.size())) return OUT_OK;  // none: no-op
         float s[SENSOR_COUNT];
         if (n.pilot) {
-          // Planner + follower: plan the route once, then steer toward the next corner.
-          if (!_wpPlanned) { _wpN = planWaypoints(*_maze, _pose, _wp, 40); _wpIdx = 0; _wpPlanned = true; }
+          // Planner + follower: get the route once, then steer toward the next corner. The kid's
+          // hand-placed waypoints win; only if there are none do we auto-plan the BFS route.
+          if (!_wpPlanned) {
+            if (_prog && !_prog->waypoints.empty()) {
+              _wpN = (int)_prog->waypoints.size(); if (_wpN > 40) _wpN = 40;
+              for (int i = 0; i < _wpN; i++) _wp[i] = _prog->waypoints[i];
+            } else {
+              _wpN = planWaypoints(*_maze, _pose, _wp, 40);
+            }
+            _wpIdx = 0; _wpPlanned = true;
+          }
           int cur = _pose.row * _maze->cols() + _pose.col;
           while (_wpIdx < _wpN && _wp[_wpIdx] == cur) _wpIdx++;   // reached this waypoint
           int tr = _maze->goalRow(), tc = _maze->goalCol();

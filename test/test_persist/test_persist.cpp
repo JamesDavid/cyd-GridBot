@@ -119,11 +119,30 @@ void test_rnn_program_roundtrip() {
   TEST_ASSERT_EQUAL_FLOAT(-0.4f, q.rbrains[0].who[2][1]);
 }
 
+// Hand-placed pilot waypoints must survive save/load (and radio trade), so the kid's route sticks.
+void test_pilot_waypoints_roundtrip() {
+  Program p;
+  uint8_t idx = p.addBrain(1);
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(Node::pilotBrain(idx));
+  p.main.push_back(loop);
+  p.waypoints = {12, 13, 23, 33, 34};            // a hand-drawn route (tile indices)
+
+  JsonDocument doc; programToJson(p, doc.to<JsonObject>());
+  std::string s; serializeJson(doc, s);
+  JsonDocument doc2; deserializeJson(doc2, s);
+  Program q; programFromJson(doc2.as<JsonObjectConst>(), q);
+
+  TEST_ASSERT_EQUAL(5, (int)q.waypoints.size());
+  for (int i = 0; i < 5; i++) TEST_ASSERT_EQUAL(p.waypoints[i], q.waypoints[i]);
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_program_roundtrip);
   RUN_TEST(test_empty_program_roundtrip);
   RUN_TEST(test_neuro_program_roundtrip);
   RUN_TEST(test_rnn_program_roundtrip);
+  RUN_TEST(test_pilot_waypoints_roundtrip);
   return UNITY_END();
 }

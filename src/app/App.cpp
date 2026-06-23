@@ -94,10 +94,11 @@ void App::drawIntro() {
   gb::Unlocks now = gb::computeUnlocks(_introLevel);
   gb::Unlocks prev = gb::computeUnlocks(_introLevel ? _introLevel - 1 : 0);
   // a newly-unlocked power -> point straight at its lesson, at the teachable moment.
-  const char* newText = nullptr; _introLesson = -1;
+  const char* newText = nullptr; const char* subText = nullptr; _introLesson = -1;
   if (now.jump && !prev.jump)        { newText = "New: Jump!";         _introLesson = 1; }   // CodeLab idx
   else if (now.repeat && !prev.repeat){ newText = "New: Repeat loops!"; _introLesson = 2; }
-  else if (now.sense && !prev.sense)  { newText = "New: Sensing!";      _introLesson = 3; }
+  else if (now.sense && !prev.sense)  { newText = "New: Sensing!";      _introLesson = 3;
+                                        subText = "+ Arena Battle - code a fighter!"; }  // foe senses + zap unlock Battle
   else if (now.func && !prev.func)    { newText = "New: Functions!";    _introLesson = 4; }
   else if (now.neuro && !prev.neuro)  { newText = "New: NeuroBot!";     _introLesson = 100; } // NeuroLab hub
   // the training tools arrive one at a time after the brain, each pointing at its lesson:
@@ -106,6 +107,7 @@ void App::drawIntro() {
   else if (now.nPilot && !prev.nPilot)  { newText = "New: Pilot!";        _introLesson = 103; } // Pilot
   else if (now.nRnn && !prev.nRnn)      { newText = "New: Memory brain!"; _introLesson = 104; } // RNN
   if (newText) label(g, SCREEN_W / 2, y + 50, newText, C_GO, textdatum_t::middle_center);
+  if (subText) label(g, SCREEN_W / 2, y + 64, subText, C_ACCENT, textdatum_t::middle_center);
   if (_newBadge) {
     char b[40]; snprintf(b, sizeof(b), "Badge: %s!", _newBadge);
     label(g, SCREEN_W / 2, y + 68, b, C_FUNC, textdatum_t::middle_center);
@@ -549,7 +551,13 @@ void App::tick(uint32_t now) {
       if (_arenaTrain.tick(now, tp) == Signal::BACK) {
         if (_arenaTrain.savedFighter()) { _profile.stats.fightersSaved++; _profile.stats.brainsTrained++; }
         _profile.achievements |= gb::evaluateAchievements(_profile);
-        saveProfile(); _arena.begin(&_profile); _arena.enter(); _state = State::ARENA;
+        saveProfile();
+        if (_arenaTrain.launchFight()) {   // "Fight! >": go straight into a battle vs the sparring foe
+          _arena.beginQuickBattle(&_profile, _arenaTrain.fightLibIdx(), _arenaTrain.fightOppName(), _arenaTrain.fightSumo());
+        } else {
+          _arena.begin(&_profile); _arena.enter();
+        }
+        _state = State::ARENA;
       }
       break;
     }

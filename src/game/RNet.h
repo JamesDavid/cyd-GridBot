@@ -11,7 +11,7 @@ namespace gb {
 constexpr int RNET_MAX_IN  = 12;
 constexpr int RNET_MAX_HID = 12;   // brains use 8; 12 is headroom (keeps static DRAM down)
 constexpr int RNET_MAX_OUT = 5;
-constexpr int RNET_MAX_T   = 56;   // longest episode we backprop through (bounds DRAM)
+constexpr int RNET_MAX_T   = 48;   // longest episode we backprop through (bounds DRAM)
 
 struct RNet {
   int nIn = 10, nHid = 12, nOut = 5;
@@ -32,6 +32,12 @@ struct RNet {
   // Backprop-through-time over one episode: X is T*nIn (row-major), act[t] is the target
   // action index at step t. Trains all weights; resets/uses a fresh memory internally.
   float trainEpisode(const float* X, const int* act, int T);
+
+  // BPTT for recurrent Q-LEARNING: like trainEpisode, but regresses ONLY the taken action's
+  // Q-value output toward a scalar TD target qt[t] (r + gamma*maxQ'); other outputs get zero
+  // error. Semi-gradient Q, unrolled through time. NOTE: empirically unstable on the reactive
+  // hunt task (memory adds noise) -- see qTrainHunterRnn; kept as an honest "this doesn't work".
+  float trainEpisodeQ(const float* X, const int* act, const float* qt, int T);
 };
 
 }  // namespace gb

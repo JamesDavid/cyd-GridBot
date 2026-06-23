@@ -115,6 +115,10 @@ void programToJson(const Program& p, JsonObject out) {
     for (size_t i = 0; i < p.rbrains.size(); i++)
       if (p.rbrains[i].trained) rnetToJson(p.rbrains[i], (int)i, ra.add<JsonObject>());
   }
+  if (!p.waypoints.empty()) {                    // hand-placed pilot route (tile indices)
+    JsonArray wa = out["wp"].to<JsonArray>();
+    for (uint8_t t : p.waypoints) wa.add((int)t);
+  }
 }
 
 void programFromJson(JsonObjectConst in, Program& p) {
@@ -134,6 +138,8 @@ void programFromJson(JsonObjectConst in, Program& p) {
       int idx = (int)(o["x"] | 0);
       if (idx >= 0 && idx < (int)p.rbrains.size()) rnetFromJson(o, p.rbrains[idx]);
     }
+  if (in["wp"].is<JsonArrayConst>())
+    for (JsonVariantConst t : in["wp"].as<JsonArrayConst>()) p.waypoints.push_back((uint8_t)(t.as<int>()));
 }
 
 }  // namespace gb
