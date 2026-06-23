@@ -42,13 +42,19 @@ inline Program alwaysForwardProgram() {
   return p;
 }
 
-// Sumo hunter: zap when the enemy is right ahead, otherwise advance (SPEC §18.4).
+// Sumo hunter (SPEC §18.4): zap when the enemy is right ahead; otherwise PATROL (turn at
+// walls) instead of walking straight into one. Patrolling keeps it roaming the ring so it
+// actually runs into the opponent -- a straight-walker just jams against a wall and the
+// match stalls to a draw. A trained NeuroBot learns true seeking; this is the code stand-in.
 inline Program hunterProgram() {
   Program p;
   Node loop = Node::repeatUntil(AT_GOAL);  // AT_GOAL never true in Sumo -> runs to cap
-  Node iff = Node::ifCond(ENEMY_AHEAD);
-  iff.body.push_back(Node::command(CMD_FIRE));
-  loop.body.push_back(iff);
+  Node zap = Node::ifCond(ENEMY_AHEAD);
+  zap.body.push_back(Node::command(CMD_FIRE));
+  loop.body.push_back(zap);
+  Node turn = Node::ifCond(BLOCKED_AHEAD);   // wall or pit ahead -> turn to keep moving
+  turn.body.push_back(Node::command(CMD_TURN_L));
+  loop.body.push_back(turn);
   loop.body.push_back(Node::command(CMD_FWD));
   p.main.push_back(loop);
   return p;

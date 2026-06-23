@@ -227,7 +227,10 @@ void ArenaScreen::startMatch() {
   setupMatchBot(_pick1, _s1, sumo);
   const Program& p0 = _cands[_pick0].prog;
   const Program& p1 = _cands[_pick1].prog;
-  _arena.setup(&_maze, &p0, &p1, _s0, _s1, _type);
+  // Sumo has no goal to end the match early, so a 300-tick cap = ~75s of wandering. Cap it
+  // short: a quick scrap, then ring-control decides. Race keeps the full cap to reach the goal.
+  int cap = sumo ? 60 : gb::ARENA_STEP_CAP;
+  _arena.setup(&_maze, &p0, &p1, _s0, _s1, _type, cap);
   _phase = Phase::BOARD;
   _running = true;
   _last = 0;
