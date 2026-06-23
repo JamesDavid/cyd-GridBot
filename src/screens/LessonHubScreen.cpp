@@ -16,7 +16,7 @@ static const LessonInfo LESSONS[N_LESSONS] = {
   {"4. Hidden layer", "what one neuron can't", C_LOOP},
   {"5. Many actions", "go / turn / jump", C_TURN},
   {"6. Robot brain", "meet its senses", ui::rgb(120, 230, 245)},
-  {"7. Evolution", "breed the best (random)", C_FUNC},
+  {"7. Evolution", "fittest breed: parents -> babies", C_FUNC},
   {"8. Data & labels", "tag examples, train to them", C_SENSE},
   {"9. Q-learning", "smarter: learn from reward", C_SENSE},
   {"10. Tuning", "turn the knobs (explore/step)", C_SENSE},

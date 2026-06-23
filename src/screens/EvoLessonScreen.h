@@ -17,11 +17,13 @@ class EvoLessonScreen : public app::IScreen {
 
  private:
   void draw();
+  void drawInfo();   // "How breeding works" overlay: population/fitness/selection/crossover/mutation
   void mazeGeom(int& tile, int& ox, int& oy) const;
   void tracePath();
 
   gb::Maze _maze;
   gb::Evolve _evo;
+  bool _info = false;     // showing the breeding-explainer overlay
   uint8_t _path[64];      // cells the best brain visits (r*cols+c), _pathLen long
   int _pathLen = 0;
   bool _won = false;
