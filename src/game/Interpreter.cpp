@@ -52,6 +52,14 @@ bool Interpreter::evalCond(Cond c) const {
                               absv(_enemy->pose->col - _pose.col)) <= _enemy->nearDist;
     case BLOCKED_AHEAD: return !_maze->inBounds(ar, ac) ||
                                _maze->at(ar, ac) == WALL || _maze->at(ar, ac) == PIT;
+    case ENEMY_LEFT:
+    case ENEMY_RIGHT: {
+      if (!_enemy || !_enemy->pose) return false;
+      // ego-relative bearing: right vector = facing rotated 90° CW = (dc, -dr)
+      int er = _enemy->pose->row - _pose.row, ec = _enemy->pose->col - _pose.col;
+      int side = er * dc - ec * dr;        // >0 => foe to the right, <0 => to the left
+      return (c == ENEMY_RIGHT) ? side > 0 : side < 0;
+    }
   }
   return false;
 }

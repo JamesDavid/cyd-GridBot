@@ -115,15 +115,20 @@ void ArenaScreen::drawGameType() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, _hotseat ? "Hotseat" : "vs Computer", C_ACCENT, textdatum_t::top_left, 2);
   label(g, SCREEN_W / 2, 38, "Pick a game", C_INK, textdatum_t::top_center);
+  // Sumo is a NeuroBot game: it's only fun once you can TRAIN a fighter to hunt + zap + shove,
+  // so it unlocks with NeuroBot (Lv 28). Before that it's a greyed teaser; Race is always open.
+  bool neuro = _profile && _profile->unlocks.neuro;
   if (_hotseat) {
     button(g, R_G1, "Race - first to the goal", C_GO, C_PANEL);
-    button(g, R_G2, "Sumo - shove them off", C_ACCENT, C_PANEL);
+    button(g, R_G2, neuro ? "Sumo - shove them off" : "Sumo - needs NeuroBot (Lv28)",
+           neuro ? C_ACCENT : C_LOCK, C_PANEL);
     button(g, R_G3, "Puzzle Race - beat the clock", C_LOOP, C_PANEL);
     button(g, R_G4, "Seed Challenge - same board", C_SENSE, C_PANEL);
   } else {
     button(g, R_G1, "Race - first to the goal", C_GO, C_PANEL);
-    button(g, R_G2, "Sumo - shove them off", C_ACCENT, C_PANEL);
-    if (_profile && _profile->unlocks.neuro)
+    button(g, R_G2, neuro ? "Sumo - shove them off" : "Sumo - needs NeuroBot (Lv28)",
+           neuro ? C_ACCENT : C_LOCK, C_PANEL);
+    if (neuro)
       button(g, R_G3, "Train a fighter (NeuroBot)", ui::rgb(120, 230, 245), C_PANEL);
   }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
@@ -222,14 +227,27 @@ void ArenaScreen::startMatch() {
   hal::audio.stopMusic();  // the board uses step-tick SFX; silence the battle theme
   MazeGen::generateArena(_maze, _profile ? _profile->seedBase + 7u : 7u, _s0, _s1);
   bool sumo = (_type == MatchType::SUMO);
-  if (sumo) _maze.clearGoal();   // Sumo = last bot standing: no goal, so bots fight not race
+  if (sumo) {
+    _maze.clearGoal();   // Sumo = last bot standing: no goal, so bots fight not race
+    // A clean OPEN ring: clear every interior wall/pit. Walls (esp. the central dash walls)
+    // form a corridor the shoves just ping-pong off; an open ring lets a shove push the foe
+    // all the way to the EDGE (ring-out). No pits = no cheap one-shove KO -> a real brawl.
+    int rows = _maze.rows(), cols = _maze.cols(), rmid = rows / 2;
+    for (int r = 0; r < rows; r++)
+      for (int c = 0; c < cols; c++)
+        if (_maze.at(r, c) == gb::PIT || _maze.at(r, c) == gb::WALL) _maze.set(r, c, gb::FLOOR);
+    // Offset the two starts to DIFFERENT rows so the seekers close in diagonally and brawl
+    // across the ring, instead of meeting dead-on for a symmetric push-stalemate.
+    _s0.row = (int8_t)(rmid - 1);
+    _s1.row = (int8_t)(rmid + 1);
+  }
   setupMatchBot(_pick0, _s0, sumo);
   setupMatchBot(_pick1, _s1, sumo);
   const Program& p0 = _cands[_pick0].prog;
   const Program& p1 = _cands[_pick1].prog;
-  // Sumo has no goal to end the match early, so a 300-tick cap = ~75s of wandering. Cap it
-  // short: a quick scrap, then ring-control decides. Race keeps the full cap to reach the goal.
-  int cap = sumo ? 60 : gb::ARENA_STEP_CAP;
+  // Sumo has no goal, so it'd otherwise run the full 300 ticks. The seeker bots now brawl and
+  // usually KO each other well before this; the cap is a safety net (then ring-control decides).
+  int cap = sumo ? 150 : gb::ARENA_STEP_CAP;
   _arena.setup(&_maze, &p0, &p1, _s0, _s1, _type, cap);
   _phase = Phase::BOARD;
   _running = true;
@@ -353,8 +371,10 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       if (R_BACK.contains(tx, ty)) { drawMenu(); break; }  // < Opponents
       if (R_G1.contains(tx, ty)) {  // Race (both branches)
         _type = MatchType::RACE; _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
-      } else if (R_G2.contains(tx, ty)) {  // Sumo (both branches)
-        _type = MatchType::SUMO; _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
+      } else if (R_G2.contains(tx, ty)) {  // Sumo (both branches) — gated behind NeuroBot
+        if (_profile && _profile->unlocks.neuro) {
+          _type = MatchType::SUMO; _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
+        } else hal::audio.fail();
       } else if (_hotseat && R_G3.contains(tx, ty)) {
         return app::Signal::GOTO_PUZZLE;
       } else if (_hotseat && R_G4.contains(tx, ty)) {
@@ -370,11 +390,12 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
           _pick0 = i; hal::audio.blip();
           if (_hotseat) { drawHandoff(); }
           else {
-            // vs the Computer, give a BEATABLE opponent (a blind dasher) so a kid's bot —
-            // or a freshly-trained Brainy — can actually win; the clever bots (Ace, Vex)
-            // are there to PICK and play as, and Hotseat-vs-a-friend is the real challenge.
-            int opp = houseBotIndex("Bolt");
-            if (opp == _pick0) opp = houseBotIndex("Rusty");
+            // RACE vs the Computer: a BEATABLE blind dasher (Bolt) so a kid's bot can win.
+            // SUMO: a real SEEKER (Vex) so it's an actual brawl -- a dasher just gets shoved
+            // off instantly. The kid trains a NeuroBot fighter to out-hunt it.
+            bool sumo = (_type == MatchType::SUMO);
+            int opp = houseBotIndex(sumo ? "Vex" : "Bolt");
+            if (opp == _pick0) opp = houseBotIndex(sumo ? "Ace" : "Rusty");  // Ace also seeks in Sumo
             _pick1 = (opp >= 0) ? opp : 0;
             startMatch();
           }

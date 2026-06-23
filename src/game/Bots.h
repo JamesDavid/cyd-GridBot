@@ -42,20 +42,23 @@ inline Program alwaysForwardProgram() {
   return p;
 }
 
-// Sumo hunter (SPEC §18.4): zap when the enemy is right ahead; otherwise PATROL (turn at
-// walls) instead of walking straight into one. Patrolling keeps it roaming the ring so it
-// actually runs into the opponent -- a straight-walker just jams against a wall and the
-// match stalls to a draw. A trained NeuroBot learns true seeking; this is the code stand-in.
+// Sumo hunter (SPEC §18.4): a real SEEKER, so the match is an actual brawl. The step-VM runs
+// one primitive per tick and skips false IFs without spending the tick, so this body is a
+// priority each tick: zap if the foe is right ahead -> turn TOWARD the foe (it's off to a
+// side) -> turn off a wall/pit -> otherwise close in. The bots home in on each other and
+// trade zaps + shoves instead of wandering. (A trained NeuroBot learns the same from foeF/R/D.)
 inline Program hunterProgram() {
   Program p;
   Node loop = Node::repeatUntil(AT_GOAL);  // AT_GOAL never true in Sumo -> runs to cap
-  Node zap = Node::ifCond(ENEMY_AHEAD);
-  zap.body.push_back(Node::command(CMD_FIRE));
-  loop.body.push_back(zap);
-  Node turn = Node::ifCond(BLOCKED_AHEAD);   // wall or pit ahead -> turn to keep moving
-  turn.body.push_back(Node::command(CMD_TURN_L));
-  loop.body.push_back(turn);
-  loop.body.push_back(Node::command(CMD_FWD));
+  auto rule = [&](Cond c, Cmd cmd) {
+    Node n = Node::ifCond(c); n.body.push_back(Node::command(cmd)); loop.body.push_back(n);
+  };
+  rule(ENEMY_AHEAD, CMD_FIRE);    // foe in the tile ahead -> ZAP (shoves it)
+  rule(PIT_AHEAD,   CMD_TURN_R);  // never charge into a pit, even while chasing (no suicide)
+  rule(ENEMY_RIGHT, CMD_TURN_R);  // foe off to the right -> turn to face it
+  rule(ENEMY_LEFT,  CMD_TURN_L);  // foe off to the left  -> turn to face it
+  rule(WALL_AHEAD,  CMD_TURN_R);  // wall straight ahead -> turn (don't jam)
+  loop.body.push_back(Node::command(CMD_FWD));  // else charge in (ram = shove)
   p.main.push_back(loop);
   return p;
 }

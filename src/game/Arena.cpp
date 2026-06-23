@@ -84,8 +84,15 @@ ArenaOutcome Arena::tick() {
           _bot[mover].it.setPose(before[mover]);   // wall behind the enemy -> mover bounces
         }
         if (out[mover] == OUT_WIN) out[mover] = OUT_OK;
+      } else if (_type == MatchType::SUMO) {
+        // Head-on (both charged the same tile): let one bot (alternating each tick) HOLD the
+        // tile so they end up ADJACENT and start trading zaps next tick, instead of freezing a
+        // tile apart forever. The alternation keeps it fair.
+        int adv = (int)(_ticks & 1);
+        _bot[1 - adv].it.setPose(before[1 - adv]);   // the other yields this tick
+        if (out[adv] == OUT_WIN) out[adv] = OUT_OK;
       } else {
-        _bot[0].it.setPose(before[0]);             // head-on or Race -> both bounce
+        _bot[0].it.setPose(before[0]);             // Race -> both bounce
         _bot[1].it.setPose(before[1]);
         for (int i = 0; i < 2; i++) if (out[i] == OUT_WIN || out[i] == OUT_FELL) out[i] = OUT_OK;
       }

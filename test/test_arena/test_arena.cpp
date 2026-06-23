@@ -142,6 +142,21 @@ void test_sumo_ram_off_edge() {
   TEST_ASSERT_FALSE(ar.alive(1));
 }
 
+// The seeking hunter TURNS toward a foe off to its side, then zaps it off the edge.
+// Verifies the directional ENEMY_LEFT/RIGHT sensing the brawl relies on.
+void test_sumo_seeker_turns_and_kos() {
+  Maze m; m.reset(3, 3); m.fill(FLOOR);
+  Pose s0; s0.row = 1; s0.col = 1; s0.facing = NORTH;  // hunter, facing away from the foe
+  Pose s1; s1.row = 1; s1.col = 2; s1.facing = NORTH;  // idle foe to the hunter's right, at the edge
+  Program hunter = hunterProgram();
+  Program idle;
+  Arena ar;
+  ar.setup(&m, &hunter, &idle, s0, s1, MatchType::SUMO, 50);
+  ArenaOutcome o = ar.run();
+  TEST_ASSERT_EQUAL((int)ArenaOutcome::BOT0, (int)o);   // turns east, zaps the foe off-board
+  TEST_ASSERT_FALSE(ar.alive(1));
+}
+
 void test_sumo_deterministic() {
   Program a = hunterProgram(), b = hunterProgram();
   Maze m; Pose s0, s1;
@@ -225,6 +240,7 @@ int main(int, char**) {
   RUN_TEST(test_sumo_zap_into_pit);
   RUN_TEST(test_sumo_brain_zap_shoves);
   RUN_TEST(test_sumo_ram_off_edge);
+  RUN_TEST(test_sumo_seeker_turns_and_kos);
   RUN_TEST(test_sumo_deterministic);
   return UNITY_END();
 }
