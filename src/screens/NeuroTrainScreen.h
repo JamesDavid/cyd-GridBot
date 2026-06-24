@@ -24,6 +24,8 @@ class NeuroTrainScreen : public app::IScreen {
 
  private:
   void draw();
+  void drawLockModal();   // "<feature> is locked -> unlock at Lv N / learn it in the <lesson>"
+  int _lockInfo = 0;      // 0 none; 1 Draw, 2 Evolve, 3 Q-Learn, 4 Pilot (a locked button was tapped)
   void mazeGeom(int& tile, int& ox, int& oy) const;
   void tracePath();
   void rebuildBrainLibs();  // library indices that carry a brain (loadable bases)

@@ -316,6 +316,7 @@ void NeuroTrainScreen::draw() {
     button(g, R_RTEACH, "Teach mem", C_GO, C_PANEL);     // BPTT-train the memory brain (tap to improve)
     button(g, R_RQL, "Q-Lrn", C_MOVE, C_PANEL);          // recurrent reward learning on this maze
     button(g, R_RPILOT, "Pilot", !uPilot ? C_LOCK : (_pilotMode ? C_GO : ui::rgb(255, 170, 60)), C_PANEL);
+    if (!uPilot) drawGlyph(g, Glyph::LOCK, R_RPILOT.x + R_RPILOT.w - 7, R_RPILOT.y + 8, 9, C_DIM);
     button(g, R_RUSE, _saved ? "saved!" : "Use it", _saved ? C_DIM : ui::rgb(120, 230, 245), C_PANEL);
     button(g, R_RBACK, "Back", C_INK, C_PANEL);
   } else {
@@ -327,9 +328,39 @@ void NeuroTrainScreen::draw() {
     button(g, R_TRAIN, "Evolve", uEvo ? C_FUNC : C_LOCK, C_PANEL);   // neuroevolution (no teacher)
     button(g, R_QL, "Q-Lrn", uEvo ? C_MOVE : C_LOCK, C_PANEL);       // reward learning (no teacher), like Arena
     button(g, R_PILOT, "Pilot", !uPilot ? C_LOCK : (_pilotMode ? C_GO : ui::rgb(255, 170, 60)), C_PANEL);
+    // a small padlock on the locked tools, so it reads "locked" not "broken"
+    auto lockBadge = [&](const ui::Rect& r) { drawGlyph(g, Glyph::LOCK, r.x + r.w - 7, r.y + 8, 9, C_DIM); };
+    if (!uDraw)  lockBadge(R_DRAW);
+    if (!uEvo)   { lockBadge(R_TRAIN); lockBadge(R_QL); }
+    if (!uPilot) lockBadge(R_PILOT);
     button(g, R_USE, _saved ? "saved!" : "Use it", _saved ? C_DIM : ui::rgb(120, 230, 245), C_PANEL);
     button(g, R_BACK, "Back", C_INK, C_PANEL);
   }
+  if (_lockInfo) drawLockModal();   // a locked tool was tapped -> explain how to unlock it
+}
+
+// A locked tool was tapped: explain which level unlocks it + which lesson teaches it.
+void NeuroTrainScreen::drawLockModal() {
+  auto& g = hal::display.gfx();
+  const char* name; int lvl; const char* lesson;
+  switch (_lockInfo) {
+    case 1: name = "Draw";    lvl = 31; lesson = "Data & labels"; break;
+    case 2: name = "Evolve";  lvl = 34; lesson = "Evolution";     break;
+    case 3: name = "Q-Learn"; lvl = 34; lesson = "Q-learning";    break;
+    case 4: name = "Pilot";   lvl = 37; lesson = "Pilot";         break;
+    default: return;
+  }
+  int w = 244, h = 116, x = (SCREEN_W - w) / 2, y = (SCREEN_H - h) / 2;
+  g.fillRoundRect(x, y, w, h, 8, C_PANEL);
+  g.drawRoundRect(x, y, w, h, 8, C_ACCENT);
+  drawGlyph(g, Glyph::LOCK, SCREEN_W / 2, y + 22, 18, C_ACCENT);
+  char t[40]; snprintf(t, sizeof(t), "%s is locked", name);
+  label(g, SCREEN_W / 2, y + 42, t, C_INK, textdatum_t::middle_center);
+  char u[40]; snprintf(u, sizeof(u), "unlocks at Level %d", lvl);
+  label(g, SCREEN_W / 2, y + 60, u, C_DIM, textdatum_t::middle_center);
+  char l[48]; snprintf(l, sizeof(l), "learn it: the \"%s\" lesson", lesson);
+  label(g, SCREEN_W / 2, y + 78, l, ui::rgb(120, 230, 245), textdatum_t::middle_center);
+  label(g, SCREEN_W / 2, y + 98, "tap to close", C_DIM, textdatum_t::middle_center);
 }
 
 void NeuroTrainScreen::seedDrawStart() {
@@ -411,6 +442,8 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
 
   int tx, ty;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
+
+  if (_lockInfo) { _lockInfo = 0; hal::audio.blip(); draw(); return app::Signal::NONE; }  // dismiss the lock modal
 
   // tap the neuron widget (top bar) to expand/fold the full network graph of this brain
   if (!_drawMode && ui::Rect{156, 1, 70, 20}.contains(tx, ty)) {
@@ -510,19 +543,19 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     _pilotMode = false; setNodePilot(false); _pulseUntil = now + 1500;
     tracePath(); hal::audio.blip(); draw();
   } else if (R_DRAW.contains(tx, ty)) {   // hand-draw a path to learn from (imitation learning)
-    if (_profile && !_profile->unlocks.nDraw) { hal::audio.fail(); return app::Signal::NONE; }
+    if (_profile && !_profile->unlocks.nDraw) { _lockInfo = 1; hal::audio.fail(); draw(); return app::Signal::NONE; }
     _drawMode = true; seedDrawStart(); hal::audio.blip(); draw();
   } else if (R_PILOT.contains(tx, ty)) {  // planner + follower: place YOUR route, then train the steerer
-    if (_profile && !_profile->unlocks.nPilot) { hal::audio.fail(); return app::Signal::NONE; }
+    if (_profile && !_profile->unlocks.nPilot) { _lockInfo = 4; hal::audio.fail(); draw(); return app::Signal::NONE; }
     enterWaypointMode(); hal::audio.blip(); draw();   // "Use route" trains the follower (empty = auto-plan)
   } else if (R_TRAIN.contains(tx, ty)) {
-    if (_profile && !_profile->unlocks.nEvolve) { hal::audio.fail(); return app::Signal::NONE; }
+    if (_profile && !_profile->unlocks.nEvolve) { _lockInfo = 2; hal::audio.fail(); draw(); return app::Signal::NONE; }
     for (int gg = 0; gg < 5; gg++) { _evo.breed(); _evo.evaluate(*_maze, nullptr, 110); }
     _brain = _evo.best(); _taught = false; _saved = false; _savedCopy = false; _gauntletScore = -1;
     _pilotMode = false; setNodePilot(false); _pulseUntil = now + 1500;
     tracePath(); hal::audio.blip(); draw();
   } else if (R_QL.contains(tx, ty)) {           // reward-driven Q-learning on THIS maze (no teacher)
-    if (_profile && !_profile->unlocks.nEvolve) { hal::audio.fail(); return app::Signal::NONE; }
+    if (_profile && !_profile->unlocks.nEvolve) { _lockInfo = 3; hal::audio.fail(); draw(); return app::Signal::NONE; }
     Pose st = _maze->startPose();
     qTrainMaze(_brain, _profile ? _profile->seedBase : 0u, 1, 3000, 0, 3000, _maze, &st);
     _taught = true; _saved = false; _savedCopy = false; _gauntletScore = -1;
