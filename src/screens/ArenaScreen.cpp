@@ -868,15 +868,26 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         net::BotCard mine;
         mine.name = _profile ? String(_profile->name.c_str()) : String("P");
         mine.avatar = _profile ? _profile->avatar : 0;
-        mine.uuid = _profile ? String(_profile->uuid.c_str()) : String("?");
+        // short uuid (8 hex) so the whole card fits ONE ESP-NOW packet -- still unique in a room
+        mine.uuid = _profile ? String(_profile->uuid.substr(0, 8).c_str()) : String("anon0000");
+        // A compact coded hunter that fits a packet. Full / neural bots are larger than one packet,
+        // so until card chunking lands the room fields a small hunter for everyone. (TODO: chunk.)
+        Program compact;
+        { Node loop = Node::repeatUntil(AT_GOAL);
+          Node z = Node::ifCond(ENEMY_AHEAD); z.body.push_back(Node::command(CMD_FIRE));   loop.body.push_back(z);
+          Node r = Node::ifCond(ENEMY_RIGHT); r.body.push_back(Node::command(CMD_TURN_R)); loop.body.push_back(r);
+          Node l = Node::ifCond(ENEMY_LEFT);  l.body.push_back(Node::command(CMD_TURN_L)); loop.body.push_back(l);
+          loop.body.push_back(Node::command(CMD_FWD)); compact.main.push_back(loop); }
         bool haveBot = _profile && !_profile->library.empty();
-        Program bot = haveBot ? _profile->library[0].program : hunterProgram();
-        String botName = haveBot ? String(_profile->library[0].name.c_str()) : String("Hunter");
-        String pj = programToJsonString(bot);
-        if (pj.length() > 240) {   // TODO: chunk big (neural) cards; for now fall back to a coded hunter
-          bot = hunterProgram(); botName = "Hunter"; pj = programToJsonString(bot);
+        String pj = haveBot ? programToJsonString(_profile->library[0].program) : String();
+        if (pj.length() == 0 || pj.length() > 200) {   // too big for a packet -> the compact hunter
+          mine.botName = haveBot ? String(_profile->library[0].name.c_str()) : String("Hunter");
+          if (pj.length() > 200) mine.botName = "Hunter";
+          pj = programToJsonString(compact);
+        } else {
+          mine.botName = String(_profile->library[0].name.c_str());
         }
-        mine.botName = botName; mine.progJson = pj;
+        mine.progJson = pj;
         if (R_ROOM_HOST.contains(tx, ty)) tn.host(mine); else tn.join(mine);
         _roomN = -1; drawNetLobby();
       } else if (tn.isHost() && tn.playerCount() >= 2 && R_ROOM_START.contains(tx, ty)) {

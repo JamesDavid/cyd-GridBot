@@ -10,7 +10,7 @@ static constexpr int SPK_CH = 0;
 // Volume = PWM duty (out of 255). The stock ledcWriteTone outputs a 50% square wave -- loud, and
 // it sags the 3.3V rail enough to visibly DIM the backlight. A low duty is quieter AND draws far
 // less current, so the screen stays bright. (8-bit res from ledcSetup, so 0..255.)
-static constexpr int SPK_VOL = 22;
+static constexpr int SPK_VOL = 12;
 static inline void spkFreq(uint16_t freq) {
   ledcWriteTone(SPK_CH, freq);              // set the tone frequency (also writes 50% duty)
   ledcWrite(SPK_CH, freq ? SPK_VOL : 0);    // then knock the duty down to a gentle volume

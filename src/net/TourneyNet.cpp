@@ -26,12 +26,19 @@ void TourneyNet::addPeerMac(const uint8_t* mac) {
   esp_now_add_peer(&p);
 }
 
+static constexpr uint8_t TN_CHANNEL = 6;   // every board pins the same channel so broadcasts are heard
+
 bool TourneyNet::begin() {
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
   esp_now_init();   // ESP_OK, or already-initialized if net::Radio set it up first -- both fine
   esp_now_register_recv_cb(recvTrampoline);   // global -- supersedes net::Radio's recv cb while active
   addPeerMac(BCAST);
+  // Pin a fixed WiFi channel -- ESP-NOW broadcast only reaches peers on the SAME channel, and
+  // without an AP each board would otherwise sit on its own default channel and hear nothing.
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_channel(TN_CHANNEL, WIFI_SECOND_CHAN_NONE);
+  esp_wifi_set_promiscuous(false);
   _state = TState::IDLE;
   return true;
 }
@@ -89,7 +96,7 @@ void TourneyNet::start(uint32_t seed, bool sumo) {
   _seed = seed; _sumo = sumo; _state = TState::SEEDED;
   uint8_t pkt[7] = {TM_SEED, (uint8_t)(seed), (uint8_t)(seed >> 8), (uint8_t)(seed >> 16),
                     (uint8_t)(seed >> 24), (uint8_t)(sumo ? 1 : 0), (uint8_t)_roster.size()};
-  esp_now_send(BCAST, pkt, sizeof(pkt));
+  for (int i = 0; i < 8; i++) { esp_now_send(BCAST, pkt, sizeof(pkt)); delay(15); }  // repeat: one SEED packet can drop
 }
 
 void TourneyNet::leave() { _role = TRole::NONE; _state = TState::IDLE; _roster.clear(); _haveHost = false; }
@@ -102,8 +109,8 @@ void TourneyNet::broadcastHello(uint32_t now) {
 
 void TourneyNet::sendMyCard(const uint8_t* /*toMac*/) {
   String s = packCard(_mine);
-  if (s.length() > 240) return;   // TODO: chunk large (neural) cards like net::Radio's M_CHUNK path
-  uint8_t pkt[241]; pkt[0] = TM_CARD;
+  if (s.length() > 249) return;   // TODO: chunk large (neural) cards like net::Radio's M_CHUNK path
+  uint8_t pkt[250]; pkt[0] = TM_CARD;
   memcpy(pkt + 1, s.c_str(), s.length());
   esp_now_send(BCAST, pkt, 1 + s.length());
 }
