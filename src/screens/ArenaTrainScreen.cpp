@@ -22,12 +22,6 @@ static const Rect R_MODE  = {92,  (int16_t)(BAND_Y + 2), 52,  18}; // Race <-> S
 static const Rect R_BTYPE = {146, (int16_t)(BAND_Y + 2), 40,  18}; // brain type: feedforward <-> RNN
 static const Rect R_VIEW  = {188, (int16_t)(BAND_Y + 2), 64,  18}; // toggle arena <-> brain view
 static const Rect R_KNOBS = {254, (int16_t)(BAND_Y + 2), 60,  18}; // open the advanced knobs overlay
-// Advanced knobs overlay: three stepper rows (- value +) + Done. y per row, buttons at the edges.
-static constexpr int KY0 = 44, KY1 = 96, KY2 = 148;
-static const Rect R_K_LR_DN  = {196, KY0, 30, 26}, R_K_LR_UP  = {284, KY0, 30, 26};
-static const Rect R_K_RND_DN = {196, KY1, 30, 26}, R_K_RND_UP = {284, KY1, 30, 26};
-static const Rect R_K_EXP_DN = {196, KY2, 30, 26}, R_K_EXP_UP = {284, KY2, 30, 26};
-static const Rect R_K_DONE   = {120, (int16_t)(BOTBAR_Y + 2), 80, 32};
 // Three training engines side by side (Teach = imitate, Evolve = select, Q-Learn = reward),
 // then Save + Back. Compact so all five fit the 320px bar.
 static const Rect R_TEACH = {4,   (int16_t)(BOTBAR_Y + 2), 52, 32};
@@ -138,40 +132,6 @@ void ArenaTrainScreen::drawOppList() {
   }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "Cancel", C_INK, C_PANEL);
-}
-
-// The advanced "knobs" overlay: three labelled stepper rows the trainer reads when you press an
-// engine. Tucked behind the Knobs button so beginners never see it; here for the kid who wants to
-// feel what a hyperparameter does (and it pairs with the "Tune a real brain" lesson).
-void ArenaTrainScreen::drawAdvanced() {
-  auto& g = hal::display.gfx();
-  g.fillScreen(C_BG);
-  g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
-  label(g, 6, 3, "Training knobs", C_ACCENT, textdatum_t::top_left, 2);
-  label(g, SCREEN_W - 6, 6, "(advanced)", C_DIM, textdatum_t::top_right);
-
-  auto row = [&](int y, const char* name, const char* val, const char* hint,
-                 const Rect& dn, const Rect& up, uint16_t vcol) {
-    label(g, 12, y + 2, name, C_INK);
-    button(g, dn, "-", C_INK, C_PANEL_HI);
-    button(g, up, "+", C_INK, C_PANEL_HI);
-    label(g, (dn.x + up.x + up.w) / 2, y + 6, val, vcol, textdatum_t::middle_center, 2);
-    label(g, 12, y + 26, hint, C_DIM);
-  };
-  char v[16];
-  snprintf(v, sizeof(v), "%.2f", _lr);
-  row(KY0, "Learning rate", v, "step size for Teach & Q-Learn", R_K_LR_DN, R_K_LR_UP,
-      _lr == 0.30f ? C_INK : C_MOVE);
-  snprintf(v, sizeof(v), "%dx", _rounds);
-  row(KY1, "Rounds", v, "how long it trains (gens/epochs)", R_K_RND_DN, R_K_RND_UP,
-      _rounds == 1 ? C_INK : C_MOVE);
-  snprintf(v, sizeof(v), "%.2f", _explore);
-  row(KY2, "Explore", v, "randomness: Evolve mutate + Q epsilon", R_K_EXP_DN, R_K_EXP_UP,
-      _explore == 1.0f ? C_INK : C_MOVE);
-
-  g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
-  label(g, 6, BOTBAR_Y - 12, "lower LR = slower; higher = jittery. defaults are tuned.", C_DIM);
-  button(g, R_K_DONE, "Done", C_GO, C_PANEL);
 }
 
 void ArenaTrainScreen::setupBoard() {
@@ -371,7 +331,7 @@ void ArenaTrainScreen::mazeGeom(int& tile, int& ox, int& oy) const {
 }
 
 void ArenaTrainScreen::draw() {
-  if (_advanced) { drawAdvanced(); return; }  // knobs overlay takes over the whole screen
+  if (_advanced) { _knobs.draw(); return; }  // knobs overlay takes over the whole screen
   if (_oppPick) { drawOppList(); return; }   // the opponent picker takes over the whole screen
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
@@ -391,7 +351,7 @@ void ArenaTrainScreen::draw() {
   button(g, R_BTYPE, _rnn ? "RNN >" : "FF >", _rnn ? C_MOVE : C_DIM, C_PANEL);  // brain type to train
   button(g, R_VIEW, _netView ? "arena >" : "brain >", C_ACCENT, C_PANEL);
   // "Knobs" lights up (accent) when any hyperparameter is off its default, so it's clear they're active
-  button(g, R_KNOBS, "Knobs", knobsDefault() ? C_DIM : C_ACCENT, C_PANEL);
+  button(g, R_KNOBS, "Knobs", _knobs.isDefault() ? C_DIM : C_ACCENT, C_PANEL);
 
   if (_netView) {
     drawNet();
@@ -537,13 +497,13 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         if (_rnn && _matchType == MatchType::SUMO) {
           // recurrent Q on the reactive BATTLE hunt -- intentionally available so a kid can SEE it
           // flounder (memory is noise here); the contrast with FF Q-Learn is the lesson.
-          qTrainHunterRnn(rbrain(), base + 101u * (uint32_t)_animLeft, 1000, done, total, _explore);
+          qTrainHunterRnn(rbrain(), base + 101u * (uint32_t)_animLeft, 1000, done, total, _knobs.explore);
         } else if (_rnn) {
           // recurrent maze Q -- train on THIS race board (with its start) so it wins the verdict,
           // like the feedforward Teach does. Memory lets it escape dead-ends -- here it WORKS.
-          qTrainMazeRnn(rbrain(), base, 1, 1000, done, total, &_maze, &_s0, _explore);
+          qTrainMazeRnn(rbrain(), base, 1, 1000, done, total, &_maze, &_s0, _knobs.explore);
         } else {
-          qTrainHunter(_brain, base + 101u * (uint32_t)_animLeft, 1000, done, total, _explore);
+          qTrainHunter(_brain, base + 101u * (uint32_t)_animLeft, 1000, done, total, _knobs.explore);
         }
         _taught = true;
       } else {
@@ -551,7 +511,7 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         // generation must beat the best-so-far -- an arms race that bootstraps without a fixed foe.
         if (_oppIdx == OPP_SELF) setSelfOpponent(_evo.best());
         // Explore knob raises mutation scale (more variety, less stable) -- the GA's "temperature".
-        _evo.breed(0.15f, 0.6f * _explore); _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType); _brain = _evo.best();
+        _evo.breed(0.15f, 0.6f * _knobs.explore); _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType); _brain = _evo.best();
         _taught = false;
       }
       _saved = false; evaluateAndTrace();        // recompute the hunt for the new brain
@@ -582,18 +542,10 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     _oppPick = false; hal::audio.blip(); draw();   // Cancel / tapped away
     return app::Signal::NONE;
   }
-  // Advanced knobs overlay: steppers adjust the live hyperparameters; Done (or tap-away) closes.
+  // Advanced knobs overlay (shared ui::Knobs): steppers adjust the live hyperparameters; Done closes.
   if (_advanced) {
-    bool hit = true;
-    if      (R_K_LR_DN.contains(tx, ty))  _lr = _lr > 0.075f ? _lr - 0.05f : 0.05f;
-    else if (R_K_LR_UP.contains(tx, ty))  _lr = _lr < 0.875f ? _lr + 0.05f : 0.90f;
-    else if (R_K_RND_DN.contains(tx, ty)) _rounds = _rounds > 1 ? _rounds - 1 : 1;
-    else if (R_K_RND_UP.contains(tx, ty)) _rounds = _rounds < 4 ? _rounds + 1 : 4;
-    else if (R_K_EXP_DN.contains(tx, ty)) _explore = _explore > 0.125f ? _explore - 0.25f : 0.0f;
-    else if (R_K_EXP_UP.contains(tx, ty)) _explore = _explore < 1.875f ? _explore + 0.25f : 2.0f;
-    else if (R_K_DONE.contains(tx, ty))   { _advanced = false; hal::audio.blip(); draw(); return app::Signal::NONE; }
-    else hit = false;
-    if (hit) { hal::audio.blip(); draw(); }
+    if (_knobs.handleTap(tx, ty)) { _advanced = false; draw(); }  // Done -> back to the trainer
+    else _knobs.draw();                                           // a knob stepped -> refresh its value
     return app::Signal::NONE;
   }
   if (R_KNOBS.contains(tx, ty)) {
@@ -611,16 +563,16 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     if (_rnn) {
       // recurrent brain: BPTT over chase episodes (Battle) or maze runs (Race) -- a memory fighter.
       // RNN BPTT is touchier than FF, so the LR knob is damped to a third (its tuned default is 0.1).
-      rbrain().lr = _lr * 0.33f;
-      if (_matchType == MatchType::SUMO) distillHunterRnn(rbrain(), seed, 1500 * _rounds);
-      else rnnTrainGeneral(rbrain(), seed, _profile ? (_profile->level < 8 ? _profile->level : 8) : 6, 4 * _rounds);
+      rbrain().lr = _knobs.lr * 0.33f;
+      if (_matchType == MatchType::SUMO) distillHunterRnn(rbrain(), seed, 1500 * _knobs.rounds);
+      else rnnTrainGeneral(rbrain(), seed, _profile ? (_profile->level < 8 ? _profile->level : 8) : 6, 4 * _knobs.rounds);
       rbrain().trained = true;
     } else if (_matchType == MatchType::SUMO) {
-      _brain.lr = _lr;
-      distillHunter(_brain, seed, 2000 * _rounds, true);    // instant hunt-and-zap fighter (tracks a moving foe)
+      _brain.lr = _knobs.lr;
+      distillHunter(_brain, seed, 2000 * _knobs.rounds, true);    // instant hunt-and-zap fighter (tracks a moving foe)
     } else {
-      _brain.lr = _lr;
-      distillSolver(_brain, _maze, true, 700 * _rounds);    // a strong racer beats most AIs
+      _brain.lr = _knobs.lr;
+      distillSolver(_brain, _maze, true, 700 * _knobs.rounds);    // a strong racer beats most AIs
     }
     _taught = true; _saved = false; _curveLen = 0; evaluateAndTrace(); pushCurve(); hal::audio.blip(); draw();
   } else if (R_BTYPE.contains(tx, ty)) {
@@ -635,7 +587,7 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     if (_rnn) { hal::audio.fail(); }  // Evolve is feedforward-only
     else {
       _qLearning = false; _curveLen = 0;
-      _animating = true; _animLeft = 16 * _rounds; _animAt = now; _genAt = now; _animFrame = 0;  // watch it hunt & learn
+      _animating = true; _animLeft = 16 * _knobs.rounds; _animAt = now; _genAt = now; _animFrame = 0;  // watch it hunt & learn
       hal::audio.blip();
     }
   } else if (R_QLRN.contains(tx, ty)) {
@@ -645,8 +597,8 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       // reward-driven training, animated in chunks so the kid watches it learn without a long
       // freeze. Fresh brain each run. FF battle = 8 chunks; any RNN = 4 (BPTT is heavier). The
       // Rounds knob multiplies the chunk count; set lr AFTER config (config resets it to default).
-      if (_rnn) { rbrain().config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23); rbrain().lr = _lr * 0.33f; _qChunks = 4 * _rounds; }
-      else      { _brain.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);   _brain.lr = _lr;          _qChunks = 8 * _rounds; }
+      if (_rnn) { rbrain().config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23); rbrain().lr = _knobs.lr * 0.33f; _qChunks = 4 * _knobs.rounds; }
+      else      { _brain.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);   _brain.lr = _knobs.lr;          _qChunks = 8 * _knobs.rounds; }
       _qLearning = true; _curveLen = 0;
       _animating = true; _animLeft = _qChunks; _animAt = now; _genAt = now; _animFrame = 0;
       hal::audio.blip();

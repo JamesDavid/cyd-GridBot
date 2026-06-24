@@ -8,6 +8,7 @@
 #include <vector>
 #include "app/Screen.h"
 #include "ui/UI.h"
+#include "ui/Knobs.h"
 #include "game/Maze.h"
 #include "game/Program.h"
 #include "game/Evolve.h"
@@ -26,6 +27,10 @@ class NeuroTrainScreen : public app::IScreen {
   void draw();
   void drawLockModal();   // "<feature> is locked -> unlock at Lv N / learn it in the <lesson>"
   int _lockInfo = 0;      // 0 none; 1 Draw, 2 Evolve, 3 Q-Learn, 4 Pilot (a locked button was tapped)
+  // Shared advanced "Training knobs" overlay (same ui::Knobs the Arena trainer uses): LR scales the
+  // Teach/Q-Learn backprop, Rounds the training length, Explore the Evolve mutation + Q epsilon.
+  bool      _advanced = false;
+  ui::Knobs _knobs;
   void mazeGeom(int& tile, int& ox, int& oy) const;
   void tracePath();
   void rebuildBrainLibs();  // library indices that carry a brain (loadable bases)

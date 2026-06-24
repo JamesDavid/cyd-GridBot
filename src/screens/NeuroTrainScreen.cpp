@@ -14,9 +14,10 @@ using namespace gb;
 
 namespace screens {
 
-static const Rect R_BASE  = {6,   (int16_t)(BAND_Y + 2), 118, 18};  // load a brain to fine-tune
-static const Rect R_GAUNT = {128, (int16_t)(BAND_Y + 2), 90,  18};  // Generalist challenge trainer
-static const Rect R_SAVEV = {222, (int16_t)(BAND_Y + 2), 92,  18};  // save a versioned copy
+static const Rect R_BASE  = {6,   (int16_t)(BAND_Y + 2), 100, 18};  // load a brain to fine-tune
+static const Rect R_GAUNT = {110, (int16_t)(BAND_Y + 2), 76,  18};  // Generalist challenge trainer
+static const Rect R_SAVEV = {190, (int16_t)(BAND_Y + 2), 76,  18};  // save a versioned copy
+static const Rect R_KNOBS = {270, (int16_t)(BAND_Y + 2), 44,  18};  // advanced training-knobs overlay
 // normal toolbar (6): distill solver / draw a path / neuroevolve / planner+follow / save / leave
 static const Rect R_TEACH = {4,   (int16_t)(BOTBAR_Y + 2), 42, 32};
 static const Rect R_DRAW  = {48,  (int16_t)(BOTBAR_Y + 2), 36, 32};
@@ -166,6 +167,7 @@ void NeuroTrainScreen::mazeGeom(int& tile, int& ox, int& oy) const {
 
 void NeuroTrainScreen::draw() {
   auto& g = hal::display.gfx();
+  if (_advanced) { _knobs.draw(); return; }  // the shared knobs overlay takes over the whole screen
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
 
@@ -206,6 +208,7 @@ void NeuroTrainScreen::draw() {
         snprintf(sv, sizeof(sv), "%s!", _profile->library.back().name.c_str());  // show the saved name
       else snprintf(sv, sizeof(sv), "save copy >");
       button(g, R_SAVEV, sv, _savedCopy ? C_DIM : C_ACCENT, C_PANEL);
+      button(g, R_KNOBS, "Knobs", _knobs.isDefault() ? C_DIM : C_ACCENT, C_PANEL);
     }
   }
 
@@ -445,6 +448,13 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
 
   if (_lockInfo) { _lockInfo = 0; hal::audio.blip(); draw(); return app::Signal::NONE; }  // dismiss the lock modal
 
+  // Shared advanced knobs overlay (ui::Knobs): steppers tune the live hyperparameters; Done closes.
+  if (_advanced) {
+    if (_knobs.handleTap(tx, ty)) { _advanced = false; draw(); }  // Done -> back to the trainer
+    else _knobs.draw();                                           // a knob stepped -> refresh its value
+    return app::Signal::NONE;
+  }
+
   // tap the neuron widget (top bar) to expand/fold the full network graph of this brain
   if (!_drawMode && ui::Rect{156, 1, 70, 20}.contains(tx, ty)) {
     _brainView = !_brainView; inferBrain(); hal::audio.blip(); draw(); return app::Signal::NONE;
@@ -489,11 +499,14 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
 
   if (_rnnMode) {                                  // ---- recurrent (memory) brain toolbar ----
     if (R_RTEACH.contains(tx, ty)) {               // BPTT-train the memory brain (tap to improve)
-      rnnTrainGeneral(_rbrain, _profile ? _profile->seedBase : 0u, 16, 40);
+      _rbrain.lr = _knobs.lr * 0.33f;              // RNN uses a damped LR (BPTT is touchier)
+      rnnTrainGeneral(_rbrain, _profile ? _profile->seedBase : 0u, 16, 40 * _knobs.rounds);
       _taught = true; _saved = false; _pulseUntil = now + 1500; tracePath(); hal::audio.blip(); draw();
     } else if (R_RQL.contains(tx, ty)) {           // recurrent reward Q-learning on THIS maze
       Pose st = _maze->startPose();
-      qTrainMazeRnn(_rbrain, _profile ? _profile->seedBase : 0u, 1, 1500, 0, 1500, _maze, &st);
+      _rbrain.lr = _knobs.lr * 0.33f;
+      int eps = 1500 * _knobs.rounds;
+      qTrainMazeRnn(_rbrain, _profile ? _profile->seedBase : 0u, 1, eps, 0, eps, _maze, &st, _knobs.explore);
       _rbrain.trained = true;
       _taught = true; _saved = false; _pulseUntil = now + 1500; tracePath(); hal::audio.blip(); draw();
     } else if (R_RPILOT.contains(tx, ty)) {        // pilot works for an rnn brain too
@@ -509,7 +522,9 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     return app::Signal::NONE;
   }
 
-  if (R_BASE.contains(tx, ty)) {  // cycle the transfer base: block brain -> saved brains
+  if (R_KNOBS.contains(tx, ty) && !_brainView) {  // open the shared advanced knobs overlay
+    _advanced = true; hal::audio.blip(); draw();
+  } else if (R_BASE.contains(tx, ty)) {  // cycle the transfer base: block brain -> saved brains
     _baseIdx = (_baseIdx + 1) % (1 + (int)_brainLibs.size());
     applyBase(); hal::audio.blip(); draw();
   } else if (R_GAUNT.contains(tx, ty)) {  // Generalist: train across the gauntlet, then test it
@@ -538,7 +553,8 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       _savedCopy = true; hal::audio.badge(); draw();
     } else { hal::audio.fail(); }
   } else if (R_TEACH.contains(tx, ty)) {  // distill the optimal solver into the brain (reliable)
-    distillSolver(_brain, *_maze, true, 700);
+    _brain.lr = _knobs.lr;
+    distillSolver(_brain, *_maze, true, 700 * _knobs.rounds);
     _taught = true; _saved = false; _savedCopy = false; _gauntletScore = -1;
     _pilotMode = false; setNodePilot(false); _pulseUntil = now + 1500;
     tracePath(); hal::audio.blip(); draw();
@@ -550,14 +566,16 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     enterWaypointMode(); hal::audio.blip(); draw();   // "Use route" trains the follower (empty = auto-plan)
   } else if (R_TRAIN.contains(tx, ty)) {
     if (_profile && !_profile->unlocks.nEvolve) { _lockInfo = 2; hal::audio.fail(); draw(); return app::Signal::NONE; }
-    for (int gg = 0; gg < 5; gg++) { _evo.breed(); _evo.evaluate(*_maze, nullptr, 110); }
+    for (int gg = 0; gg < 5 * _knobs.rounds; gg++) { _evo.breed(0.15f, 0.6f * _knobs.explore); _evo.evaluate(*_maze, nullptr, 110); }
     _brain = _evo.best(); _taught = false; _saved = false; _savedCopy = false; _gauntletScore = -1;
     _pilotMode = false; setNodePilot(false); _pulseUntil = now + 1500;
     tracePath(); hal::audio.blip(); draw();
   } else if (R_QL.contains(tx, ty)) {           // reward-driven Q-learning on THIS maze (no teacher)
     if (_profile && !_profile->unlocks.nEvolve) { _lockInfo = 3; hal::audio.fail(); draw(); return app::Signal::NONE; }
     Pose st = _maze->startPose();
-    qTrainMaze(_brain, _profile ? _profile->seedBase : 0u, 1, 3000, 0, 3000, _maze, &st);
+    _brain.lr = _knobs.lr;
+    int eps = 3000 * _knobs.rounds;
+    qTrainMaze(_brain, _profile ? _profile->seedBase : 0u, 1, eps, 0, eps, _maze, &st, _knobs.explore);
     _taught = true; _saved = false; _savedCopy = false; _gauntletScore = -1;
     _pilotMode = false; setNodePilot(false); _pulseUntil = now + 1500;
     tracePath(); hal::audio.blip(); draw();
