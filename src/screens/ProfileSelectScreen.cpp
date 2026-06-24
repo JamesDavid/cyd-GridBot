@@ -1,12 +1,14 @@
 #include "screens/ProfileSelectScreen.h"
 #include "assets/Assets.h"
 #include "hal/Audio.h"
+#include "hal/Touch.h"
 
 using namespace ui;
 
 namespace screens {
 
 static const Rect R_SOUND = {250, 1, 68, 20};  // music on/off toggle
+static const Rect R_CAL   = {6, (int16_t)(SCREEN_H - 22), 96, 20};  // re-run touch calibration
 
 // Up to 6 profile cards in a 3x2 grid, plus a "+ New" card in the next slot.
 static constexpr int COLS = 3, CARD_W = 102, CARD_H = 84, GAP = 4;
@@ -61,8 +63,8 @@ void ProfileSelectScreen::draw() {
   label(g, nr.cx(), nr.cy() - 10, "+", C_GO, textdatum_t::middle_center, 3);
   label(g, nr.cx(), nr.y + nr.h - 18, "New Player", C_GO, textdatum_t::top_center);
 
-  label(g, SCREEN_W / 2, SCREEN_H - 12, "tap a player to play - tap stats/edit for more",
-        C_DIM, textdatum_t::middle_center);
+  button(g, R_CAL, "Calibrate", C_DIM, C_PANEL);
+  label(g, SCREEN_W - 6, SCREEN_H - 12, "tap a player to play", C_DIM, textdatum_t::middle_right);
 }
 
 app::Signal ProfileSelectScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
@@ -70,6 +72,11 @@ app::Signal ProfileSelectScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int n = (int)_metas.size(); if (n > 6) n = 6;
   if (!_tap.tapped(tp, now, tx, ty)) return app::Signal::NONE;
 
+  if (R_CAL.contains(tx, ty)) {         // re-run the inset touch calibration (modal, blocking)
+    hal::touch.recalibrate();
+    draw();
+    return app::Signal::NONE;
+  }
   if (R_SOUND.contains(tx, ty)) {       // toggle music/sound
     bool on = !hal::audio.enabled();
     hal::audio.setEnabled(on);
