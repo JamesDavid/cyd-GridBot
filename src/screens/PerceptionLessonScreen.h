@@ -1,7 +1,9 @@
-// NeuroLab lesson — Perception (raw -> meaning). Every other lesson HANDS the brain clean
-// senses ("wall ahead = 1"). But where do those come from? A little perception net looks at
-// the raw squares the robot can see and decides "wall ahead? yes/no". Turning raw input into
-// meaning is the hard part real robots spend the most on. (read-only, example-cycling demo)
+// NeuroLab lesson — Perception (the senses we hand the brain). Every other lesson is HANDED
+// clean senses like "wall ahead = 1". This shows where they come from: the robot's immediate
+// surroundings turned into the numbers that ARE the brain's input layer. The honest caveats:
+// in this game we just hand the values; a real robot would need a camera + sensors to work them
+// out (that's perception, the hard part); choosing WHICH values to sense is an engineering call;
+// and these are the robot's LOCAL surroundings, not a top-down map of the whole world.
 #pragma once
 #include "app/Screen.h"
 #include "ui/UI.h"
@@ -16,8 +18,8 @@ class PerceptionLessonScreen : public app::IScreen {
 
  private:
   void draw();
-  int _phase = 0;   // 0 the puzzle, 1 the perception net classifying, 2 the takeaway
-  int _view = 0;    // which example "robot's-eye view" is shown
+  int _phase = 0;   // 0 the senses, 1 we-hand-them/real-robots-perceive, 2 local-not-global
+  int _scene = 0;   // which surroundings example is shown
   app::TapDetector _tap;
 };
 
