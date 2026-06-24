@@ -194,7 +194,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![NeuroLab](docs/img/neurolab-hub.png) |
 |:--|
-| **NeuroLab** — seventeen lessons, each small enough to *watch*: one neuron, backprop, perception, a hidden layer, many actions, **your robot's brain** (a tour of its real senses), **evolution** (population → fitness → selection → **crossover** → mutation: "the best robots make robot babies"), data & labels, Q-learning, **Tuning** (turn the explore/step knobs on a tabular grid), **Tune a real brain** (learn rate + rounds on a live MLP — watch the loss fall, or *thrash*), **transfer learning**, **Brain Cam**, **Pilot** (plan + steer), **Memory** (a recurrent brain), **Self-play** (train by beating yourself), and **The Right Tool** (match the method to the problem). |
+| **NeuroLab** — seventeen lessons, each small enough to *watch*: one neuron, backprop, **perception** (the senses we hand the brain), a hidden layer, many actions, **your robot's brain** (a tour of its real senses), data & labels, Q-learning, **Tuning the grid** (the explore/step knobs on a tabular Q table), **Tuning a real net** (learn rate + rounds on a live MLP — watch the loss fall, or *thrash*), **evolution** (population → fitness → selection → **crossover** → mutation: "the best robots make robot babies"), **transfer learning**, **Brain Cam**, **Pilot** (plan + steer), **Memory** (a recurrent brain), **Self-play** (train by beating yourself), and **The Right Tool** (match the method to the problem). |
 
 | ![Watch a neuron learn](docs/img/neuro-neuron.gif) |
 |:--|
@@ -346,8 +346,8 @@ board) · ✅ **battling at the Sense tier** — code a fighter with `if` condit
 no neural training required · ✅ **local tournaments** — a **Cup** knock-out bracket and a
 round-robin **Ladder**, run deterministically and replayed on screen · ✅ the full **NeuroBot**
 mode (backprop / Q-learning / evolution **with a breeding explainer** (crossover + "robot babies")
-/ transfer / **Tuning** (explore/step knobs) / **Tune a real brain** (learn rate + rounds on a
-live net) / **Pilot** (plan + steer, now with **hand-placed waypoints**) / **Memory** (an RNN) /
+/ transfer / **Tuning the grid** (explore/step knobs) / **Tuning a real net** (learn rate + rounds
+on a live net) / **Pilot** (plan + steer, now with **hand-placed waypoints**) / **Memory** (an RNN) /
 **Self-play** / **The Right Tool** lessons, Brain Cam with an argmax caption, a learning-curve
 sparkline, a trainable brain block with versioned saves) · ✅ neural Arena trainers — **Teach /
 Q-Learn / Evolve**, an RNN toggle, a **Self** sparring partner for self-play, and an optional
