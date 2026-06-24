@@ -61,7 +61,7 @@ void TuneNetLessonScreen::draw() {
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
-  label(g, 6, 3, "Tune a real brain", C_ACCENT, textdatum_t::top_left, 2);
+  label(g, 6, 3, "Tuning a real net", C_ACCENT, textdatum_t::top_left, 2);
   char hd[20]; snprintf(hd, sizeof(hd), "loss %.3f", _last);
   label(g, SCREEN_W - 6, 6, hd, _last < 0.05f ? C_GO : C_DIM, textdatum_t::top_right);
 

@@ -68,7 +68,7 @@ void TuneLessonScreen::draw() {
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
-  label(g, 6, 3, "Tuning: the knobs", C_ACCENT, textdatum_t::top_left, 2);
+  label(g, 6, 3, "Tuning the grid", C_ACCENT, textdatum_t::top_left, 2);
   char hd[20]; snprintf(hd, sizeof(hd), "tries %d", _q.episodes);
   label(g, SCREEN_W - 6, 6, hd, C_DIM, textdatum_t::top_right);
 
