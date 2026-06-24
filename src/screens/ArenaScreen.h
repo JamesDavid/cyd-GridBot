@@ -26,6 +26,8 @@ class ArenaScreen : public app::IScreen {
 
  private:
   enum class Phase : uint8_t { MENU, GAMETYPE, PICK1, HANDOFF, PICK2, BOARD, DONE, TOURNEY,
+                               TDISC,     // tournament: pick discipline (Maze race vs Battle)
+                               TPICK,     // tournament: pick which fighters take part (checklist + all)
                                TCHOICE,   // pick tournament format: Ladder (round-robin) or Cup (bracket)
                                CUP };     // bracket card shown between/after Cup matches
   struct Candidate { std::string name; gb::Program prog; uint8_t avatar; std::string style; bool house; bool smart; bool neuro = false; };
@@ -51,14 +53,20 @@ class ArenaScreen : public app::IScreen {
   void drawHit(int i, const char* txt, uint16_t col);// burst over bot i when it's zapped/knocked
   void finishOverlay();
   void onMatchEnd();                                 // a BOARD match resolved: Cup result vs normal DONE
+  // Tournament setup: pick discipline (maze race vs battle), then which fighters take part.
+  void drawTDisc();       // discipline chooser (Maze race / Battle)
+  void drawTPick();       // participant checklist (per-bot checkbox + Select all)
+  bool _tSumo = false;    // chosen discipline: true = Battle (Sumo), false = Maze (Race)
+  uint32_t _tSelMask = 0; // selection bitmask, bit i = candidate i is in the tournament
+  int _tScroll = 0;       // first visible row in the participant checklist
   // Tournament: round-robin every fighter vs every other, tally wins, rank them (a battle ladder).
-  void runTournament();   // play all the matches headless + sort the standings
+  void runTournament(const std::vector<int>& parts);   // play all matches headless + sort standings
   void drawTourney();     // the leaderboard
   struct Standing { int cand; int w; int l; };
   std::vector<Standing> _standings;
   // Single-elimination Cup: watch your fighters battle through a bracket to one champion. The
   // local version (library fighters) is the verifiable core the networked tournament will drive.
-  void startCup();        // build the field from the library + seed the bracket
+  void startCup(const std::vector<int>& parts);  // seed the bracket from the chosen fighters
   void cupAdvanceToNextMatch();  // skip byes, set up the next real match (or finish the Cup)
   void drawCupCard();     // the between-match bracket card (round, matchup, or champion)
   void drawTChoice();     // Ladder vs Cup chooser

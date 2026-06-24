@@ -49,6 +49,10 @@ static const Rect R_EXIT3  = {194, 129, 64, 26};
 // screen like the match-result overlay) -- otherwise they'd land on the champion's avatar/name.
 static const Rect R_CUP_AGAIN = {40,  (int16_t)(BOTBAR_Y + 4), 110, 28};
 static const Rect R_CUP_EXIT  = {174, (int16_t)(BOTBAR_Y + 4), 106, 28};
+// participant-picker bottom bar: Select all + Format >
+static const Rect R_TALL  = {116, (int16_t)(BOTBAR_Y + 2), 64,  26};
+static const Rect R_TNEXT = {188, (int16_t)(BOTBAR_Y + 2), 126, 26};
+static constexpr int PICK_ROWH = 26, PICK_TOP = BAND_Y + 4;  // pick-list geometry (shared by PICK + TPICK)
 
 static Program dashProgram() {
   Program p;
@@ -106,22 +110,27 @@ void ArenaScreen::enter() { drawMenu(); }
 
 // Round-robin battle ladder: every fighter plays every other (home AND away on one fair ring so
 // start-position bias cancels), wins are tallied, and the field is ranked. Headless + deterministic.
-void ArenaScreen::runTournament() {
-  buildCandidates(true);                                  // Sumo roster: your library first, then house
-  int nlib = _profile ? (int)_profile->library.size() : 0;
-  std::vector<int> parts;
-  for (int i = (nlib > 6 ? nlib - 6 : 0); i < nlib; i++) parts.push_back(i);   // up to 6 of your fighters
-  int vex = houseBotIndex("Vex"), ace = houseBotIndex("Ace");                  // + two house benchmarks
-  if (vex >= 0) parts.push_back(vex);
-  if (ace >= 0) parts.push_back(ace);
+void ArenaScreen::runTournament(const std::vector<int>& parts) {
   int N = (int)parts.size();
-  MazeGen::generateSumoRing(_maze, (_profile ? _profile->seedBase : 7u) + 1234u, _s0, _s1);
-  for (int p : parts) setupMatchBot(p, _s0, true);        // finalise each fighter's Sumo program
+  bool sumo = _tSumo;
+  uint32_t base = _profile ? _profile->seedBase : 7u;
+  if (sumo) MazeGen::generateSumoRing(_maze, base + 1234u, _s0, _s1);
+  else      MazeGen::generateArena(_maze, base + 31u, _s0, _s1);
+  MatchType mt = sumo ? MatchType::SUMO : MatchType::RACE;
+  int cap = sumo ? 150 : 200;
+  // A race is start-dependent (a solver builds its path from where it stands), so prepare each
+  // fighter's program for BOTH start poses; sumo programs are start-agnostic (reuse one).
+  std::vector<Program> pa(N), pb(N);
+  for (int k = 0; k < N; k++) {
+    setupMatchBot(parts[k], _s0, sumo); pa[k] = _cands[parts[k]].prog;
+    if (sumo) { pb[k] = pa[k]; }
+    else { setupMatchBot(parts[k], _s1, sumo); pb[k] = _cands[parts[k]].prog; }
+  }
   std::vector<int> w(N, 0), l(N, 0);
   for (int i = 0; i < N; i++)
     for (int j = 0; j < N; j++) {
       if (i == j) continue;
-      Arena ar; ar.setup(&_maze, &_cands[parts[i]].prog, &_cands[parts[j]].prog, _s0, _s1, MatchType::SUMO, 150);
+      Arena ar; ar.setup(&_maze, &pa[i], &pb[j], _s0, _s1, mt, cap);
       ArenaOutcome o = ar.run();
       if (o == ArenaOutcome::BOT0) { w[i]++; l[j]++; }
       else if (o == ArenaOutcome::BOT1) { w[j]++; l[i]++; }
@@ -158,16 +167,10 @@ void ArenaScreen::drawTourney() {
 }
 
 // ---- Cup: single-elimination bracket, watched match by match -------------------------------
-void ArenaScreen::startCup() {
-  buildCandidates(true);                          // Sumo roster: your library leads the list
-  int nlib = _profile ? (int)_profile->library.size() : 0;
+void ArenaScreen::startCup(const std::vector<int>& parts) {
   _cupPlayers.clear();
-  for (int i = 0; i < nlib && (int)_cupPlayers.size() < gb::BRACKET_MAX; i++) _cupPlayers.push_back(i);
-  if ((int)_cupPlayers.size() < 4) {              // pad a tiny field with house challengers
-    int v = houseBotIndex("Vex"); if (v >= 0) _cupPlayers.push_back(v);
-    int a = houseBotIndex("Ace"); if (a >= 0) _cupPlayers.push_back(a);
-  }
-  _type = MatchType::SUMO;
+  for (int p : parts) { if ((int)_cupPlayers.size() < gb::BRACKET_MAX) _cupPlayers.push_back(p); }
+  _type = _tSumo ? MatchType::SUMO : MatchType::RACE;
   _cupBracket.init((int)_cupPlayers.size());
   _cup = true; _cupMatch = -1;
   _phase = Phase::CUP; drawCupCard();             // opening card; tap to start the first match
@@ -245,14 +248,70 @@ void ArenaScreen::onMatchEnd() {
   }
 }
 
+// Tournament step 1: what kind of contest -- a maze race or a battle.
+void ArenaScreen::drawTDisc() {
+  auto& g = hal::display.gfx();
+  g.fillScreen(C_BG);
+  g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
+  label(g, 6, 3, "Tournament", C_ACCENT, textdatum_t::top_left, 2);
+  label(g, SCREEN_W / 2, 40, "What kind of contest?", C_INK, textdatum_t::top_center);
+  button(g, R_G1, "Maze race - first to the goal", C_GO, C_PANEL);
+  label(g, SCREEN_W / 2, 94, "bots solve the same maze; fastest wins", C_DIM, textdatum_t::top_center);
+  button(g, R_G3, "Battle - last bot standing", C_FUNC, C_PANEL);
+  label(g, SCREEN_W / 2, 170, "bots fight on a ring; survivor wins", C_DIM, textdatum_t::top_center);
+  g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
+  button(g, R_BACK, "< Back", C_INK, C_PANEL);
+}
+
+// Tournament step 2: which fighters take part (checkbox each, + Select all). Reuses the pick-list
+// geometry; a tap toggles a fighter in/out so the field never has bots that don't fit the contest.
+void ArenaScreen::drawTPick() {
+  auto& g = hal::display.gfx();
+  g.fillScreen(C_BG);
+  g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
+  label(g, 6, 3, "Pick fighters", C_ACCENT, textdatum_t::top_left, 2);
+  int sel = 0; for (int i = 0; i < (int)_cands.size(); i++) if ((_tSelMask >> i) & 1u) sel++;
+  char hd[20]; snprintf(hd, sizeof(hd), "%d in", sel);
+  label(g, SCREEN_W - 6, 6, hd, sel >= 2 ? C_GO : C_BAD, textdatum_t::top_right);
+  int n = (int)_cands.size(), vis = pickVisible();
+  if (_tScroll > n - vis) _tScroll = (n > vis) ? n - vis : 0;
+  if (_tScroll < 0) _tScroll = 0;
+  for (int i = _tScroll; i < n && i < _tScroll + vis; i++) {
+    Rect r = {6, (int16_t)(PICK_TOP + (i - _tScroll) * PICK_ROWH), 300, 24};
+    const Candidate& c = _cands[i];
+    bool on = (_tSelMask >> i) & 1u;
+    g.fillRoundRect(r.x, r.y, r.w, r.h, 4, C_PANEL_HI);
+    g.drawRoundRect(r.x, r.y, r.w, r.h, 4, on ? C_GO : C_PANEL_HI);
+    // checkbox
+    g.drawRoundRect(r.x + 4, r.y + 4, 16, 16, 3, on ? C_GO : C_DIM);
+    if (on) { g.fillRoundRect(r.x + 7, r.y + 7, 10, 10, 2, C_GO); }
+    assets::drawCharacter(g, r.x + 34, r.cy(), 16, c.avatar, gb::SOUTH);
+    label(g, r.x + 50, r.y + 2, c.name.c_str(), c.neuro ? ui::rgb(120, 230, 245) : c.house ? C_INK : C_GO);
+    label(g, r.x + 130, r.y + 5, c.style.c_str(), C_DIM);
+  }
+  if (n > vis) {  // scrollbar (tap top/bottom half to page)
+    int trackX = SCREEN_W - 8, trackH = vis * PICK_ROWH;
+    g.fillRect(trackX, PICK_TOP, 4, trackH, C_PANEL_HI);
+    int thumbH = trackH * vis / n; if (thumbH < 10) thumbH = 10;
+    int thumbY = PICK_TOP + (trackH - thumbH) * _tScroll / (n - vis);
+    g.fillRect(trackX, thumbY, 4, thumbH, C_ACCENT);
+  }
+  g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
+  button(g, R_TALL,  "All",      C_ACCENT, C_PANEL);
+  button(g, R_TNEXT, "Format >", sel >= 2 ? C_GO : C_LOCK, C_PANEL);
+  button(g, R_BACK,  "< Back",   C_INK, C_PANEL);
+}
+
 void ArenaScreen::drawTChoice() {
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Tournament", C_ACCENT, textdatum_t::top_left, 2);
-  label(g, SCREEN_W / 2, 40, "Pick a format", C_INK, textdatum_t::top_center);
-  button(g, R_G1, "Ladder - round robin (instant)", C_MOVE, C_PANEL);
-  button(g, R_G2, "Cup - bracket, watch it play", C_ACCENT, C_PANEL);
+  label(g, SCREEN_W / 2, 36, "Pick a format", C_INK, textdatum_t::top_center);
+  button(g, R_G1, "Ladder", C_MOVE, C_PANEL);
+  label(g, SCREEN_W / 2, 94, "everyone plays everyone; ranked by wins", C_DIM, textdatum_t::top_center);
+  button(g, R_G3, "Cup", C_ACCENT, C_PANEL);
+  label(g, SCREEN_W / 2, 170, "knockout bracket - lose and you're out", C_DIM, textdatum_t::top_center);
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
 }
@@ -315,13 +374,12 @@ void ArenaScreen::drawGameType() {
       button(g, R_G3, "Train a fighter (NeuroBot)", ui::rgb(120, 230, 245), C_PANEL);
     // Tournament: a battle ladder of your own fighters -- needs at least two saved bots.
     if (neuro && _profile && _profile->library.size() >= 2)
-      button(g, R_G4, "Tournament - fighter ladder", C_MOVE, C_PANEL);
+      button(g, R_G4, "Tournament - race or battle", C_MOVE, C_PANEL);
   }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Opponents", C_INK, C_PANEL);
 }
 
-static constexpr int PICK_ROWH = 26, PICK_TOP = BAND_Y + 4;
 int ArenaScreen::pickVisible() const { return (BAND_H - 8) / PICK_ROWH; }
 
 ui::Rect ArenaScreen::pickRowRect(int i) const {
@@ -657,25 +715,63 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         return app::Signal::GOTO_ARENA_TRAIN;
       } else if (!_hotseat && _profile && _profile->unlocks.neuro && _profile->library.size() >= 2
                  && R_G4.contains(tx, ty)) {
-        _phase = Phase::TCHOICE; drawTChoice();        // pick Ladder (round-robin) or Cup (bracket)
+        _phase = Phase::TDISC; drawTDisc();            // tournament: pick discipline first
       }
       break;
-    case Phase::TCHOICE:
+    case Phase::TDISC:
       if (R_BACK.contains(tx, ty)) { drawGameType(); }
-      else if (R_G1.contains(tx, ty)) {                // Ladder: instant round-robin leaderboard
+      else if (R_G1.contains(tx, ty) || R_G3.contains(tx, ty)) {   // Maze race (G1) / Battle (G3)
+        _tSumo = R_G3.contains(tx, ty);
+        _type = _tSumo ? MatchType::SUMO : MatchType::RACE;
+        buildCandidates(_tSumo);                       // discipline-appropriate roster
+        _tSelMask = (_cands.size() >= 32) ? 0xFFFFFFFFu : ((1u << _cands.size()) - 1u);  // all selected
+        _tScroll = 0; _phase = Phase::TPICK; drawTPick();
+      }
+      break;
+    case Phase::TPICK: {
+      if (R_BACK.contains(tx, ty)) { _phase = Phase::TDISC; drawTDisc(); break; }
+      uint32_t allMask = (_cands.size() >= 32) ? 0xFFFFFFFFu : ((1u << _cands.size()) - 1u);
+      if (R_TALL.contains(tx, ty)) {                   // Select all <-> none
+        _tSelMask = (_tSelMask == allMask) ? 0u : allMask;
+        hal::audio.blip(); drawTPick(); break;
+      }
+      if (R_TNEXT.contains(tx, ty)) {                  // Format > (need >=2 fighters)
+        int sel = 0; for (int i = 0; i < (int)_cands.size(); i++) if ((_tSelMask >> i) & 1u) sel++;
+        if (sel >= 2) { _phase = Phase::TCHOICE; drawTChoice(); } else hal::audio.fail();
+        break;
+      }
+      int n = (int)_cands.size(), vis = pickVisible();
+      if (n > vis && tx >= SCREEN_W - 14) {            // scrollbar paging
+        _tScroll += (ty < PICK_TOP + vis * PICK_ROWH / 2) ? -(vis - 1) : (vis - 1);
+        if (_tScroll > n - vis) _tScroll = n - vis;
+        if (_tScroll < 0) _tScroll = 0;
+        hal::audio.blip(); drawTPick(); break;
+      }
+      for (int i = _tScroll; i < n && i < _tScroll + vis; i++) {   // toggle a fighter in/out
+        Rect r = {6, (int16_t)(PICK_TOP + (i - _tScroll) * PICK_ROWH), 300, 24};
+        if (r.contains(tx, ty)) { _tSelMask ^= (1u << i); hal::audio.blip(); drawTPick(); break; }
+      }
+      break;
+    }
+    case Phase::TCHOICE: {
+      if (R_BACK.contains(tx, ty)) { _phase = Phase::TPICK; drawTPick(); break; }
+      std::vector<int> parts;
+      for (int i = 0; i < (int)_cands.size(); i++) if ((_tSelMask >> i) & 1u) parts.push_back(i);
+      if (R_G1.contains(tx, ty)) {                     // Ladder: instant round-robin leaderboard
         auto& g = hal::display.gfx();
         label(g, SCREEN_W / 2, SCREEN_H / 2, "Running tournament...", C_ACCENT, textdatum_t::middle_center);
-        runTournament();
-      } else if (R_G2.contains(tx, ty)) {              // Cup: watchable single-elimination bracket
-        startCup();
+        runTournament(parts);
+      } else if (R_G3.contains(tx, ty)) {              // Cup: watchable single-elimination bracket
+        startCup(parts);
       }
       break;
+    }
     case Phase::TOURNEY:
-      if (R_BACK.contains(tx, ty)) drawGameType();
+      if (R_BACK.contains(tx, ty)) { _phase = Phase::TPICK; drawTPick(); }
       break;
     case Phase::CUP:
       if (_cupBracket.done()) {                        // champion shown (bottom-bar buttons)
-        if (R_CUP_AGAIN.contains(tx, ty)) startCup();  // run it again
+        if (R_CUP_AGAIN.contains(tx, ty)) { std::vector<int> same = _cupPlayers; startCup(same); }  // re-run, same field
         else if (R_CUP_EXIT.contains(tx, ty) || R_BACK.contains(tx, ty)) drawGameType();
       } else {
         if (R_AGAIN.contains(tx, ty)) cupAdvanceToNextMatch();   // Start / Next match
