@@ -29,7 +29,8 @@ class ArenaScreen : public app::IScreen {
                                TDISC,     // tournament: pick discipline (Maze race vs Battle)
                                TPICK,     // tournament: pick which fighters take part (checklist + all)
                                TCHOICE,   // pick tournament format: Ladder (round-robin) or Cup (bracket)
-                               CUP };     // bracket card shown between/after Cup matches
+                               CUP,       // bracket card shown between/after Cup matches
+                               NETLOBBY };// multi-device room: host/join + roster, then a networked Cup
   struct Candidate { std::string name; gb::Program prog; uint8_t avatar; std::string style; bool house; bool smart; bool neuro = false; };
 
   void buildCandidates(bool sumo = false);  // sumo => only NeuroBot fighters, no dashers
@@ -86,6 +87,13 @@ class ArenaScreen : public app::IScreen {
   struct CupGame { int8_t round; int8_t a; int8_t b; int8_t win; };
   std::vector<CupGame> _cupLog;
   void drawBracket();            // the full bracket tree (rounds as columns)
+  // Networked room (multi-device ESP-NOW Cup): the field comes from the lobby roster and every
+  // device replays the SAME matches from the shared seed (deterministic Arena -> same result).
+  void drawNetLobby();           // host/join + the live roster
+  void buildRosterField();       // turn the lobby roster into _cands + _cupPlayers, start the Cup
+  bool _netCup = false;          // this Cup's match boards use the shared seed (not millis())
+  uint32_t _netSeed = 0;         // the host's broadcast seed
+  int8_t _roomN = -1;            // last-drawn roster size (redraw the lobby when it changes)
 
   gb::Profile* _profile = nullptr;
   std::vector<Candidate> _cands;

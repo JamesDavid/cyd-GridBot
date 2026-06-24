@@ -7,6 +7,14 @@ Audio audio;
 
 static constexpr int SPK_PIN = 26;
 static constexpr int SPK_CH = 0;
+// Volume = PWM duty (out of 255). The stock ledcWriteTone outputs a 50% square wave -- loud, and
+// it sags the 3.3V rail enough to visibly DIM the backlight. A low duty is quieter AND draws far
+// less current, so the screen stays bright. (8-bit res from ledcSetup, so 0..255.)
+static constexpr int SPK_VOL = 22;
+static inline void spkFreq(uint16_t freq) {
+  ledcWriteTone(SPK_CH, freq);              // set the tone frequency (also writes 50% duty)
+  ledcWrite(SPK_CH, freq ? SPK_VOL : 0);    // then knock the duty down to a gentle volume
+}
 
 // A cheerful 8-bit theme that loops on the menu. (freq Hz, duration ms; 0 = rest)
 const Note kTitleMusic[] = {
@@ -27,19 +35,19 @@ const int kArenaMusicLen = sizeof(kArenaMusic) / sizeof(kArenaMusic[0]);
 void Audio::begin() {
   ledcSetup(SPK_CH, 2000, 8);
   ledcAttachPin(SPK_PIN, SPK_CH);
-  ledcWriteTone(SPK_CH, 0);
+  spkFreq(0);
 }
 
 void Audio::setEnabled(bool on) {
   _on = on;
-  if (!on) { _playing = false; ledcWriteTone(SPK_CH, 0); }
+  if (!on) { _playing = false; spkFreq(0); }
 }
 
 void Audio::tone(uint16_t freq, uint16_t ms) {
   if (!_on) return;
-  ledcWriteTone(SPK_CH, freq);
+  spkFreq(freq);
   delay(ms);
-  ledcWriteTone(SPK_CH, 0);
+  spkFreq(0);
   _noteStart = 0;  // make the melody re-assert its current note on the next update
 }
 
@@ -69,14 +77,14 @@ void Audio::startMusic(const Note* notes, int count, bool loop) {
 
 void Audio::stopMusic() {
   _playing = false;
-  ledcWriteTone(SPK_CH, 0);
+  spkFreq(0);
 }
 
 void Audio::update(uint32_t now) {
   if (!_playing || !_on || !_mel) return;
   if (_noteStart == 0) {                 // (re)start the current note
     _noteStart = now;
-    ledcWriteTone(SPK_CH, _mel[_melIdx].freq);
+    spkFreq(_mel[_melIdx].freq);
     return;
   }
   if (now - _noteStart >= _mel[_melIdx].ms) {
@@ -86,7 +94,7 @@ void Audio::update(uint32_t now) {
       _melIdx = 0;
     }
     _noteStart = now;
-    ledcWriteTone(SPK_CH, _mel[_melIdx].freq);
+    spkFreq(_mel[_melIdx].freq);
   }
 }
 

@@ -9,11 +9,25 @@
 #include "game/Bots.h"
 #include "game/Score.h"
 #include "game/Distill.h"
+#include "game/ProgramJson.h"
+#include "net/TourneyNet.h"
+#include <ArduinoJson.h>
 
 using namespace ui;
 using namespace gb;
 
 namespace screens {
+
+// AST <-> JSON for putting a fighter on the wire (same shape as the radio trade).
+static String programToJsonString(const Program& p) {
+  JsonDocument doc; programToJson(p, doc.to<JsonObject>());
+  String s; serializeJson(doc, s); return s;
+}
+static Program programFromJsonString(const String& s) {
+  Program p; JsonDocument doc;
+  if (deserializeJson(doc, s) == DeserializationError::Ok) programFromJson(doc.as<JsonObjectConst>(), p);
+  return p;
+}
 
 // A pre-trained NeuroBot: distil a brain to navigate this board (from `start`), then
 // drive with a NEURO node. Reliable + competent, and an actual neural net to battle.
@@ -29,9 +43,14 @@ static void buildNeuroBot(Program& p, const Maze& m, const Pose& start, uint32_t
 
 static const Rect R_BACK = {6, (int16_t)(BOTBAR_Y + 2), 100, 26};
 // Level 1 — pick the OPPONENT first (who you play against)
-static const Rect R_OPP_AI    = {20, 56,  280, 40};
-static const Rect R_OPP_HOT   = {20, 104, 280, 40};
-static const Rect R_OPP_RADIO = {20, 152, 280, 40};
+static const Rect R_OPP_AI    = {20, 46,  280, 34};
+static const Rect R_OPP_HOT   = {20, 86,  280, 34};
+static const Rect R_OPP_RADIO = {20, 126, 280, 34};
+static const Rect R_OPP_ROOM  = {20, 166, 280, 34};   // multi-device tournament room
+// net lobby
+static const Rect R_ROOM_HOST  = {40, 72,  240, 38};
+static const Rect R_ROOM_JOIN  = {40, 122, 240, 38};
+static const Rect R_ROOM_START = {112, (int16_t)(BOTBAR_Y + 2), 96, 26};
 // Level 2 — pick the GAME (depends on the opponent); vertical slots reused per branch
 static const Rect R_G1 = {20, 56,  280, 34};
 static const Rect R_G2 = {20, 94,  280, 34};
@@ -228,7 +247,7 @@ void ArenaScreen::startCup(const std::vector<int>& parts) {
   _type = _tSumo ? MatchType::SUMO : MatchType::RACE;
   _cupBracket.init((int)_cupPlayers.size());
   _cupLog.clear();
-  _cup = true; _cupMatch = -1;
+  _cup = true; _cupMatch = -1; _netCup = false;   // local by default; buildRosterField sets net
   _phase = Phase::CUP; drawCupCard();             // opening card; tap to start the first match
 }
 
@@ -430,9 +449,62 @@ void ArenaScreen::drawMenu() {
   label(g, SCREEN_W / 2, 38, "Who do you want to play?", C_INK, textdatum_t::top_center);
   button(g, R_OPP_AI,    "vs Computer", C_GO, C_PANEL);
   button(g, R_OPP_HOT,   "Hotseat - 2 players, 1 device", C_FUNC, C_PANEL);
-  button(g, R_OPP_RADIO, "Radio - a friend nearby", C_MOVE, C_PANEL);
+  button(g, R_OPP_RADIO, "Radio - trade/battle a friend", C_MOVE, C_PANEL);
+  button(g, R_OPP_ROOM,  "Room - tournament w/ friends", C_ACCENT, C_PANEL);
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
+}
+
+// The room lobby: host or join, then watch the roster fill as nearby boards join.
+void ArenaScreen::drawNetLobby() {
+  auto& g = hal::display.gfx();
+  g.fillScreen(C_BG);
+  g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
+  label(g, 6, 3, "Room", C_ACCENT, textdatum_t::top_left, 2);
+  net::TourneyNet& tn = net::tourney();
+  if (tn.role() == net::TRole::NONE) {
+    label(g, SCREEN_W / 2, 46, "Tournament with nearby boards", C_DIM, textdatum_t::top_center);
+    button(g, R_ROOM_HOST, "Host a room", C_GO, C_PANEL);
+    button(g, R_ROOM_JOIN, "Join a room", C_MOVE, C_PANEL);
+  } else {
+    char hd[24]; snprintf(hd, sizeof(hd), "%s  %d in", tn.isHost() ? "hosting" : "joined", tn.playerCount());
+    label(g, SCREEN_W - 6, 6, hd, C_GO, textdatum_t::top_right);
+    label(g, 10, 28, "Players in the room:", C_DIM);
+    const std::vector<net::BotCard>& r = tn.roster();
+    for (int i = 0; i < (int)r.size() && i < 6; i++) {
+      int y = 46 + i * 24;
+      g.fillRoundRect(10, y, SCREEN_W - 20, 22, 4, C_PANEL);
+      char row[44]; snprintf(row, sizeof(row), "%.8s  (%.12s)", r[i].name.c_str(), r[i].botName.c_str());
+      label(g, 16, y + 6, row, C_INK);
+    }
+  }
+  g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
+  button(g, R_BACK, "< Back", C_INK, C_PANEL);
+  if (tn.isHost() && tn.playerCount() >= 2) button(g, R_ROOM_START, "Start >", C_GO, C_PANEL);
+  else if (tn.role() == net::TRole::PEER) label(g, SCREEN_W / 2, BOTBAR_Y + 9, "waiting for host to start", C_DIM, textdatum_t::top_center);
+  else if (tn.isHost()) label(g, SCREEN_W / 2, BOTBAR_Y + 9, "need 2+ boards", C_DIM, textdatum_t::top_center);
+}
+
+// Turn the lobby roster into the Cup field and start a networked Cup (shared seed -> every device
+// replays the identical bracket). Roster order is uuid-sorted on every device, so fields match.
+void ArenaScreen::buildRosterField() {
+  net::TourneyNet& tn = net::tourney();
+  const std::vector<net::BotCard>& r = tn.roster();
+  _cands.clear();
+  for (const net::BotCard& c : r) {
+    Candidate cd;
+    cd.name = std::string(c.botName.length() ? c.botName.c_str() : c.name.c_str());
+    cd.prog = programFromJsonString(c.progJson);
+    cd.avatar = c.avatar;
+    cd.style = std::string(c.name.c_str());   // the owner's name
+    cd.house = false; cd.smart = false; cd.neuro = false;  // a concrete program -> don't re-distill
+    _cands.push_back(cd);
+  }
+  _tSumo = tn.sumo();
+  std::vector<int> parts;
+  for (int i = 0; i < (int)_cands.size(); i++) parts.push_back(i);
+  startCup(parts);                  // sets _type, bracket, _phase=CUP, draws the card
+  _netCup = true; _netSeed = tn.seed();
 }
 
 // Level 2: the games available for the chosen opponent (_hotseat picks the branch).
@@ -567,15 +639,12 @@ void ArenaScreen::setupMatchBot(int pick, const Pose& start, bool sumo) {
 void ArenaScreen::startMatch() {
   hal::audio.stopMusic();  // the board uses step-tick SFX; silence the battle theme
   bool sumo = (_type == MatchType::SUMO);
-  if (sumo) {
-    // A big, open ring that's fresh EVERY match -- mix the clock so it's not the same series
-    // each boot. Local play (vs-Computer / Hotseat) only, so millis() is fine; a network Sumo
-    // would pass the SHARED seed instead and both devices would build the identical ring.
-    uint32_t seed = (_profile ? _profile->seedBase : 7u) + (uint32_t)millis() + 101u * (++_sumoNonce);
-    MazeGen::generateSumoRing(_maze, seed, _s0, _s1);
-  } else {
-    MazeGen::generateArena(_maze, _profile ? _profile->seedBase + 7u : 7u, _s0, _s1);
-  }
+  // Networked Cup: derive the board from the SHARED seed + match index so every device builds the
+  // identical board and replays the same result. Local play mixes the clock for variety.
+  uint32_t base = _netCup ? (_netSeed + 101u * (uint32_t)(_cupMatch + 1))
+                          : (_profile ? _profile->seedBase : 7u) + (uint32_t)millis() + 101u * (++_sumoNonce);
+  if (sumo) MazeGen::generateSumoRing(_maze, base, _s0, _s1);
+  else      MazeGen::generateArena(_maze, _netCup ? base : (_profile ? _profile->seedBase + 7u : 7u), _s0, _s1);
   setupMatchBot(_pick0, _s0, sumo);
   setupMatchBot(_pick1, _s1, sumo);
   const Program& p0 = _cands[_pick0].prog;
@@ -774,6 +843,14 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     if (o != ArenaOutcome::RUNNING) { _running = false; onMatchEnd(); }
   }
 
+  // Networked room: pump ESP-NOW every frame (not just on tap); redraw as the roster grows; once
+  // the host seeds the bracket, build the field and run the Cup (same on every device).
+  if (_phase == Phase::NETLOBBY) {
+    net::tourney().loop(now);
+    if (net::tourney().seeded()) { buildRosterField(); return app::Signal::NONE; }
+    if ((int)net::tourney().playerCount() != _roomN) { _roomN = (int8_t)net::tourney().playerCount(); drawNetLobby(); }
+  }
+
   if (!tap) return app::Signal::NONE;
 
   switch (_phase) {
@@ -782,7 +859,32 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       if (R_OPP_RADIO.contains(tx, ty)) return app::Signal::GOTO_RADIO;  // radio screen has its own battle/trade
       else if (R_OPP_AI.contains(tx, ty))  { _hotseat = false; drawGameType(); }
       else if (R_OPP_HOT.contains(tx, ty)) { _hotseat = true;  drawGameType(); }
+      else if (R_OPP_ROOM.contains(tx, ty)) { net::tourney().begin(); net::tourney().leave(); _roomN = -1; _phase = Phase::NETLOBBY; drawNetLobby(); }
       break;
+    case Phase::NETLOBBY: {
+      net::TourneyNet& tn = net::tourney();
+      if (R_BACK.contains(tx, ty)) { tn.leave(); drawMenu(); break; }
+      if (tn.role() == net::TRole::NONE && (R_ROOM_HOST.contains(tx, ty) || R_ROOM_JOIN.contains(tx, ty))) {
+        net::BotCard mine;
+        mine.name = _profile ? String(_profile->name.c_str()) : String("P");
+        mine.avatar = _profile ? _profile->avatar : 0;
+        mine.uuid = _profile ? String(_profile->uuid.c_str()) : String("?");
+        bool haveBot = _profile && !_profile->library.empty();
+        Program bot = haveBot ? _profile->library[0].program : hunterProgram();
+        String botName = haveBot ? String(_profile->library[0].name.c_str()) : String("Hunter");
+        String pj = programToJsonString(bot);
+        if (pj.length() > 240) {   // TODO: chunk big (neural) cards; for now fall back to a coded hunter
+          bot = hunterProgram(); botName = "Hunter"; pj = programToJsonString(bot);
+        }
+        mine.botName = botName; mine.progJson = pj;
+        if (R_ROOM_HOST.contains(tx, ty)) tn.host(mine); else tn.join(mine);
+        _roomN = -1; drawNetLobby();
+      } else if (tn.isHost() && tn.playerCount() >= 2 && R_ROOM_START.contains(tx, ty)) {
+        uint32_t seed = (_profile ? _profile->seedBase : 7u) + (uint32_t)now;
+        tn.start(seed, true);   // networked Battle (Sumo): most deterministic across devices
+      }
+      break;
+    }
     case Phase::GAMETYPE:
       if (R_BACK.contains(tx, ty)) { drawMenu(); break; }  // < Opponents
       if (R_G1.contains(tx, ty)) {  // Race (both branches)

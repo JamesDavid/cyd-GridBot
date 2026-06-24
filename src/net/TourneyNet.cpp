@@ -29,8 +29,8 @@ void TourneyNet::addPeerMac(const uint8_t* mac) {
 bool TourneyNet::begin() {
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
-  if (esp_now_init() != ESP_OK) { _state = TState::FAILED; return false; }
-  esp_now_register_recv_cb(recvTrampoline);   // NOTE: global -- supersedes net::Radio's while active
+  esp_now_init();   // ESP_OK, or already-initialized if net::Radio set it up first -- both fine
+  esp_now_register_recv_cb(recvTrampoline);   // global -- supersedes net::Radio's recv cb while active
   addPeerMac(BCAST);
   _state = TState::IDLE;
   return true;
