@@ -21,6 +21,9 @@ class GameScreen : public app::IScreen {
   // progress/coins/stats (not farmable) — just the star rating on the overlay.
   void beginChallenge(gb::Profile* profile, uint32_t seedCode);
   bool isChallenge() const { return _challenge; }
+  // Edit a saved library bot's program in the editor (no campaign progress/coins; a test-win
+  // just returns you to the code view). `level` picks the practice maze (the bot's source level).
+  void beginEditLibrary(gb::Profile* profile, const gb::Program& prog, uint32_t level);
   void enter() override;
   void resumeCode();   // re-show the Code view WITHOUT the level preview (e.g. back from train-brain)
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
@@ -91,6 +94,7 @@ class GameScreen : public app::IScreen {
   gb::Profile* _profile = nullptr;
   uint32_t _level = 1;
   bool _challenge = false;    // shared-seed Challenge run (no campaign progress on win)
+  bool _editLib = false;      // editing a saved library bot (no campaign progress; win -> back to code)
   uint32_t _challengeCode = 0;  // the seed code (shown in the chrome instead of "Lv N")
   gb::Maze _boards[gb::MAX_BOARDS];
   int _boardCount = 1;

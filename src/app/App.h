@@ -117,6 +117,7 @@ class App {
   screens::BackpropLessonScreen _backpropLesson;
   screens::LibraryScreen _library;
   int _renameLibIdx = -1;   // library entry being renamed via the keyboard (-1 = none)
+  int _editLibIdx = -1;     // library entry being edited in the GAME editor (-1 = none)
   screens::BrainViewScreen _brainView;
   screens::BrainMapScreen _brainMap;
   TapDetector _introTap;

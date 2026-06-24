@@ -14,13 +14,15 @@ class LibraryScreen : public app::IScreen {
   void enter() override;
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
   int renameIdx() const { return _renameIdx; }  // entry the keyboard should rename (-1 = none)
+  int editIdx() const { return _editIdx; }       // entry to open in the code editor (-1 = none)
 
  private:
   void draw();
   gb::Profile* _p = nullptr;
-  int _sel = -1;       // selected row (shows Rename/Delete chips), -1 = none
+  int _sel = -1;       // selected row (shows Edit/Rename/Delete chips), -1 = none
   int _scroll = 0;     // first visible row
   int _renameIdx = -1; // set when "Rename" tapped -> App opens the keyboard for this entry
+  int _editIdx = -1;   // set when "edit" tapped -> App opens the code editor on this bot
   app::TapDetector _tap;
 };
 

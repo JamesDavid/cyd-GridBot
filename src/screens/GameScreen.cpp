@@ -48,6 +48,7 @@ void GameScreen::begin(Profile* profile, uint32_t level) {
   _profile = profile;
   _level = level;
   _challenge = false;
+  _editLib = false;
   _boardCount = MazeGen::generateBoards(_boards, gb::MAX_BOARDS,
                                         profile ? profile->seedBase : 0, level);
   _boardIdx = 0;
@@ -85,6 +86,7 @@ void GameScreen::beginChallenge(Profile* profile, uint32_t seedCode) {
   static constexpr int CHALLENGE_LEVEL = 12;  // fixed difficulty so a code => one board
   _profile = profile;
   _challenge = true;
+  _editLib = false;
   _challengeCode = seedCode;
   _level = CHALLENGE_LEVEL;
   _boardCount = 1;
@@ -94,6 +96,40 @@ void GameScreen::beginChallenge(Profile* profile, uint32_t seedCode) {
   recountGems();
   _biome = ui::biomeFor(CHALLENGE_LEVEL);
   _prog.clear();                       // never resume a campaign script into a challenge
+  _editList = &_prog.main;
+  _par = shortestSolutionLen(_maze, profile && profile->unlocks.jump);
+  if (_par <= 0) _par = 1;
+  _stepMs = profile ? animStepMs(profile->settings) : 400;
+  _view = V_CODE;
+  _mode = M_EDIT;
+  _auto = false;
+  _selected = -1;
+  _scroll = 0;
+  _followTail = true;
+  _failNode = nullptr;
+  _drawnPose = _maze.startPose();
+  _tween = false;
+  for (auto& v : _visited) v = false;
+  for (auto& v : _coinTaken) v = false;
+  for (auto& v : _gemTaken) v = false;
+  _gemsThisRun = 0;
+  _coinsThisRun = 0;
+  _it.load(&_prog, &_maze, _maze.startPose());
+}
+
+void GameScreen::beginEditLibrary(Profile* profile, const Program& prog, uint32_t level) {
+  _profile = profile;
+  _challenge = false;
+  _editLib = true;
+  if (level < 1) level = 15;
+  _level = level;
+  _boardCount = 1;                                  // single practice board
+  MazeGen::generateBoards(_boards, 1, profile ? profile->seedBase : 0, level);
+  _boardIdx = 0;
+  _maze = _boards[0];
+  recountGems();
+  _biome = ui::biomeFor((int)level);
+  _prog = prog;                                     // the saved bot's program (edit it in place)
   _editList = &_prog.main;
   _par = shortestSolutionLen(_maze, profile && profile->unlocks.jump);
   if (_par <= 0) _par = 1;
@@ -1131,8 +1167,10 @@ app::Signal GameScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       _mode = M_EDIT; _view = V_CODE; drawCodeView();
       return app::Signal::NONE;
     }
-    if (_profile) { _profile->workLevel = _level; _profile->work = _prog; }
-    return app::Signal::BACK;             // editor / win / fail -> menu (hub)
+    // Autosave the campaign resume slot -- but NOT when editing a library bot (that would
+    // clobber the player's in-progress campaign program with the bot we're editing).
+    if (_profile && !_editLib) { _profile->workLevel = _level; _profile->work = _prog; }
+    return app::Signal::BACK;             // editor / win / fail -> menu (hub) / My Bots
   }
 
   // level-start maze preview: hold ~2.5s (or until tapped), then go to code view
@@ -1147,7 +1185,11 @@ app::Signal GameScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   }
 
   if (_mode == M_WIN) {
-    if (tap) return app::Signal::WON;
+    if (tap) {
+      // Editing a library bot: a test-win isn't campaign progress -- just hop back to the code.
+      if (_editLib) { _mode = M_EDIT; _view = V_CODE; drawCodeView(); return app::Signal::NONE; }
+      return app::Signal::WON;
+    }
     return app::Signal::NONE;
   }
 

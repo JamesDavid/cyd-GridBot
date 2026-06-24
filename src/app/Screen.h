@@ -28,6 +28,7 @@ enum class Signal : uint8_t {
   GOTO_PLAY,       // play the campaign at the current level (from the Home hub)
   GOTO_MYBOTS,     // open the library manager ("My Bots") from the Home hub
   RENAME_LIB,      // rename a library entry (My Bots -> keyboard -> back)
+  EDIT_LIB,        // edit a library bot's program in the code editor (My Bots -> Game edit mode)
 };
 
 class IScreen {

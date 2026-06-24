@@ -349,6 +349,17 @@ void App::tick(uint32_t now) {
           _create.enter(); _state = State::CREATE;
         }
       }
+      else if (s == Signal::EDIT_LIB) {  // open this bot's program in the code editor
+        int i = _library.editIdx();
+        if (i >= 0 && i < (int)_profile.library.size()) {
+          _editLibIdx = i;
+          uint32_t lvl = _profile.library[i].srcLevel ? _profile.library[i].srcLevel : 15u;
+          hal::audio.stopMusic();
+          _game.beginEditLibrary(&_profile, _profile.library[i].program, lvl);
+          _game.resumeCode();   // straight to the code view (no maze-study preview)
+          _state = State::GAME;
+        }
+      }
       break;
     }
     case State::CREATE: {
@@ -401,6 +412,16 @@ void App::tick(uint32_t now) {
         _game.clearPendingNeuro();
         _neuroTrain.enter();
         _state = State::NEURO_TRAIN;
+        break;
+      }
+      // Editing a saved library bot: write the edited program back to that entry and return to
+      // My Bots. No campaign progress/coins. (Brain training above still works mid-edit.)
+      if (_editLibIdx >= 0 && (s == Signal::BACK || s == Signal::WON)) {
+        if (_editLibIdx < (int)_profile.library.size())
+          _profile.library[_editLibIdx].program = _game.program();
+        saveProfile();
+        _editLibIdx = -1;
+        _library.begin(&_profile); _library.enter(); _state = State::LIBRARY;
         break;
       }
       // Seed Challenge: a one-off board — return to the picker, never touch the campaign.

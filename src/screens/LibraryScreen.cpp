@@ -9,6 +9,7 @@ namespace screens {
 
 static const int TOP = 28, ROWH = 28, VIS = 6;
 static Rect rowRect(int i) { return {8, (int16_t)(TOP + i * ROWH), 304, (int16_t)(ROWH - 2)}; }
+static Rect editChip(int y) { return {(int16_t)(312 - 168), (int16_t)(y + 2), 50, 22}; }
 static Rect renChip(int y) { return {(int16_t)(312 - 112), (int16_t)(y + 2), 50, 22}; }
 static Rect delChip(int y) { return {(int16_t)(312 - 56),  (int16_t)(y + 2), 50, 22}; }
 static const Rect R_BACK = {6,   (int16_t)(BOTBAR_Y + 2), 96, 26};
@@ -45,7 +46,7 @@ static const char* botType(const Program& p) {
   return nn->pilot ? "pilot" : "brain";
 }
 
-void LibraryScreen::begin(Profile* profile) { _p = profile; _sel = -1; _scroll = 0; _renameIdx = -1; }
+void LibraryScreen::begin(Profile* profile) { _p = profile; _sel = -1; _scroll = 0; _renameIdx = -1; _editIdx = -1; }
 void LibraryScreen::enter() { draw(); }
 
 void LibraryScreen::draw() {
@@ -79,6 +80,7 @@ void LibraryScreen::draw() {
     else snprintf(sub, sizeof(sub), "%s . %s", srcLabel(e.source), botType(e.program));
     label(g, rr.x + 8, rr.y + 14, sub, C_DIM);
     if (sel) {
+      button(g, editChip(rr.y), "edit", C_GO, C_PANEL);   // open this bot in the code editor
       button(g, renChip(rr.y), "rename", C_ACCENT, C_PANEL);
       button(g, delChip(rr.y), "delete", C_BAD, C_PANEL);
     }
@@ -106,6 +108,7 @@ app::Signal LibraryScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     if (idx >= n) break;
     Rect rr = rowRect(r);
     if (idx == _sel) {  // acting on the selected row's chips
+      if (editChip(rr.y).contains(tx, ty)) { _editIdx = idx; hal::audio.blip(); return app::Signal::EDIT_LIB; }
       if (renChip(rr.y).contains(tx, ty)) { _renameIdx = idx; hal::audio.blip(); return app::Signal::RENAME_LIB; }
       if (delChip(rr.y).contains(tx, ty)) {
         _p->library.erase(_p->library.begin() + idx);
