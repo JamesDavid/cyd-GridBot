@@ -29,7 +29,7 @@ bool distillPath(Net& brain, const Maze& m, const uint8_t* tiles, int n, int epo
 // when it's in the tile ahead, dodge walls/pits, else charge in -- by backprop over random foe
 // placements on a battle ring. One call = a competent fighter instantly (the "Teach" button in
 // Battle), where the goal is "minimise enemy distance, then zap". In place; call again to refine.
-bool distillHunter(Net& brain, uint32_t seed, int epochs);
+bool distillHunter(Net& brain, uint32_t seed, int epochs, bool jitterFoe = false);
 
 // As distillHunter, but teaches a RECURRENT brain (BPTT over each chase episode) -- the RNN
 // variant of the Battle "Teach", so the brain-type toggle can train a memory brain to fight.

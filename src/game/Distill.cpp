@@ -178,7 +178,7 @@ static int idealHuntAction(const Maze& m, const Pose& me, const Pose& foe) {
   return 2;                                                      // foe dead behind / blocked -> rotate
 }
 
-bool distillHunter(Net& brain, uint32_t seed, int epochs) {
+bool distillHunter(Net& brain, uint32_t seed, int epochs, bool jitterFoe) {
   Rng rng(seed);
   Maze m; Pose s0, s1;
   MazeGen::generateSumoRing(m, seed, s0, s1);   // a real battle ring (no goal, open)
@@ -214,6 +214,14 @@ bool distillHunter(Net& brain, uint32_t seed, int epochs) {
         int ar = me.row + dr, ac = me.col + dc;
         if (!m.isWalkable(ar, ac) || (ar == foe.row && ac == foe.col)) break;
         me.row = (int8_t)ar; me.col = (int8_t)ac;
+      }
+      // Jitter the foe so the net learns to track a MOVING target. Trained against a static foe it
+      // dithers on the novel bearings a real (moving) player creates -> "stuck a few tiles away".
+      // Opt-in (the game enables it; the host tests pin the original static-foe behaviour).
+      if (jitterFoe && rng.below(100) < 30) {
+        int fdr, fdc; facingDelta((Facing)rng.below(4), fdr, fdc);
+        int nr = foe.row + fdr, nc = foe.col + fdc;
+        if (m.isWalkable(nr, nc) && !(nr == me.row && nc == me.col)) { foe.row = (int8_t)nr; foe.col = (int8_t)nc; }
       }
     }
   }

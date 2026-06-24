@@ -624,7 +624,7 @@ void ArenaScreen::setupMatchBot(int pick, const Pose& start, bool sumo) {
     if (c.neuro && c.prog.brains.empty()) {
       c.prog.clear();
       uint8_t bi = c.prog.addBrain(7u + (uint32_t)c.avatar * 13u);
-      distillHunter(c.prog.brains[bi], 7u + (uint32_t)c.avatar * 13u, 2000);
+      distillHunter(c.prog.brains[bi], 7u + (uint32_t)c.avatar * 13u, 2000, true);  // jitter -> tracks a moving player
       Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(bi)); c.prog.main.push_back(loop);
     } else if (c.prog.main.empty() && c.prog.brains.empty()) {
       c.prog = hunterProgram();   // Ace / empties: a code hunter so they engage

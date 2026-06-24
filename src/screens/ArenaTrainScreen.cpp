@@ -85,7 +85,7 @@ void ArenaTrainScreen::buildOpponent(int idx) {
     _oppName = HOUSE_OPP[idx];
     uint8_t bi = _ai.addBrain((idx == 5 ? 11u : 29u) + (_profile ? _profile->seedBase : 0u));
     if (_matchType == MatchType::SUMO) {
-      distillHunter(_ai.brains[bi], (idx == 5 ? 11u : 29u), 2000);
+      distillHunter(_ai.brains[bi], (idx == 5 ? 11u : 29u), 2000, true);
     } else {
       Maze mm = _maze; mm.setStart(_s1);
       distillSolver(_ai.brains[bi], mm, true, 500);
@@ -617,7 +617,7 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       rbrain().trained = true;
     } else if (_matchType == MatchType::SUMO) {
       _brain.lr = _lr;
-      distillHunter(_brain, seed, 2000 * _rounds);          // instant hunt-and-zap fighter
+      distillHunter(_brain, seed, 2000 * _rounds, true);    // instant hunt-and-zap fighter (tracks a moving foe)
     } else {
       _brain.lr = _lr;
       distillSolver(_brain, _maze, true, 700 * _rounds);    // a strong racer beats most AIs
