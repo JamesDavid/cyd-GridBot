@@ -47,7 +47,8 @@ void ProfileSelectScreen::draw() {
     Rect r = cardRect(i);
     panel(g, r, C_PANEL);
     g.drawRoundRect(r.x, r.y, r.w, r.h, 6, C_PANEL_HI);
-    assets::drawCharacter(g, r.cx(), r.y + 22, 36, _metas[i].avatar, gb::SOUTH);
+    assets::drawAvatar(g, r.cx(), r.y + 22, 36, _metas[i].customChar.data(), (int)_metas[i].customChar.size(),
+                       _metas[i].shopColor, _metas[i].shopEmoji, _metas[i].avatar, gb::SOUTH);
     label(g, r.cx(), r.y + 40, _metas[i].name.c_str(), C_INK, textdatum_t::top_center);
     char lv[16]; snprintf(lv, sizeof(lv), "Lv %u", (unsigned)_metas[i].level);
     label(g, r.cx(), r.y + 50, lv, C_DIM, textdatum_t::top_center);

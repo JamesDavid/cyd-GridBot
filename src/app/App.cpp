@@ -279,7 +279,9 @@ bool App::saverEligible() const {
 void App::drawNametag() {
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
-  assets::drawCharacter(g, SCREEN_W / 2, 92, 92, _profile.avatar, gb::SOUTH);  // a big robot
+  // a big robot, with the player's full customization (custom drawing / tint / worn emoji)
+  assets::drawAvatar(g, SCREEN_W / 2, 92, 92, _profile.customChar.data(), (int)_profile.customChar.size(),
+                     _profile.shopColor, _profile.shopEmoji, _profile.avatar, gb::SOUTH);
   label(g, SCREEN_W / 2, 168, _profile.name.c_str(), assets::roster(_profile.avatar).bodyColor,
         textdatum_t::middle_center, 4);
   char s[24]; snprintf(s, sizeof(s), "*%u stars", (unsigned)_profile.stats.starsTotal);

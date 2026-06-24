@@ -141,6 +141,29 @@ void drawCharacterTinted(LGFX& g, int cx, int cy, int tile, uint16_t bodyColor, 
   drawRobot(g, cx, cy, tile, bodyColor, facing);
 }
 
+// True if the 16x16 sprite buffer has any non-empty pixel (else fall back to roster/tint art).
+static bool customHasPixels(const uint8_t* p, int n) {
+  if (!p || n < 256) return false;
+  for (int i = 0; i < 256; i++) if (p[i]) return true;
+  return false;
+}
+
+void drawAvatar(LGFX& g, int cx, int cy, int tile, const uint8_t* customChar, int customCharLen,
+                uint8_t shopColor, uint8_t shopEmoji, int avatar, gb::Facing facing) {
+  if (customHasPixels(customChar, customCharLen)) {
+    drawCustomSprite(g, cx, cy, tile, customChar);
+  } else if (shopColor > 0 && shopColor <= SHOP_COLOR_N) {
+    drawCharacterTinted(g, cx, cy, tile, SHOP_COLORS[shopColor - 1].color, facing);
+  } else {
+    drawCharacter(g, cx, cy, tile, avatar, facing);
+  }
+  // equipped emoji "worn" on the head: centred near the top of the sprite, so a crown sits on it
+  if (shopEmoji > 0) {
+    int es = tile / 3; if (es < 7) es = 7;
+    drawEmoji(g, shopEmoji, cx, cy - tile / 3, es);
+  }
+}
+
 void drawGoalToken(LGFX& g, int cx, int cy, int tile, int avatar) {
   const RosterEntry& e = roster(avatar);
   int w = tile * 0.42f; if (w < 8) w = 8;

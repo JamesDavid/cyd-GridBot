@@ -46,4 +46,11 @@ extern const ShopEmoji SHOP_EMOJIS[SHOP_EMOJI_N];
 // Draw a little equippable emoji/accessory (id 1..6) centred at (cx,cy).
 void drawEmoji(LGFX& g, uint8_t id, int cx, int cy, int size);
 
+// Draw a player's avatar with ALL their customizations, the way the game does it: the KidPix
+// custom drawing if present, else the shop colour tint, else the roster art -- plus the equipped
+// emoji "worn" on top of the head (so a crown sits on the head). `customChar` may be null/short
+// (-> falls back to tint/roster). Use this everywhere an avatar is shown so menus match the game.
+void drawAvatar(LGFX& g, int cx, int cy, int tile, const uint8_t* customChar, int customCharLen,
+                uint8_t shopColor, uint8_t shopEmoji, int avatar, gb::Facing facing);
+
 }  // namespace assets

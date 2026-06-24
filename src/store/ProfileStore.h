@@ -12,6 +12,10 @@ struct ProfileMeta {
   std::string name;
   uint8_t avatar = 0;
   uint32_t level = 1;
+  // cosmetics, so the player-select cards can show the real avatar (custom drawing / tint / emoji)
+  uint8_t shopColor = 0;
+  uint8_t shopEmoji = 0;
+  std::vector<uint8_t> customChar;  // 16x16 KidPix sprite (empty = none)
 };
 
 class ProfileStore {

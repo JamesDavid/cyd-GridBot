@@ -172,6 +172,7 @@ static void profileFromJson(JsonObjectConst o, gb::Profile& p) {
 // ---- store ops ------------------------------------------------------------
 void ProfileStore::begin() {
   if (!LittleFS.exists(DIR)) LittleFS.mkdir(DIR);
+  rebuildIndex();  // refresh the index (incl. cosmetics) so player-select cards are current
 }
 
 bool ProfileStore::load(const std::string& id, gb::Profile& out) {
@@ -210,6 +211,9 @@ bool ProfileStore::listProfiles(std::vector<ProfileMeta>& out) {
     m.name = (const char*)(o["name"] | "");
     m.avatar = o["avatar"] | 0;
     m.level = o["level"] | 1;
+    m.shopColor = o["shopColor"] | 0;
+    m.shopEmoji = o["shopEmoji"] | 0;
+    if (o["cchar"].is<const char*>()) fromHex(o["cchar"], m.customChar);
     out.push_back(m);
   }
   return true;
@@ -236,6 +240,9 @@ void ProfileStore::rebuildIndex() {
         o["name"] = p.name;
         o["avatar"] = p.avatar;
         o["level"] = p.level;
+        o["shopColor"] = p.shopColor;
+        o["shopEmoji"] = p.shopEmoji;
+        if (!p.customChar.empty()) o["cchar"] = toHex(p.customChar);  // so cards show the real avatar
       }
     }
   }

@@ -1,6 +1,7 @@
 #include "screens/ShopScreen.h"
 #include "assets/Assets.h"
 #include "hal/Audio.h"
+#include "store/ProfileStore.h"
 
 using namespace ui;
 
@@ -73,10 +74,10 @@ app::Signal ShopScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   for (int i = 0; i < assets::SHOP_COLOR_N; i++) {
     if (!colorRect(i).contains(tx, ty)) continue;
     bool owned = _p->ownedColors & (1u << i);
-    if (owned) { _p->shopColor = (_p->shopColor == i + 1) ? 0 : (i + 1); _msg = "equipped!"; hal::audio.blip(); }
+    if (owned) { _p->shopColor = (_p->shopColor == i + 1) ? 0 : (i + 1); _msg = "equipped!"; store::profiles.save(*_p); hal::audio.blip(); }
     else if (_p->coins >= (uint32_t)assets::SHOP_COLORS[i].price) {
       _p->coins -= assets::SHOP_COLORS[i].price;
-      _p->ownedColors |= (1u << i); _p->shopColor = i + 1; _msg = "bought!"; hal::audio.badge();
+      _p->ownedColors |= (1u << i); _p->shopColor = i + 1; _msg = "bought!"; store::profiles.save(*_p); hal::audio.badge();
     } else { _msg = "need more coins"; hal::audio.fail(); }
     draw(); return app::Signal::NONE;
   }
@@ -84,10 +85,10 @@ app::Signal ShopScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     if (!emojiRect(i).contains(tx, ty)) continue;
     uint8_t id = assets::SHOP_EMOJIS[i].id;
     bool owned = _p->ownedEmojis & (1u << i);
-    if (owned) { _p->shopEmoji = (_p->shopEmoji == id) ? 0 : id; _msg = "equipped!"; hal::audio.blip(); }
+    if (owned) { _p->shopEmoji = (_p->shopEmoji == id) ? 0 : id; _msg = "equipped!"; store::profiles.save(*_p); hal::audio.blip(); }
     else if (_p->coins >= (uint32_t)assets::SHOP_EMOJIS[i].price) {
       _p->coins -= assets::SHOP_EMOJIS[i].price;
-      _p->ownedEmojis |= (1u << i); _p->shopEmoji = id; _msg = "bought!"; hal::audio.badge();
+      _p->ownedEmojis |= (1u << i); _p->shopEmoji = id; _msg = "bought!"; store::profiles.save(*_p); hal::audio.badge();
     } else { _msg = "need more coins"; hal::audio.fail(); }
     draw(); return app::Signal::NONE;
   }

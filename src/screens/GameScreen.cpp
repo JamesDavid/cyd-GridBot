@@ -261,9 +261,11 @@ void GameScreen::drawCharacterPx(int cx, int cy, Facing facing, int emote) {
     if (tint) assets::drawCharacterTinted(g, cx, cy, tile, tint, facing);
     else assets::drawCharacter(g, cx, cy, tile, _profile ? _profile->avatar : 0, facing);
   }
-  // equipped emoji accessory (shop)
-  if (_profile && _profile->shopEmoji > 0)
-    assets::drawEmoji(g, _profile->shopEmoji, cx + tile / 3, cy - tile / 2, tile / 4);
+  // equipped emoji accessory (shop) -- worn on top of the head (a crown sits on the head)
+  if (_profile && _profile->shopEmoji > 0) {
+    int es = tile / 3; if (es < 7) es = 7;
+    assets::drawEmoji(g, _profile->shopEmoji, cx, cy - tile / 3, es);
+  }
   // emotes: happy = sparkles above; dizzy = red X eyes
   int eo = tile * 0.11f;
   if (emote == 1) {
