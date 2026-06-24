@@ -569,8 +569,13 @@ void ArenaScreen::drawScore() {
     label(g, 6, 4, hdr, C_ACCENT);
     return;
   }
-  const char* n0 = _hotseat ? "P1" : "You";
-  const char* n1 = _hotseat ? "P2" : _cands[_pick1].name.c_str();
+  // In a Cup/tournament match neither bot is "you" -- show the real fighters (truncated to fit the
+  // tight name slots); in your own battle the left side is "You", the foe keeps its name.
+  char n0[10], n1[10];
+  if (_hotseat)   { snprintf(n0, sizeof(n0), "P1"); snprintf(n1, sizeof(n1), "P2"); }
+  else if (_cup)  { snprintf(n0, sizeof(n0), "%.8s", _cands[_pick0].name.c_str());
+                    snprintf(n1, sizeof(n1), "%.8s", _cands[_pick1].name.c_str()); }
+  else            { snprintf(n0, sizeof(n0), "You"); snprintf(n1, sizeof(n1), "%.8s", _cands[_pick1].name.c_str()); }
   const int pw = 13, ph = 11, gap = 3, py = (TOPBAR_H - ph) / 2;
   label(g, 4, 6, n0, C_GO);
   int lx = 40;
