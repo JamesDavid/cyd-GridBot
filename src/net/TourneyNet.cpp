@@ -8,11 +8,13 @@ namespace net {
 static TourneyNet* s_tn = nullptr;          // the heap singleton (see tourney())
 TourneyNet& tourney() { if (!s_tn) s_tn = new TourneyNet(); return *s_tn; }
 
-// Wire protocol. Each packet <= 250 bytes (ESP-NOW limit). A card that doesn't fit one packet is
-// a TODO (chunk it like net::Radio does) -- marked below; small coded bots fit fine.
-enum : uint8_t { TM_HELLO = 1, TM_CARD = 2, TM_SEED = 3 };
+// Wire protocol. Each packet <= 250 bytes (ESP-NOW limit). Cards are CHUNKED so a full / neural
+// fighter (bigger than one packet) rides the lobby; transfers are reassembled per-sender MAC.
+//   CBEGIN: [2][total(2)][avatar(1)][nameLen(1)][name][uuidLen(1)][uuid][botNameLen(1)][botName]
+//   CCHUNK: [3][off(2)][progJson bytes...]      CEND: [4]
+enum : uint8_t { TM_HELLO = 1, TM_CBEGIN = 2, TM_CCHUNK = 3, TM_CEND = 4, TM_SEED = 5 };
 static const uint8_t BCAST[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-static const char SEP = '\x1F';   // field separator inside a packed card
+static constexpr int TM_CHUNK = 220;   // progJson bytes per CCHUNK packet
 
 static void recvTrampoline(const uint8_t* mac, const uint8_t* data, int len) {
   if (s_tn) s_tn->onRecv(mac, data, len);
@@ -43,22 +45,11 @@ bool TourneyNet::begin() {
   return true;
 }
 
-// --- (de)serialize a BotCard to a single field-separated blob (fits one packet when small) ---
-static String packCard(const BotCard& c) {
-  String s = c.name; s += SEP; s += String((int)c.avatar); s += SEP;
-  s += c.uuid; s += SEP; s += c.botName; s += SEP; s += c.progJson;
-  return s;
-}
-static bool unpackCard(const uint8_t* data, int len, BotCard& c) {
-  String s; s.reserve(len); for (int i = 0; i < len; i++) s += (char)data[i];
-  int f = 0, start = 0; String fields[5];
-  for (int i = 0; i <= s.length() && f < 5; i++) {
-    if (i == s.length() || s[i] == SEP) { fields[f++] = s.substring(start, i); start = i + 1; }
-  }
-  if (f < 5) return false;
-  c.name = fields[0]; c.avatar = (uint8_t)fields[1].toInt();
-  c.uuid = fields[2]; c.botName = fields[3]; c.progJson = fields[4];
-  return true;
+// Find the reassembly slot for this sender (or claim a free/oldest one).
+int TourneyNet::rxSlotFor(const uint8_t* mac) {
+  for (int i = 0; i < RX_SLOTS; i++) if (_rx[i].active && memcmp(_rx[i].mac, mac, 6) == 0) return i;
+  for (int i = 0; i < RX_SLOTS; i++) if (!_rx[i].active) return i;
+  return 0;  // all busy -> reuse slot 0 (small room; transfers are short)
 }
 
 int TourneyNet::rosterIndexByUuid(const String& uuid) const {
@@ -107,31 +98,65 @@ void TourneyNet::broadcastHello(uint32_t now) {
   esp_now_send(BCAST, pkt, sizeof(pkt));
 }
 
-void TourneyNet::sendMyCard(const uint8_t* /*toMac*/) {
-  String s = packCard(_mine);
-  if (s.length() > 249) return;   // TODO: chunk large (neural) cards like net::Radio's M_CHUNK path
-  uint8_t pkt[250]; pkt[0] = TM_CARD;
-  memcpy(pkt + 1, s.c_str(), s.length());
-  esp_now_send(BCAST, pkt, 1 + s.length());
+// Broadcast my card in a quick burst: CBEGIN (meta) + CCHUNK(progJson) + CEND.
+void TourneyNet::sendMyCard() {
+  uint8_t pkt[TM_CHUNK + 8]; int n = 0;
+  uint16_t total = (uint16_t)_mine.progJson.length();
+  pkt[n++] = TM_CBEGIN; pkt[n++] = total & 0xFF; pkt[n++] = total >> 8; pkt[n++] = _mine.avatar;
+  uint8_t nl = (uint8_t)min((int)_mine.name.length(), 8);    pkt[n++] = nl; for (int i = 0; i < nl; i++) pkt[n++] = _mine.name[i];
+  uint8_t ul = (uint8_t)min((int)_mine.uuid.length(), 16);   pkt[n++] = ul; for (int i = 0; i < ul; i++) pkt[n++] = _mine.uuid[i];
+  uint8_t bl = (uint8_t)min((int)_mine.botName.length(), 16); pkt[n++] = bl; for (int i = 0; i < bl; i++) pkt[n++] = _mine.botName[i];
+  esp_now_send(BCAST, pkt, n); delay(8);
+  for (int off = 0; off < total; off += TM_CHUNK) {
+    int take = min(TM_CHUNK, total - off);
+    int m = 0; uint8_t cp[TM_CHUNK + 4];
+    cp[m++] = TM_CCHUNK; cp[m++] = off & 0xFF; cp[m++] = (off >> 8) & 0xFF;
+    for (int i = 0; i < take; i++) cp[m++] = _mine.progJson[off + i];
+    esp_now_send(BCAST, cp, m); delay(8);
+  }
+  uint8_t e[1] = {TM_CEND}; esp_now_send(BCAST, e, 1);
 }
 
 void TourneyNet::loop(uint32_t now) {
   if (_state != TState::LOBBY) return;
-  if (now - _lastBeacon < 1200) return;
+  if (now - _lastBeacon < 1400) return;
   _lastBeacon = now;
   if (_role == TRole::HOST) broadcastHello(now);  // announce the lobby
-  sendMyCard(nullptr);                            // everyone rebroadcasts their card -> roster converges
+  sendMyCard();                                   // everyone rebroadcasts their card -> roster converges
 }
 
 void TourneyNet::onRecv(const uint8_t* mac, const uint8_t* data, int len) {
   if (len < 1) return;
   switch (data[0]) {
     case TM_HELLO:
-      if (_role == TRole::PEER && !_haveHost) { memcpy(_host, mac, 6); _haveHost = true; addPeerMac(mac); sendMyCard(mac); }
+      if (_role == TRole::PEER && !_haveHost) { memcpy(_host, mac, 6); _haveHost = true; addPeerMac(mac); sendMyCard(); }
       break;
-    case TM_CARD: {
-      BotCard c;
-      if (unpackCard(data + 1, len - 1, c) && _state == TState::LOBBY) ingestCard(c);
+    case TM_CBEGIN: {                              // start a card transfer from this sender
+      if (len < 5) return;
+      int s = rxSlotFor(mac);
+      RxSlot& r = _rx[s];
+      memcpy(r.mac, mac, 6); r.active = true; r.buf = "";
+      r.total = data[1] | (data[2] << 8);
+      r.meta = BotCard{}; r.meta.avatar = data[3];
+      int p = 4;
+      uint8_t nl = (p < len) ? data[p++] : 0; for (int i = 0; i < nl && p < len; i++) r.meta.name += (char)data[p++];
+      uint8_t ul = (p < len) ? data[p++] : 0; for (int i = 0; i < ul && p < len; i++) r.meta.uuid += (char)data[p++];
+      uint8_t bl = (p < len) ? data[p++] : 0; for (int i = 0; i < bl && p < len; i++) r.meta.botName += (char)data[p++];
+      break;
+    }
+    case TM_CCHUNK: {                              // append bytes to this sender's buffer
+      if (len < 3) return;
+      int s = rxSlotFor(mac); RxSlot& r = _rx[s];
+      if (!r.active || memcmp(r.mac, mac, 6) != 0) break;
+      for (int i = 3; i < len; i++) r.buf += (char)data[i];
+      break;
+    }
+    case TM_CEND: {                               // card complete -> ingest it
+      int s = rxSlotFor(mac); RxSlot& r = _rx[s];
+      if (r.active && memcmp(r.mac, mac, 6) == 0 && (int)r.buf.length() >= r.total && _state == TState::LOBBY) {
+        r.meta.progJson = r.buf; ingestCard(r.meta);
+      }
+      r.active = false; r.buf = "";
       break;
     }
     case TM_SEED:

@@ -51,10 +51,13 @@ class TourneyNet {
  private:
   void addPeerMac(const uint8_t* mac);
   void broadcastHello(uint32_t now);
-  void broadcastRoster();
-  void sendMyCard(const uint8_t* toMac);   // chunked JOIN of _mine to the host
+  void sendMyCard();                       // broadcast _mine, chunked (BEGIN + CHUNKs + END)
   int  rosterIndexByUuid(const String& uuid) const;
   void ingestCard(const BotCard& c);       // add/replace a roster entry (de-dupe by uuid)
+  // per-sender reassembly: cards from different boards interleave on the broadcast, so each
+  // incoming transfer is keyed by the sender's MAC into its own slot until END.
+  struct RxSlot { uint8_t mac[6]; bool active = false; uint16_t total = 0; String buf; BotCard meta; };
+  int rxSlotFor(const uint8_t* mac);       // find/allocate the reassembly slot for this sender
 
   TRole  _role = TRole::NONE;
   TState _state = TState::IDLE;
@@ -65,9 +68,9 @@ class TourneyNet {
   uint32_t _lobbyId = 0;                   // distinguishes overlapping lobbies in one room
   uint32_t _seed = 0;
   bool _sumo = true;
-  uint32_t _lastBeacon = 0;                // last HELLO/ROSTER broadcast
-  // chunked receive of an incoming card (one in flight at a time, per the small-room assumption)
-  String _rxBuf; int _rxTotal = 0; bool _rxActive = false;
+  uint32_t _lastBeacon = 0;                // last HELLO/card broadcast
+  static constexpr int RX_SLOTS = 4;       // simultaneous incoming card transfers (small room)
+  RxSlot _rx[RX_SLOTS];
 };
 
 // Lazily heap-allocated singleton: costs no static DRAM until a lobby screen first asks for it

@@ -93,6 +93,7 @@ class ArenaScreen : public app::IScreen {
   void buildRosterField();       // turn the lobby roster into _cands + _cupPlayers, start the Cup
   bool _netCup = false;          // this Cup's match boards use the shared seed (not millis())
   uint32_t _netSeed = 0;         // the host's broadcast seed
+  uint32_t _cupAutoAt = 0;       // networked Cup auto-advances at this time (every device in step)
   int8_t _roomN = -1;            // last-drawn roster size (redraw the lobby when it changes)
 
   gb::Profile* _profile = nullptr;

@@ -247,7 +247,7 @@ void ArenaScreen::startCup(const std::vector<int>& parts) {
   _type = _tSumo ? MatchType::SUMO : MatchType::RACE;
   _cupBracket.init((int)_cupPlayers.size());
   _cupLog.clear();
-  _cup = true; _cupMatch = -1; _netCup = false;   // local by default; buildRosterField sets net
+  _cup = true; _cupMatch = -1; _netCup = false; _cupAutoAt = 0;   // local by default; buildRosterField sets net
   _phase = Phase::CUP; drawCupCard();             // opening card; tap to start the first match
 }
 
@@ -850,6 +850,12 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     if (net::tourney().seeded()) { buildRosterField(); return app::Signal::NONE; }
     if ((int)net::tourney().playerCount() != _roomN) { _roomN = (int8_t)net::tourney().playerCount(); drawNetLobby(); }
   }
+  // Networked Cup auto-plays (no manual "Next >") so every device advances in lockstep and all
+  // reach the same champion at the same pace (the matches themselves are already deterministic).
+  if (_netCup && _phase == Phase::CUP && !_cupBracket.done()) {
+    if (_cupAutoAt == 0) _cupAutoAt = now + 1600;            // pause on the bracket card to read it
+    else if (now >= _cupAutoAt) { _cupAutoAt = 0; cupAdvanceToNextMatch(); }
+  }
 
   if (!tap) return app::Signal::NONE;
 
@@ -868,26 +874,22 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         net::BotCard mine;
         mine.name = _profile ? String(_profile->name.c_str()) : String("P");
         mine.avatar = _profile ? _profile->avatar : 0;
-        // short uuid (8 hex) so the whole card fits ONE ESP-NOW packet -- still unique in a room
-        mine.uuid = _profile ? String(_profile->uuid.substr(0, 8).c_str()) : String("anon0000");
-        // A compact coded hunter that fits a packet. Full / neural bots are larger than one packet,
-        // so until card chunking lands the room fields a small hunter for everyone. (TODO: chunk.)
-        Program compact;
-        { Node loop = Node::repeatUntil(AT_GOAL);
-          Node z = Node::ifCond(ENEMY_AHEAD); z.body.push_back(Node::command(CMD_FIRE));   loop.body.push_back(z);
-          Node r = Node::ifCond(ENEMY_RIGHT); r.body.push_back(Node::command(CMD_TURN_R)); loop.body.push_back(r);
-          Node l = Node::ifCond(ENEMY_LEFT);  l.body.push_back(Node::command(CMD_TURN_L)); loop.body.push_back(l);
-          loop.body.push_back(Node::command(CMD_FWD)); compact.main.push_back(loop); }
+        mine.uuid = _profile ? String(_profile->uuid.substr(0, 16).c_str()) : String("anon");
+        // Card chunking carries any size, so this device brings the player's REAL saved fighter
+        // (their first My-Bots entry). If they have none, field a compact coded hunter.
         bool haveBot = _profile && !_profile->library.empty();
-        String pj = haveBot ? programToJsonString(_profile->library[0].program) : String();
-        if (pj.length() == 0 || pj.length() > 200) {   // too big for a packet -> the compact hunter
-          mine.botName = haveBot ? String(_profile->library[0].name.c_str()) : String("Hunter");
-          if (pj.length() > 200) mine.botName = "Hunter";
-          pj = programToJsonString(compact);
-        } else {
+        if (haveBot) {
           mine.botName = String(_profile->library[0].name.c_str());
+          mine.progJson = programToJsonString(_profile->library[0].program);
+        } else {
+          Program compact;
+          { Node loop = Node::repeatUntil(AT_GOAL);
+            Node z = Node::ifCond(ENEMY_AHEAD); z.body.push_back(Node::command(CMD_FIRE));   loop.body.push_back(z);
+            Node r = Node::ifCond(ENEMY_RIGHT); r.body.push_back(Node::command(CMD_TURN_R)); loop.body.push_back(r);
+            Node l = Node::ifCond(ENEMY_LEFT);  l.body.push_back(Node::command(CMD_TURN_L)); loop.body.push_back(l);
+            loop.body.push_back(Node::command(CMD_FWD)); compact.main.push_back(loop); }
+          mine.botName = "Hunter"; mine.progJson = programToJsonString(compact);
         }
-        mine.progJson = pj;
         if (R_ROOM_HOST.contains(tx, ty)) tn.host(mine); else tn.join(mine);
         _roomN = -1; drawNetLobby();
       } else if (tn.isHost() && tn.playerCount() >= 2 && R_ROOM_START.contains(tx, ty)) {
