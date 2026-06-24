@@ -61,9 +61,16 @@ class ArenaScreen : public app::IScreen {
   int _tScroll = 0;       // first visible row in the participant checklist
   // Tournament: round-robin every fighter vs every other, tally wins, rank them (a battle ladder).
   void runTournament(const std::vector<int>& parts);   // play all matches headless + sort standings
-  void drawTourney();     // the leaderboard
-  struct Standing { int cand; int w; int l; };
+  void drawTourney();     // the leaderboard (paginated, 5 per page)
+  void drawBreakdown();   // one fighter's per-opponent win/loss record (tap a standing)
+  struct Standing { int cand; int w; int l; int mi; };  // mi = row index in the results matrix
   std::vector<Standing> _standings;
+  std::vector<int> _tOrder;     // cand index for each results-matrix slot (matrix order)
+  std::vector<int8_t> _tWin;    // N*N: +1 if row beat col, -1 if lost, 0 none (the full results)
+  int16_t _tN = 0;              // matrix dimension (participant count)
+  int16_t _standPage = 0;       // standings page (5 per page)
+  int16_t _breakdownMi = -1;    // matrix row whose breakdown is shown (-1 = the standings list)
+  int16_t _bdPage = 0;          // breakdown page
   // Single-elimination Cup: watch your fighters battle through a bracket to one champion. The
   // local version (library fighters) is the verifiable core the networked tournament will drive.
   void startCup(const std::vector<int>& parts);  // seed the bracket from the chosen fighters

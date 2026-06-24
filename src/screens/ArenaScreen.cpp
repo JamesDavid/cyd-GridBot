@@ -52,6 +52,10 @@ static const Rect R_CUP_EXIT  = {174, (int16_t)(BOTBAR_Y + 4), 106, 28};
 // participant-picker bottom bar: Select all + Format >
 static const Rect R_TALL  = {116, (int16_t)(BOTBAR_Y + 2), 64,  26};
 static const Rect R_TNEXT = {188, (int16_t)(BOTBAR_Y + 2), 126, 26};
+// standings / breakdown pager (5 per page, like the lessons hub)
+static const Rect R_SPREV = {150, (int16_t)(BOTBAR_Y + 2), 78, 26};
+static const Rect R_SNEXT = {234, (int16_t)(BOTBAR_Y + 2), 80, 26};
+static constexpr int TPER_PAGE = 5;
 static constexpr int PICK_ROWH = 26, PICK_TOP = BAND_Y + 4;  // pick-list geometry (shared by PICK + TPICK)
 
 static Program dashProgram() {
@@ -127,43 +131,94 @@ void ArenaScreen::runTournament(const std::vector<int>& parts) {
     else { setupMatchBot(parts[k], _s1, sumo); pb[k] = _cands[parts[k]].prog; }
   }
   std::vector<int> w(N, 0), l(N, 0);
+  _tN = N; _tOrder.assign(parts.begin(), parts.end());
+  _tWin.assign((size_t)N * N, 0);
   for (int i = 0; i < N; i++)
     for (int j = 0; j < N; j++) {
       if (i == j) continue;
       Arena ar; ar.setup(&_maze, &pa[i], &pb[j], _s0, _s1, mt, cap);
       ArenaOutcome o = ar.run();
-      if (o == ArenaOutcome::BOT0) { w[i]++; l[j]++; }
-      else if (o == ArenaOutcome::BOT1) { w[j]++; l[i]++; }
+      // _tWin[a*N+b] accumulates how many times a beat b (each pair plays home AND away -> 0..2)
+      if (o == ArenaOutcome::BOT0) { w[i]++; l[j]++; _tWin[i * N + j]++; }
+      else if (o == ArenaOutcome::BOT1) { w[j]++; l[i]++; _tWin[j * N + i]++; }
     }
   _standings.clear();
-  for (int i = 0; i < N; i++) _standings.push_back({parts[i], w[i], l[i]});
+  for (int i = 0; i < N; i++) _standings.push_back({parts[i], w[i], l[i], i});
   std::sort(_standings.begin(), _standings.end(),
             [](const Standing& a, const Standing& b) { return a.w != b.w ? a.w > b.w : a.l < b.l; });
+  _standPage = 0; _breakdownMi = -1;
   _phase = Phase::TOURNEY;
   drawTourney();
 }
 
 void ArenaScreen::drawTourney() {
+  if (_breakdownMi >= 0) { drawBreakdown(); return; }   // a row was tapped -> its record
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
-  label(g, 6, 3, "Tournament", C_ACCENT, textdatum_t::top_left, 2);
-  label(g, SCREEN_W - 6, 6, "wins-losses", C_DIM, textdatum_t::top_right);
+  label(g, 6, 3, "Standings", C_ACCENT, textdatum_t::top_left, 2);
   int n = (int)_standings.size();
-  int rowh = (BAND_H - 8) / (n > 0 ? n : 1); if (rowh > 26) rowh = 26; if (rowh < 14) rowh = 14;
-  for (int i = 0; i < n; i++) {
+  int npages = (n + TPER_PAGE - 1) / TPER_PAGE; if (npages < 1) npages = 1;
+  if (_standPage >= npages) _standPage = npages - 1;
+  char hd[28]; snprintf(hd, sizeof(hd), "wins-losses  (%d/%d)", _standPage + 1, npages);
+  label(g, SCREEN_W - 6, 6, hd, C_DIM, textdatum_t::top_right);
+  int rowh = 30, top = BAND_Y + 6;
+  for (int r = 0; r < TPER_PAGE; r++) {
+    int i = _standPage * TPER_PAGE + r;
+    if (i >= n) break;
     const Standing& s = _standings[i];
-    int y = BAND_Y + 4 + i * rowh;
+    int y = top + r * rowh;
     uint16_t medal = (i == 0) ? C_ACCENT : (i == 1) ? C_MOVE : (i == 2) ? C_WALL : C_PANEL_HI;
-    g.fillRoundRect(8, y, SCREEN_W - 16, rowh - 2, 4, C_PANEL);
-    g.drawRoundRect(8, y, SCREEN_W - 16, rowh - 2, 4, medal);
+    g.fillRoundRect(8, y, SCREEN_W - 16, rowh - 4, 4, C_PANEL);
+    g.drawRoundRect(8, y, SCREEN_W - 16, rowh - 4, 4, medal);
     char row[40]; snprintf(row, sizeof(row), "%d.  %s", i + 1, _cands[s.cand].name.c_str());
-    label(g, 16, y + (rowh - 8) / 2, row, i < 3 ? C_GO : C_INK);
-    char wl[16]; snprintf(wl, sizeof(wl), "%d - %d", s.w, s.l);
-    label(g, SCREEN_W - 16, y + (rowh - 8) / 2, wl, C_DIM, textdatum_t::top_right);
+    label(g, 16, y + 7, row, i < 3 ? C_GO : C_INK);
+    char wl[16]; snprintf(wl, sizeof(wl), "%d - %d  >", s.w, s.l);
+    label(g, SCREEN_W - 16, y + 7, wl, C_DIM, textdatum_t::top_right);
   }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
+  button(g, R_SPREV, "< Prev", _standPage > 0 ? C_ACCENT : C_LOCK, C_PANEL);
+  button(g, R_SNEXT, "Next >", _standPage < npages - 1 ? C_ACCENT : C_LOCK, C_PANEL);
+}
+
+// One fighter's record: who it beat and who beat it (tap a standing to open). Paginated.
+void ArenaScreen::drawBreakdown() {
+  auto& g = hal::display.gfx();
+  g.fillScreen(C_BG);
+  g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
+  int mi = _breakdownMi;
+  int self = (mi >= 0 && mi < (int)_tOrder.size()) ? _tOrder[mi] : 0;
+  char ttl[28]; snprintf(ttl, sizeof(ttl), "%.14s", _cands[self].name.c_str());
+  label(g, 6, 3, ttl, C_ACCENT, textdatum_t::top_left, 2);
+  // collect opponents (skip self), count W/L
+  std::vector<int> opp;
+  for (int j = 0; j < _tN; j++) if (j != mi) opp.push_back(j);
+  int w = 0, l = 0;
+  for (int j : opp) { w += _tWin[mi * _tN + j]; l += _tWin[j * _tN + mi]; }
+  char hd[20]; snprintf(hd, sizeof(hd), "%d - %d", w, l);
+  label(g, SCREEN_W - 6, 6, hd, C_GO, textdatum_t::top_right);
+  int n = (int)opp.size();
+  int npages = (n + TPER_PAGE - 1) / TPER_PAGE; if (npages < 1) npages = 1;
+  if (_bdPage >= npages) _bdPage = npages - 1;
+  int rowh = 30, top = BAND_Y + 6;
+  for (int r = 0; r < TPER_PAGE; r++) {
+    int k = _bdPage * TPER_PAGE + r;
+    if (k >= n) break;
+    int j = opp[k]; int mw = _tWin[mi * _tN + j], ml = _tWin[j * _tN + mi];
+    int y = top + r * rowh;
+    g.fillRoundRect(8, y, SCREEN_W - 16, rowh - 4, 4, C_PANEL);
+    const char* verb = mw > ml ? "beat" : mw < ml ? "lost to" : "split";
+    uint16_t col = mw > ml ? C_GO : mw < ml ? C_BAD : C_DIM;
+    char row[40]; snprintf(row, sizeof(row), "%s  %.12s", verb, _cands[_tOrder[j]].name.c_str());
+    label(g, 16, y + 7, row, col);
+    char rec[8]; snprintf(rec, sizeof(rec), "%d-%d", mw, ml);
+    label(g, SCREEN_W - 16, y + 7, rec, C_DIM, textdatum_t::top_right);
+  }
+  g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
+  button(g, R_BACK, "< Standings", C_INK, C_PANEL);
+  button(g, R_SPREV, "< Prev", _bdPage > 0 ? C_ACCENT : C_LOCK, C_PANEL);
+  button(g, R_SNEXT, "Next >", _bdPage < npages - 1 ? C_ACCENT : C_LOCK, C_PANEL);
 }
 
 // ---- Cup: single-elimination bracket, watched match by match -------------------------------
@@ -771,9 +826,26 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       }
       break;
     }
-    case Phase::TOURNEY:
-      if (R_BACK.contains(tx, ty)) { _phase = Phase::TPICK; drawTPick(); }
+    case Phase::TOURNEY: {
+      if (_breakdownMi >= 0) {                          // a fighter's per-opponent record
+        int n = _tN > 0 ? _tN - 1 : 0, npages = (n + TPER_PAGE - 1) / TPER_PAGE; if (npages < 1) npages = 1;
+        if (R_BACK.contains(tx, ty)) { _breakdownMi = -1; _bdPage = 0; drawTourney(); }
+        else if (R_SPREV.contains(tx, ty)) { if (_bdPage > 0) { _bdPage--; hal::audio.blip(); drawBreakdown(); } }
+        else if (R_SNEXT.contains(tx, ty)) { if (_bdPage < npages - 1) { _bdPage++; hal::audio.blip(); drawBreakdown(); } }
+        break;
+      }
+      int n = (int)_standings.size(), npages = (n + TPER_PAGE - 1) / TPER_PAGE; if (npages < 1) npages = 1;
+      if (R_BACK.contains(tx, ty)) { _phase = Phase::TPICK; drawTPick(); break; }
+      if (R_SPREV.contains(tx, ty)) { if (_standPage > 0) { _standPage--; hal::audio.blip(); drawTourney(); } break; }
+      if (R_SNEXT.contains(tx, ty)) { if (_standPage < npages - 1) { _standPage++; hal::audio.blip(); drawTourney(); } break; }
+      int rowh = 30, top = BAND_Y + 6;                  // tap a standing -> its breakdown
+      for (int r = 0; r < TPER_PAGE; r++) {
+        int i = _standPage * TPER_PAGE + r; if (i >= n) break;
+        Rect rr = {8, (int16_t)(top + r * rowh), (int16_t)(SCREEN_W - 16), (int16_t)(rowh - 4)};
+        if (rr.contains(tx, ty)) { _breakdownMi = _standings[i].mi; _bdPage = 0; hal::audio.blip(); drawBreakdown(); break; }
+      }
       break;
+    }
     case Phase::CUP:
       if (_cupBracket.done()) {                        // champion shown (bottom-bar buttons)
         if (R_CUP_AGAIN.contains(tx, ty)) { std::vector<int> same = _cupPlayers; startCup(same); }  // re-run, same field
