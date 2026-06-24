@@ -209,8 +209,29 @@ void NeuroTrainScreen::draw() {
     }
   }
 
-  if (_brainView && !_drawMode) {  // the full Brain-Cam network graph of THIS brain
-    drawBrainGraph(g, &_brain, &_rbrain, _rnnMode, _in, _hid, _out, _action, -1);
+  if (_brainView && !_drawMode) {  // the full Brain-Cam network graph of THIS brain + a maze mini-map
+    drawBrainGraph(g, &_brain, &_rbrain, _rnnMode, _in, _hid, _out, _action, -1, 18);  // shifted to make room
+    // maze mini-map with the brain's path (like Brain Cam / the Arena trainer) -- top-left corner
+    if (_maze) {
+      int cols = _maze->cols(), rows = _maze->rows();
+      int box = 50, mx0 = 2, my0 = BAND_Y + 22;
+      g.fillRect(mx0, my0, box, box + 2, C_BG);
+      int mt = (box - 2) / cols; if ((box - 2) / rows < mt) mt = (box - 2) / rows; if (mt < 3) mt = 3;
+      int ox = mx0 + 1, oy = my0 + 1;
+      for (int r = 0; r < rows; r++)
+        for (int c = 0; c < cols; c++) {
+          int x = ox + c * mt, y = oy + r * mt;
+          Tile t = _maze->at(r, c);
+          uint16_t col = ((r + c) & 1) ? C_FLOOR : C_FLOOR2;
+          if (t == WALL) col = C_WALL; else if (t == PIT) col = C_BG;
+          g.fillRect(x, y, mt - 1, mt - 1, col);
+          if (_maze->isGoal(r, c)) g.fillCircle(x + mt / 2, y + mt / 2, mt / 3 + 1, C_ACCENT);
+        }
+      for (int i = 0; i < _pathLen; i++) {  // the brain's run, green if it solved
+        int r = _path[i] / cols, c = _path[i] % cols;
+        g.fillCircle(ox + c * mt + mt / 2, oy + r * mt + mt / 2, 1, _won ? C_GO : C_MOVE);
+      }
+    }
     char v[28]; snprintf(v, sizeof(v), "decides: %s", BRAIN_OUTLBL[_action]);
     label(g, 6, BOTBAR_Y - 14, v, ui::rgb(120, 230, 245));
     label(g, 150, BOTBAR_Y - 14, "tap the dots to fold up", C_DIM);
