@@ -17,6 +17,10 @@ constexpr int MAX_FRAME_DEPTH  = 64;   // bounds call-stack growth (recursive F1
 struct EnemyView {
   const Pose* pose = nullptr;
   int nearDist = 3;
+  // Soccer: a brain's TARGET (the goal-direction sense, slots 4-6) follows this tile instead of
+  // the maze goal -- we point it at the BALL so the fighter senses where to push. Null = use the
+  // maze goal as usual (Race), or no target (Sumo). `pose` then carries the goal to push toward.
+  const Pose* target = nullptr;
 };
 
 class Interpreter {

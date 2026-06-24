@@ -66,11 +66,15 @@ class ArenaTrainScreen : public app::IScreen {
   gb::RNet* _rbrain = nullptr;
   gb::RNet& rbrain();    // lazily allocate + return the RNN brain
   bool _rnn = false;     // brain-type toggle: train/save/show the RNN brain rather than feedforward
-  uint8_t _path[64];
+  static constexpr int PATH_N = 40;  // traced-route samples (trimmed to free static DRAM)
+  uint8_t _path[PATH_N];
   int _pathLen = 0;
-  uint8_t _oppPath[64];      // the opponent's route when it runs ITS code (shown in red)
+  uint8_t _oppPath[PATH_N];  // the opponent's route when it runs ITS code (shown in red)
   int _oppLen = 0;
-  gb::MatchType _matchType = gb::MatchType::RACE;  // Race (to goal) or Sumo (last bot standing)
+  gb::MatchType _matchType = gb::MatchType::RACE;  // Race (to goal), Sumo (last standing) or Soccer
+  // Soccer: a ball the fighter shoves toward its goal. _goal0 is the brain's target, _goal1 the
+  // opponent's; _ball tracks the live ball position through the traced match (for the mini-map).
+  gb::Pose _ball, _goal0, _goal1;
   int _oppIdx = 0;            // which roster opponent we spar against
   std::string _oppName;      // its display name
   bool _beatsAI = false, _taught = false, _saved = false;

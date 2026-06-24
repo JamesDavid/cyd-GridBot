@@ -32,8 +32,14 @@ float scoreBrain(const Net& brain, const Maze& m, const EnemyView* enemy, int ma
   return f;
 }
 
+static inline int manhattan(const Pose& a, const Pose& b) {
+  int dr = a.row - b.row, dc = a.col - b.col;
+  return (dr < 0 ? -dr : dr) + (dc < 0 ? -dc : dc);
+}
+
 float scoreFighter(const Net& brain, const Maze& m, const Pose& s0, const Pose& s1,
-                   const Program& ai, int maxSteps, MatchType type) {
+                   const Program& ai, int maxSteps, MatchType type,
+                   const Pose* ball, const Pose* g0, const Pose* g1) {
   Program bp;
   bp.brains.push_back(brain);
   Node loop = Node::repeatUntil(AT_GOAL);
@@ -42,6 +48,21 @@ float scoreFighter(const Net& brain, const Maze& m, const Pose& s0, const Pose& 
 
   Arena ar;
   ar.setup(&m, &bp, &ai, s0, s1, type, maxSteps);
+
+  if (type == MatchType::SOCCER && ball && g0) {
+    ar.configSoccer(*ball, *g0, g1 ? *g1 : *g0);
+    int ballStart = manhattan(*ball, *g0);
+    ar.run();
+    ArenaOutcome o = ar.outcome();
+    // Reward shoving the ball toward our goal; a clean score is the headline; staying near the
+    // ball (so it ENGAGES rather than wandering) is a small shaping nudge.
+    float f = (float)(ballStart - manhattan(ar.ball(), *g0)) * 3.0f;
+    if (o == ArenaOutcome::BOT0) f += 100.0f;
+    else if (o == ArenaOutcome::BOT1) f -= 40.0f;
+    f -= (float)manhattan(ar.pose(0), ar.ball()) * 0.5f;
+    return f;
+  }
+
   ar.run();
   ArenaOutcome o = ar.outcome();
 
@@ -69,8 +90,10 @@ float scoreFighter(const Net& brain, const Maze& m, const Pose& s0, const Pose& 
 }
 
 void Evolve::evaluateArena(const Maze& m, const Pose& s0, const Pose& s1,
-                           const Program& ai, int maxSteps, MatchType type) {
-  for (int i = 0; i < EVO_POP; i++) fit[i] = scoreFighter(pop[i], m, s0, s1, ai, maxSteps, type);
+                           const Program& ai, int maxSteps, MatchType type,
+                           const Pose* ball, const Pose* g0, const Pose* g1) {
+  for (int i = 0; i < EVO_POP; i++)
+    fit[i] = scoreFighter(pop[i], m, s0, s1, ai, maxSteps, type, ball, g0, g1);
 }
 
 void Evolve::init(int in, int hid, int out, uint32_t seed) {

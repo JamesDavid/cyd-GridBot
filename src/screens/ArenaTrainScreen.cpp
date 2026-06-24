@@ -135,16 +135,23 @@ void ArenaTrainScreen::drawOppList() {
 }
 
 void ArenaTrainScreen::setupBoard() {
-  if (_matchType == MatchType::SUMO) {
-    // Practice on the SAME kind of ring you'll battle on (the big open Sumo ring), and vary it
-    // per session so the fighter learns to HUNT in general rather than over-fitting one board
-    // -- otherwise a "trained winner" loses on the random battle ring.
+  if (_matchType == MatchType::SUMO || _matchType == MatchType::SOCCER) {
+    // Practice on the SAME kind of open ring you'll play on, varied per session so the fighter
+    // generalises rather than over-fitting one board.
     uint32_t seed = (_profile ? _profile->seedBase : 31u) + (uint32_t)millis();
     MazeGen::generateSumoRing(_maze, seed, _s0, _s1);
   } else {
     MazeGen::generateArena(_maze, _profile ? _profile->seedBase + 31u : 31u, _s0, _s1);
   }
   _maze.setStart(_s0);  // the brain is bot 0, starting at s0
+  if (_matchType == MatchType::SOCCER) {
+    // Ball in the middle; the brain attacks the right rim, the opponent the left. Pin them to the
+    // ball's row so a straight shove can score (the goal tile itself may sit on the rim wall).
+    int gr = _maze.rows() / 2;
+    _ball.row = (int8_t)gr;          _ball.col = (int8_t)(_maze.cols() / 2);
+    _goal0.row = (int8_t)gr;         _goal0.col = (int8_t)(_maze.cols() - 1);
+    _goal1.row = (int8_t)gr;         _goal1.col = 0;
+  }
 }
 
 void ArenaTrainScreen::begin(Profile* profile) {
@@ -207,6 +214,7 @@ void ArenaTrainScreen::writeBackEditBrain() {
 // Switch Race <-> Sumo: different board (Sumo has no goal), different fitness, fresh training.
 void ArenaTrainScreen::setMode(MatchType t) {
   _matchType = t;
+  if (t == MatchType::SOCCER) _rnn = false;   // soccer's teacher (distillSoccer) is feedforward-only
   _animating = false; _qLearning = false;
   setupBoard();
   buildOpponent(_oppIdx);
@@ -221,7 +229,13 @@ void ArenaTrainScreen::enter() { draw(); }
 void ArenaTrainScreen::evaluateAndTrace() {
   // Evolve is feedforward-only: refresh _brain from the population unless we're in RNN mode or the
   // brain was directly trained (Teach/Q-Learn set _taught so their result isn't overwritten).
-  if (!_rnn && !_taught) { _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType); _brain = _evo.best(); }
+  if (!_rnn && !_taught) {
+    if (_matchType == MatchType::SOCCER)
+      _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType, &_ball, &_goal0, &_goal1);
+    else
+      _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType);
+    _brain = _evo.best();
+  }
   Program bp;
   Node loop = Node::repeatUntil(AT_GOAL);
   if (_rnn) { bp.rbrains.push_back(rbrain()); loop.body.push_back(Node::rnnBrain(0)); }
@@ -229,7 +243,26 @@ void ArenaTrainScreen::evaluateAndTrace() {
   bp.main.push_back(loop);
   int cols = _maze.cols();
 
-  if (_matchType == MatchType::SUMO) {
+  if (_matchType == MatchType::SOCCER) {
+    // Trace the dribble: step both bots so you watch the brain chase the ball and shove it goalward.
+    const int CAP = 200;
+    Arena ar; ar.setup(&_maze, &bp, &_ai, _s0, _s1, MatchType::SOCCER, CAP);
+    ar.configSoccer(_ball, _goal0, _goal1);   // _ball is the fixed kickoff spot (not mutated here)
+    int d0 = abs(_ball.row - _goal0.row) + abs(_ball.col - _goal0.col);
+    _pathLen = 0; _oppLen = 0;
+    for (int s = 0; s < CAP; s++) {
+      Pose a = ar.pose(0), b = ar.pose(1);
+      if (_pathLen < PATH_N) _path[_pathLen++] = (uint8_t)(a.row * cols + a.col);
+      if (_oppLen  < PATH_N) _oppPath[_oppLen++] = (uint8_t)(b.row * cols + b.col);
+      if (ar.tick() != ArenaOutcome::RUNNING) break;
+    }
+    ArenaOutcome o = ar.outcome();
+    _beatsAI = (o == ArenaOutcome::BOT0);
+    int dEnd = abs(ar.ball().row - _goal0.row) + abs(ar.ball().col - _goal0.col);
+    // score 0..1: scored = 1, else how much closer to our goal the ball got (progress / start dist)
+    _score = (o == ArenaOutcome::BOT0) ? 1.0f : (d0 > 0 ? (float)(d0 - dEnd) / (float)d0 : 0.5f);
+    if (_score < 0) _score = 0; else if (_score > 1) _score = 1;
+  } else if (_matchType == MatchType::SUMO) {
     // Trace the REAL fight: step both bots so you see them hunt and shove (not solo wandering).
     // Use the SAME 150-tick cap as a real Battle so the trainer's "wins!" predicts the actual
     // outcome -- a slower hunter that KOs the foe at tick ~100 would falsely read as a loss at 80.
@@ -238,8 +271,8 @@ void ArenaTrainScreen::evaluateAndTrace() {
     _pathLen = 0; _oppLen = 0;
     for (int s = 0; s < CAP; s++) {
       Pose a = ar.pose(0), b = ar.pose(1);
-      if (_pathLen < 64) _path[_pathLen++] = (uint8_t)(a.row * cols + a.col);
-      if (_oppLen  < 64) _oppPath[_oppLen++] = (uint8_t)(b.row * cols + b.col);
+      if (_pathLen < PATH_N) _path[_pathLen++] = (uint8_t)(a.row * cols + a.col);
+      if (_oppLen  < PATH_N) _oppPath[_oppLen++] = (uint8_t)(b.row * cols + b.col);
       if (ar.tick() != ArenaOutcome::RUNNING) break;
     }
     ArenaOutcome o = ar.outcome();
@@ -254,7 +287,7 @@ void ArenaTrainScreen::evaluateAndTrace() {
     _pathLen = 0;
     for (int s = 0; s < 64; s++) {
       Pose p = it.pose();
-      if (_pathLen < 64) _path[_pathLen++] = (uint8_t)(p.row * cols + p.col);
+      if (_pathLen < PATH_N) _path[_pathLen++] = (uint8_t)(p.row * cols + p.col);
       if (it.finished()) break;
       it.step();
     }
@@ -262,7 +295,7 @@ void ArenaTrainScreen::evaluateAndTrace() {
     _oppLen = 0;
     for (int s = 0; s < 64; s++) {
       Pose p = oit.pose();
-      if (_oppLen < 64) _oppPath[_oppLen++] = (uint8_t)(p.row * cols + p.col);
+      if (_oppLen < PATH_N) _oppPath[_oppLen++] = (uint8_t)(p.row * cols + p.col);
       if (oit.finished()) break;
       oit.step();
     }
@@ -347,7 +380,8 @@ void ArenaTrainScreen::draw() {
   // switching opponents keeps the same brain, so you can transfer-learn against foe after foe.
   char chip[32]; snprintf(chip, sizeof(chip), "vs %s >", _oppName.c_str());
   button(g, R_OPP, chip, ui::rgb(120, 230, 245), C_PANEL);
-  button(g, R_MODE, _matchType == MatchType::SUMO ? "Battle >" : "Race >", C_FUNC, C_PANEL);
+  button(g, R_MODE, _matchType == MatchType::SUMO ? "Battle >" :
+                    _matchType == MatchType::SOCCER ? "Soccer >" : "Race >", C_FUNC, C_PANEL);
   button(g, R_BTYPE, _rnn ? "RNN >" : "FF >", _rnn ? C_MOVE : C_DIM, C_PANEL);  // brain type to train
   button(g, R_VIEW, _netView ? "arena >" : "brain >", C_ACCENT, C_PANEL);
   // "Knobs" lights up (accent) when any hyperparameter is off its default, so it's clear they're active
@@ -364,8 +398,16 @@ void ArenaTrainScreen::draw() {
         uint16_t col = ((r + c) & 1) ? C_FLOOR : C_FLOOR2;
         if (t == WALL) col = C_WALL; else if (t == PIT) col = C_BG;
         g.fillRect(x, y, tile - 1, tile - 1, col);
-        if (_maze.isGoal(r, c)) assets::drawGoalToken(g, x + tile / 2, y + tile / 2, tile, 0);
+        if (_matchType != MatchType::SOCCER && _maze.isGoal(r, c))
+          assets::drawGoalToken(g, x + tile / 2, y + tile / 2, tile, 0);
       }
+    if (_matchType == MatchType::SOCCER) {
+      // your goal (green frame), the opponent's goal (red frame), and the ball (white).
+      g.drawRect(ox + _goal0.col * tile, oy + _goal0.row * tile, tile - 1, tile - 1, C_GO);
+      g.drawRect(ox + _goal0.col * tile + 1, oy + _goal0.row * tile + 1, tile - 3, tile - 3, C_GO);
+      g.drawRect(ox + _goal1.col * tile, oy + _goal1.row * tile, tile - 1, tile - 1, C_BAD);
+      g.fillCircle(ox + _ball.col * tile + tile / 2, oy + _ball.row * tile + tile / 2, tile / 4 + 1, C_INK);
+    }
     // the opponent runs ITS code from its start (red route); your brain runs from its start
     // (blue/green route). While training we REVEAL the route step-by-step (a bright bot head
     // leading a trail) so you watch them hunt; otherwise the whole route is shown.
@@ -400,13 +442,13 @@ void ArenaTrainScreen::draw() {
   button(g, R_EVO, (_animating && !_qLearning) ? "..." : "Evolve", _rnn ? C_DIM : C_FUNC, C_PANEL);
   // Q-Learn (reward): FF hunts in Battle; RNN learns mazes in Race (memory helps) and CAN be tried
   // on Battle too (where it flounders -- a deliberate "match the method to the problem" lesson).
-  bool qOk = sumo || _rnn;   // only FF+Race has no Q engine
+  bool qOk = (sumo || _rnn) && _matchType != MatchType::SOCCER;  // FF+Race & soccer have no Q engine
   button(g, R_QLRN, (_animating && _qLearning) ? "..." : "Q-Learn", qOk ? C_MOVE : C_DIM, C_PANEL);
   // edit-link (opened from the editor): "< Editor" bails out (no change), "Use it >" writes the
   // brain back into the program. From the Arena menu: "Save" to library, "Fight! >" to battle.
   if (_editLink) button(g, R_SAVE, "< Editor", C_INK, C_PANEL);
   else           button(g, R_SAVE, _saved ? "saved!" : "Save", _saved ? C_DIM : C_ACCENT, C_PANEL);
-  button(g, R_BACK, _editLink ? "Use it >" : "Fight! >", C_GO, C_PANEL);
+  button(g, R_BACK, _editLink ? "Use it >" : (_matchType == MatchType::SOCCER ? "Save >" : "Fight! >"), C_GO, C_PANEL);
 }
 
 // The "watch it learn" panel: the brain's network graph (weights recolour as it trains) plus
@@ -511,7 +553,12 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         // generation must beat the best-so-far -- an arms race that bootstraps without a fixed foe.
         if (_oppIdx == OPP_SELF) setSelfOpponent(_evo.best());
         // Explore knob raises mutation scale (more variety, less stable) -- the GA's "temperature".
-        _evo.breed(0.15f, 0.6f * _knobs.explore); _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType); _brain = _evo.best();
+        _evo.breed(0.15f, 0.6f * _knobs.explore);
+        if (_matchType == MatchType::SOCCER)
+          _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType, &_ball, &_goal0, &_goal1);
+        else
+          _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType);
+        _brain = _evo.best();
         _taught = false;
       }
       _saved = false; evaluateAndTrace();        // recompute the hunt for the new brain
@@ -552,15 +599,20 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     _advanced = true; hal::audio.blip(); draw();
   } else if (R_VIEW.contains(tx, ty)) {
     _netView = !_netView; hal::audio.blip(); draw();
-  } else if (R_MODE.contains(tx, ty)) {  // Race <-> Sumo
-    setMode(_matchType == MatchType::RACE ? MatchType::SUMO : MatchType::RACE);
+  } else if (R_MODE.contains(tx, ty)) {  // Race -> Sumo -> Soccer -> Race
+    MatchType nxt = _matchType == MatchType::RACE ? MatchType::SUMO
+                  : _matchType == MatchType::SUMO ? MatchType::SOCCER : MatchType::RACE;
+    setMode(nxt);
     hal::audio.blip(); draw();
   } else if (R_OPP.contains(tx, ty)) {
     _oppPick = true; hal::audio.blip(); draw();   // open the pick-list (replaces cycling)
   } else if (R_TEACH.contains(tx, ty)) {
     _animating = false;
     uint32_t seed = _profile ? _profile->seedBase : 7u;
-    if (_rnn) {
+    if (_matchType == MatchType::SOCCER) {
+      _brain.lr = _knobs.lr;
+      distillSoccer(_brain, seed, 4000 * _knobs.rounds);          // dribble the ball into the goal (FF)
+    } else if (_rnn) {
       // recurrent brain: BPTT over chase episodes (Battle) or maze runs (Race) -- a memory fighter.
       // RNN BPTT is touchier than FF, so the LR knob is damped to a third (its tuned default is 0.1).
       rbrain().lr = _knobs.lr * 0.33f;
@@ -576,6 +628,7 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     }
     _taught = true; _saved = false; _curveLen = 0; evaluateAndTrace(); pushCurve(); hal::audio.blip(); draw();
   } else if (R_BTYPE.contains(tx, ty)) {
+    if (_matchType == MatchType::SOCCER) { hal::audio.fail(); return app::Signal::NONE; }  // soccer is FF-only
     // flip feedforward <-> RNN: it's a fresh brain of the new type, so clear training state
     _rnn = !_rnn;
     _animating = false; _qLearning = false; _curveLen = 0;
@@ -591,8 +644,9 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       hal::audio.blip();
     }
   } else if (R_QLRN.contains(tx, ty)) {
-    bool ffRace = (_matchType == MatchType::RACE && !_rnn);     // the one combo with no Q engine
-    if (ffRace) { hal::audio.fail(); }
+    bool noQ = (_matchType == MatchType::RACE && !_rnn)         // FF race has no Q engine...
+            || _matchType == MatchType::SOCCER;                 // ...and soccer trains via Teach/Evolve
+    if (noQ) { hal::audio.fail(); }
     else {
       // reward-driven training, animated in chunks so the kid watches it learn without a long
       // freeze. Fresh brain each run. FF battle = 8 chunks; any RNN = 4 (BPTT is heavier). The
@@ -612,7 +666,11 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       return app::Signal::BACK;
     }
     // "Fight! >": stash the fighter and jump straight into a battle vs the current opponent.
-    if (_profile && saveFighterToLibrary() >= 0) { _launchFight = true; hal::audio.blip(); }
+    // Soccer has no live battle arena yet -> just save it to the library and return.
+    if (_profile && saveFighterToLibrary() >= 0) {
+      if (_matchType != MatchType::SOCCER) _launchFight = true;
+      hal::audio.blip();
+    }
     return app::Signal::BACK;
   }
   return app::Signal::NONE;

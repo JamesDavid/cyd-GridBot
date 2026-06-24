@@ -35,6 +35,13 @@ bool distillHunter(Net& brain, uint32_t seed, int epochs, bool jitterFoe = false
 // variant of the Battle "Teach", so the brain-type toggle can train a memory brain to fight.
 bool distillHunterRnn(RNet& brain, uint32_t seed, int episodes);
 
+// SOCCER "Teach": teach a brain to dribble -- get BEHIND the ball relative to its target goal, then
+// shove it goalward. Senses match the soccer Arena: the TARGET bearing (slots 4-6) is the ball and
+// the "enemy" bearing (slots 7-9) is the goal to score on. The expert moves to the push-point (the
+// tile opposite the goal from the ball), aligns, then steps forward to push -- a learnable policy
+// from those two bearings. One call = a competent soccer bot; call again to refine. In place.
+bool distillSoccer(Net& brain, uint32_t seed, int epochs);
+
 // Q-LEARNING (reinforcement, no teacher): the brain's 5 sigmoid outputs are Q-values; we play
 // simplified battle episodes (the learner moves, the foe stands) and nudge Q(s,a) toward
 // r + gamma*max Q(s'). Reward = land a zap on an adjacent foe (+1, a win); ring yourself out

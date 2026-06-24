@@ -198,6 +198,9 @@ Outcome Interpreter::step() {
           int tr = _maze->goalRow(), tc = _maze->goalCol();
           if (_wpIdx < _wpN) { tr = _wp[_wpIdx] / _maze->cols(); tc = _wp[_wpIdx] % _maze->cols(); }
           senseEgoTo(*_maze, _pose, _enemy, tr, tc, s);
+        } else if (_enemy && _enemy->target) {
+          // Soccer: sense the ball as the target (slots 4-6); `enemy->pose` carries the goal.
+          senseEgoTo(*_maze, _pose, _enemy, _enemy->target->row, _enemy->target->col, s);
         } else {
           senseEgo(*_maze, _pose, _enemy, s);
         }

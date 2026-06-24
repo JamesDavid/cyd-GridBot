@@ -18,9 +18,11 @@ constexpr int EVO_KEEP = 5;   // top survivors that get to breed
 float scoreBrain(const Net& brain, const Maze& m, const EnemyView* enemy, int maxSteps);
 
 // Fitness as an ARENA FIGHTER vs an AI program. RACE = score by progress/win to the goal;
-// SUMO = score by knocking the enemy out + surviving + hunting it down (no goal).
+// SUMO = score by knocking the enemy out + surviving + hunting it down (no goal). SOCCER (pass
+// `ball`/`g0`/`g1`) = score by shoving the ball toward goal g0 + a win bonus + staying near the ball.
 float scoreFighter(const Net& brain, const Maze& m, const Pose& s0, const Pose& s1,
-                   const Program& ai, int maxSteps, MatchType type = MatchType::RACE);
+                   const Program& ai, int maxSteps, MatchType type = MatchType::RACE,
+                   const Pose* ball = nullptr, const Pose* g0 = nullptr, const Pose* g1 = nullptr);
 
 struct Evolve {
   Net pop[EVO_POP];
@@ -33,7 +35,8 @@ struct Evolve {
   void evaluate(const Maze& m, const EnemyView* enemy = nullptr, int maxSteps = 120);
   // score every brain as a fighter vs the AI (for the Arena trainer)
   void evaluateArena(const Maze& m, const Pose& s0, const Pose& s1, const Program& ai,
-                     int maxSteps = 200, MatchType type = MatchType::RACE);
+                     int maxSteps = 200, MatchType type = MatchType::RACE,
+                     const Pose* ball = nullptr, const Pose* g0 = nullptr, const Pose* g1 = nullptr);
   // selection + mutation -> next generation. `rate`/`scale` tune mutation (how many weights
   // change, and by how much); defaults match the classic combat trainer. The Arena trainer's
   // "Explore" knob raises `scale` to mutate harder (more variety, less stable).

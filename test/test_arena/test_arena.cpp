@@ -426,8 +426,69 @@ void test_maze_qlearn_ff_solves() {
   TEST_ASSERT_TRUE(solved >= LV - 1);
 }
 
+// SOCCER: a bot directly behind the ball dribbles it into its goal over a couple of pushes.
+// Verifies the push physics (walk into the ball -> it rolls one tile ahead) and goal scoring.
+void test_soccer_push_into_goal() {
+  Maze m; m.reset(1, 5); m.fill(FLOOR); m.clearGoal();   // no maze goal -> the dasher keeps walking
+  Pose s0; s0.row = 0; s0.col = 1; s0.facing = EAST;     // pusher, just left of the ball
+  Pose s1; s1.row = 0; s1.col = 0; s1.facing = WEST;     // idle opponent in the corner
+  Program dasher;
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(Node::command(CMD_FWD));
+  dasher.main.push_back(loop);
+  Program idle;
+  Arena ar;
+  ar.setup(&m, &dasher, &idle, s0, s1, MatchType::SOCCER, 50);
+  Pose ball; ball.row = 0; ball.col = 2;
+  Pose g0; g0.row = 0; g0.col = 4;                        // bot0 attacks the right end
+  Pose g1; g1.row = 0; g1.col = 0;                        // bot1 attacks the left end
+  ar.configSoccer(ball, g0, g1);
+  ArenaOutcome o = ar.run();
+  TEST_ASSERT_EQUAL((int)ArenaOutcome::BOT0, (int)o);
+  TEST_ASSERT_EQUAL(4, ar.ball().col);                   // the ball ended in the goal
+}
+
+void test_soccer_deterministic() {
+  Program a = dashProgram(), b = dashProgram();
+  uint32_t h[2];
+  for (int run = 0; run < 2; run++) {
+    Maze m; Pose s0, s1; MazeGen::generateSumoRing(m, 5, s0, s1);
+    Arena ar; ar.setup(&m, &a, &b, s0, s1, MatchType::SOCCER, 120);
+    Pose ball; ball.row = (int8_t)(m.rows() / 2); ball.col = (int8_t)(m.cols() / 2);
+    Pose g0; g0.row = ball.row; g0.col = (int8_t)(m.cols() - 1);
+    Pose g1; g1.row = ball.row; g1.col = 0;
+    ar.configSoccer(ball, g0, g1);
+    ar.run();
+    h[run] = ar.logHash();
+  }
+  TEST_ASSERT_EQUAL_UINT32(h[0], h[1]);
+}
+
+// The SOCCER "Teach" (distillSoccer): a taught brain must dribble the ball toward its goal -- on a
+// spread of open rings, vs an idle opponent, it pushes the ball into (or nearest to) its own goal
+// and so WINS the match the clear majority of the time. The one-tap path to a competent soccer bot.
+void test_soccer_taught_brain_scores() {
+  int wins = 0;
+  for (uint32_t seed = 1; seed <= 6; seed++) {
+    Net taught; taught.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
+    distillSoccer(taught, seed, 4000);
+    Maze m; Pose s0, s1; MazeGen::generateSumoRing(m, seed, s0, s1);
+    Program me = brainProgram(taught), idle;
+    Arena ar; ar.setup(&m, &me, &idle, s0, s1, MatchType::SOCCER, 250);
+    Pose ball; ball.row = (int8_t)(m.rows() / 2); ball.col = (int8_t)(m.cols() / 2);
+    Pose g0; g0.row = ball.row; g0.col = (int8_t)(m.cols() - 1);   // bot0 attacks the right rim
+    Pose g1; g1.row = ball.row; g1.col = 0;                        // bot1 (idle) the left rim
+    ar.configSoccer(ball, g0, g1);
+    if ((int)ar.run() == (int)ArenaOutcome::BOT0) wins++;
+  }
+  TEST_ASSERT_TRUE(wins >= 4);   // dribbles goalward and wins on most rings
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
+  RUN_TEST(test_soccer_push_into_goal);
+  RUN_TEST(test_soccer_deterministic);
+  RUN_TEST(test_soccer_taught_brain_scores);
   RUN_TEST(test_maze_qlearn_ff_solves);
   RUN_TEST(test_battle_taught_brain_hunts_and_matches_vex);
   RUN_TEST(test_battle_qlearn_brain_hunts);

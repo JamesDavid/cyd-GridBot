@@ -9,7 +9,7 @@
 
 namespace gb {
 
-enum class MatchType : uint8_t { RACE, SUMO };  // ZAP (FIRE verb) -> backlog
+enum class MatchType : uint8_t { RACE, SUMO, SOCCER };  // ZAP (FIRE verb) -> backlog
 enum class ArenaOutcome : uint8_t { RUNNING, BOT0, BOT1, DRAW };
 
 constexpr int ARENA_STEP_CAP = 300;
@@ -28,6 +28,13 @@ class Arena {
   void setup(const Maze* maze, const Program* p0, const Program* p1,
              const Pose& s0, const Pose& s1, MatchType type = MatchType::RACE,
              int stepCap = ARENA_STEP_CAP);
+
+  // Soccer: place the ball and each bot's TARGET goal (bot i scores by pushing the ball onto
+  // goal[i]). Call AFTER setup() with MatchType::SOCCER. Both bots sense the ball as their target
+  // (slots 4-6) and their own goal as the "enemy" bearing (slots 7-9), then learn to shove it home.
+  void configSoccer(const Pose& ball, const Pose& goal0, const Pose& goal1);
+  const Pose& ball() const { return _ball; }
+  const Pose& goal(int i) const { return _goal[i]; }
 
   // Advance one tick (both live bots one primitive + resolution). Returns the
   // running/terminal outcome.
@@ -55,6 +62,12 @@ class Arena {
     int zapCd = 0;      // ticks until this bot's zap is ready again (Sumo)
   };
   void foldLog();
+
+  // Soccer state (deterministic, folded into the hash like every other field).
+  bool pushBall(int mover);   // bot `mover` stands on the ball -> shove it; false if blocked
+  Pose _ball;                 // ball tile
+  Pose _goal[2];              // goal[i] = the tile bot i is trying to push the ball onto
+  bool _scored[2] = {false, false};
 
   const Maze* _maze = nullptr;
   MatchType _type = MatchType::RACE;

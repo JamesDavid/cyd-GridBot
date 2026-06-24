@@ -27,7 +27,38 @@ void Arena::setup(const Maze* maze, const Program* p0, const Program* p1,
   _bot[1].enemy.pose = &_bot[0].it.pose();
   _bot[0].it.setEnemy(&_bot[0].enemy);
   _bot[1].it.setEnemy(&_bot[1].enemy);
+  _scored[0] = _scored[1] = false;
   foldLog();
+}
+
+void Arena::configSoccer(const Pose& ball, const Pose& goal0, const Pose& goal1) {
+  _ball = ball;
+  _goal[0] = goal0;
+  _goal[1] = goal1;
+  // Re-aim each bot's senses for soccer: the TARGET (slots 4-6) is the ball, and the "enemy"
+  // bearing (slots 7-9) points at the goal it's attacking -- so the brain learns ball + goal.
+  for (int i = 0; i < 2; i++) {
+    _bot[i].enemy.pose = &_goal[i];
+    _bot[i].enemy.target = &_ball;
+  }
+  foldLog();
+}
+
+// Bot `mover` has stepped onto the ball's tile -- try to shove the ball one tile further in the
+// mover's facing. Off-board / wall / pit blocks the shove; landing on a goal tile scores. Returns
+// false if the ball can't move (the caller then bounces the bot back -- you can't walk through it).
+bool Arena::pushBall(int mover) {
+  int dr, dc; facingDelta(_bot[mover].it.pose().facing, dr, dc);
+  int nr = _ball.row + dr, nc = _ball.col + dc;
+  bool intoGoal0 = (nr == _goal[0].row && nc == _goal[0].col);
+  bool intoGoal1 = (nr == _goal[1].row && nc == _goal[1].col);
+  // A goal tile is always scorable; otherwise the ball can only roll onto walkable floor.
+  if (!intoGoal0 && !intoGoal1 && (!_maze->inBounds(nr, nc) || !_maze->isWalkable(nr, nc)))
+    return false;
+  _ball.row = (int8_t)nr; _ball.col = (int8_t)nc;
+  if (intoGoal0) _scored[0] = true;
+  else if (intoGoal1) _scored[1] = true;
+  return true;
 }
 
 void Arena::foldLog() {
@@ -40,6 +71,10 @@ void Arena::foldLog() {
     fold((uint32_t)(_bot[i].alive ? 1 : 0));
     fold((uint32_t)_bot[i].hp);
     fold((uint32_t)_bot[i].zapCd);
+  }
+  if (_type == MatchType::SOCCER) {  // ball + score are live state in soccer
+    fold((uint32_t)_ball.row); fold((uint32_t)_ball.col);
+    fold((uint32_t)(_scored[0] ? 1 : 0)); fold((uint32_t)(_scored[1] ? 1 : 0));
   }
 }
 
@@ -113,9 +148,20 @@ ArenaOutcome Arena::tick() {
     else if (out[i] == OUT_DONE_NO_WIN) { _bot[i].done = true; }
   }
 
+  // 2b) SOCCER ball physics: a bot that stepped onto the ball's tile shoves it one tile ahead
+  // (its facing); the ball can't be walked THROUGH, so a blocked push bounces the bot back.
+  if (_type == MatchType::SOCCER) {
+    for (int i = 0; i < 2; i++) {
+      if (!moved[i] || !_bot[i].alive) continue;
+      const Pose& p = _bot[i].it.pose();
+      if (p.row == _ball.row && p.col == _ball.col)
+        if (!pushBall(i)) _bot[i].it.setPose(before[i]);
+    }
+  }
+
   // 3) Attacks resolve AFTER moves (SPEC §18.1). A zap shoves the enemy one tile in
-  // the zapper's facing; into a PIT / off-board = out (Sumo, SPEC §18.2).
-  for (int i = 0; i < 2; i++) {
+  // the zapper's facing; into a PIT / off-board = out (Sumo, SPEC §18.2). Soccer has no zap.
+  for (int i = 0; _type != MatchType::SOCCER && i < 2; i++) {
     if (!zapping[i] || !_bot[i].alive) continue;
     if (_type == MatchType::SUMO && _bot[i].zapCd > 0) continue;  // still recovering -> fizzle
     int j = 1 - i;
@@ -143,7 +189,10 @@ ArenaOutcome Arena::tick() {
 
   foldLog();
 
-  if (_type == MatchType::RACE) {
+  if (_type == MatchType::SOCCER) {  // first bot to shove the ball into its goal wins
+    if (_scored[0]) { _bot[0].won = true; _outcome = ArenaOutcome::BOT0; }
+    else if (_scored[1]) { _bot[1].won = true; _outcome = ArenaOutcome::BOT1; }
+  } else if (_type == MatchType::RACE) {
     if (win[0] && win[1]) { _outcome = ArenaOutcome::DRAW; }
     else if (win[0]) { _bot[0].won = true; _outcome = ArenaOutcome::BOT0; }
     else if (win[1]) { _bot[1].won = true; _outcome = ArenaOutcome::BOT1; }
@@ -161,7 +210,17 @@ ArenaOutcome Arena::tick() {
   bool active1 = _bot[1].alive && !_bot[1].done && !_bot[1].it.finished();
   bool over = (!active0 && !active1) || _ticks >= _stepCap;
   if (over && _outcome == ArenaOutcome::RUNNING) {
-    if (_type == MatchType::SUMO && _bot[0].alive && _bot[1].alive) {
+    if (_type == MatchType::SOCCER) {
+      // Nobody scored in time -> the side whose goal the ball is nearer to wins (it was pressing).
+      auto bd = [&](int i) {
+        int dr = _ball.row - _goal[i].row, dc = _ball.col - _goal[i].col;
+        return (dr < 0 ? -dr : dr) + (dc < 0 ? -dc : dc);
+      };
+      int d0 = bd(0), d1 = bd(1);
+      if (d0 < d1) { _bot[0].won = true; _outcome = ArenaOutcome::BOT0; }
+      else if (d1 < d0) { _bot[1].won = true; _outcome = ArenaOutcome::BOT1; }
+      else _outcome = ArenaOutcome::DRAW;
+    } else if (_type == MatchType::SUMO && _bot[0].alive && _bot[1].alive) {
       int cr = _maze->rows() / 2, cc = _maze->cols() / 2;
       auto dist = [&](int i) {
         const Pose& p = _bot[i].it.pose();

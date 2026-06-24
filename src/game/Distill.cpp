@@ -228,6 +228,79 @@ bool distillHunter(Net& brain, uint32_t seed, int epochs, bool jitterFoe) {
   return true;
 }
 
+// Map a cardinal (dr,dc) step to the Facing that produces it.
+static Facing facingFromDelta(int dr, int dc) {
+  for (int f = 0; f < 4; f++) { int a, b; facingDelta((Facing)f, a, b); if (a == dr && b == dc) return (Facing)f; }
+  return EAST;
+}
+// Turn toward a desired facing in one step (left or right; caller handles "already aligned").
+static int turnToward(Facing from, Facing want) { return (turnRight(from) == want) ? 2 : 1; }
+
+// The expert SOCCER move for a (me, ball, goal) layout. The ball can only be shoved one cardinal
+// tile, so we push it along the dominant ball->goal axis: the "push point" is the tile on the
+// OPPOSITE side of the ball from the goal. Get there, face the push direction, step forward (which
+// lands on the ball and shoves it goalward). Actions: 0 fwd, 1 turnL, 2 turnR, 3 jump (unused), 4 n/a.
+static int idealSoccerAction(const Maze& m, const Pose& me, const Pose& ball, const Pose& goal) {
+  int gdr = goal.row - ball.row, gdc = goal.col - ball.col;
+  int pdr, pdc;
+  if ((gdr < 0 ? -gdr : gdr) >= (gdc < 0 ? -gdc : gdc) && gdr != 0) { pdr = gdr < 0 ? -1 : 1; pdc = 0; }
+  else { pdr = 0; pdc = gdc < 0 ? -1 : 1; }                 // push along the bigger axis
+  Facing pushF = facingFromDelta(pdr, pdc);
+  Pose push; push.row = (int8_t)(ball.row - pdr); push.col = (int8_t)(ball.col - pdc);
+  if (me.row == push.row && me.col == push.col) {           // standing on the push point
+    if (me.facing == pushF) return 0;                       // aligned -> shove the ball
+    return turnToward(me.facing, pushF);                    // rotate to the push direction
+  }
+  // Navigate to the push point with the same cone-chaser the hunter uses; "in the tile ahead"
+  // means step ONTO it (forward) rather than zap.
+  int act = idealHuntAction(m, me, push);
+  return (act == 4) ? 0 : act;
+}
+
+bool distillSoccer(Net& brain, uint32_t seed, int epochs) {
+  Rng rng(seed);
+  Maze m; Pose s0, s1;
+  MazeGen::generateSumoRing(m, seed, s0, s1);   // an open pitch (no internal walls)
+  int rows = m.rows(), cols = m.cols();
+  float in[SENSOR_COUNT];
+  int trained = 0;
+  while (trained < epochs) {
+    // random ball, goal, and bot (all on walkable floor, all distinct)
+    Pose ball; ball.row = (int8_t)rng.below(rows); ball.col = (int8_t)rng.below(cols);
+    Pose goal; goal.row = (int8_t)rng.below(rows); goal.col = (int8_t)rng.below(cols);
+    Pose me;   me.row = (int8_t)rng.below(rows); me.col = (int8_t)rng.below(cols); me.facing = (Facing)rng.below(4);
+    if (!m.isWalkable(ball.row, ball.col) || !m.isWalkable(me.row, me.col)) continue;
+    if ((ball.row == goal.row && ball.col == goal.col) ||
+        (me.row == ball.row && me.col == ball.col)) continue;
+    EnemyView ev; ev.pose = &goal;                // "enemy" bearing carries the goal (slots 7-9)
+    for (int step = 0; step < 36 && trained < epochs; step++) {
+      senseEgoTo(m, me, &ev, ball.row, ball.col, in);   // target = the ball (slots 4-6)
+      int act = idealSoccerAction(m, me, ball, goal);
+      float tg[NET_MAX_OUT] = {0}; tg[act] = 1.0f;
+      int reps = (act == 0 ? 1 : 1) + (dangerAhead(m, me) ? 1 : 0);  // a touch of edge-safety weight
+      for (int r = 0; r < reps; r++) brain.trainStep(in, tg);
+      trained += reps;
+      // advance the expert along its own trajectory; a forward that lands on the ball pushes it.
+      if (act == 1) me.facing = turnLeft(me.facing);
+      else if (act == 2) me.facing = turnRight(me.facing);
+      else {
+        int dr, dc; facingDelta(me.facing, dr, dc);
+        int ar = me.row + dr, ac = me.col + dc;
+        if (!m.inBounds(ar, ac) || !m.isWalkable(ar, ac)) break;
+        if (ar == ball.row && ac == ball.col) {           // stepping into the ball -> shove it
+          int nr = ball.row + dr, nc = ball.col + dc;
+          bool intoGoal = (nr == goal.row && nc == goal.col);
+          if (!intoGoal && !m.isWalkable(nr, nc)) break;   // can't push (wall) -> new scenario
+          ball.row = (int8_t)nr; ball.col = (int8_t)nc;
+          if (intoGoal) break;                             // scored -> fresh scenario
+        }
+        me.row = (int8_t)ar; me.col = (int8_t)ac;
+      }
+    }
+  }
+  return true;
+}
+
 bool distillHunterRnn(RNet& brain, uint32_t seed, int episodes) {
   Rng rng(seed);
   Maze m; Pose s0, s1;
