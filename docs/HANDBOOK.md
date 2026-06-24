@@ -180,65 +180,65 @@ Condensed pages. Same shape as the sample: **Big idea · On screen · Ask · Wat
 - **Big idea:** training isn't magic — it's a tiny loop: **LOOK** (the neuron guesses) → **SCORE** (how wrong) → **BLAME** (which weights to nudge, and why an OFF input *doesn't* change) → **NUDGE** (apply it; the guess gets closer). One example per "Next step", training a real neuron by hand.
 - **Ask:** "Why didn't *that* weight change?" *(its input was OFF — only inputs that were ON get the blame.)* "Did the guess get closer or further after the nudge?" **Watch for:** this is the *mechanism* under every "Teach"/Train button in the game. **Words:** *gradient, nudge, learning rate.* (Companion to CodeLab's *Debug* — same do-one-thing-and-look rhythm.)
 
-**3 · Hidden layer** — *what one neuron can't.*
+**3 · Perception** — *the senses we hand the brain.*
+- **Big idea:** every other lesson **hands** the brain clean senses ("wall ahead = 1"). This shows where they come from: the robot's **immediate surroundings** (the tiles right next to it) turned into the numbers that *are* the brain's **input layer** — `wall ahead`, `wall left/right`, `pit ahead`, `goal bearing`. The honest catch: in this game we just **hand** the brain those numbers. A **real** robot would need a **camera and sensors** to work them out from the world — *that's* perception, the hard part real robots spend the most effort on.
+- **On screen:** the surroundings on the left, the sense values they produce dropping into the brain's input layer on the right; tap **Next view** to cycle situations (corridor, wall ahead, pit ahead, goal ahead…). Later phases note that **choosing which things to sense is an engineering decision**, and that these are the robot's **local** surroundings — *not a top-down map of the whole world.*
+- **Ask:** "In real life, how would a robot *know* there's a wall ahead — who tells it?" / "Why does it only sense what's right next to it, instead of the whole map?" **Watch for:** in a self-driving car this is the hard 90% — the world doesn't hand you "wall ahead = 1"; a camera + perception net has to produce it. **Words:** *perception, sensor, input layer, egocentric (local) vs. global.*
+
+**4 · Hidden layer** — *what one neuron can't.*
 - **Big idea:** some rules are impossible for a single neuron — you need a **hidden layer** in between. The lesson uses a real one: **"turn at a corner" — turn when *exactly one* side (left **or** right) is open**, but go straight in a corridor (both walls) *or* a junction (both open). One neuron can't learn that; a hidden layer can. *(This is the classic **XOR** problem — the same shape — but framed as something the bot actually does.)*
 - **Ask:** "It literally can't learn this with one neuron, no matter how long. Why might 'more layers' help?" **Watch for:** this is *the* reason deep learning is "deep." **Words:** *hidden layer, non-linear, deep.*
 > **For the classroom:** the most rigorous lesson — it *proves* a limitation, then *removes* it. AI4K12 *Learning / Representation*.
 
-**4 · Many actions** — *go / turn / jump.*
+**5 · Many actions** — *go / turn / jump.*
 - **Big idea:** real choices aren't yes/no — the brain has **several outputs** and **picks the strongest** (that's *argmax*).
 - **Ask:** "Three outputs light up a bit. How does it decide which one to actually do?" **Words:** *multi-class, output, argmax.*
 
-**5 · Robot brain** — *meet its senses.*
+**6 · Robot brain** — *meet its senses.*
 - **Big idea:** a tour of the *actual* brain every NeuroBot uses: **10 senses → 8 hidden → 5 actions**, and the senses are **relative to the robot** (ahead/right are signed: minus = behind/left).
 - **Ask:** "Why does it sense 'goal to my *right*' instead of 'goal in the north-east'?" *(everything is from the robot's point of view — like a driver, not a map.)* **Watch for:** the same `10→8→5` brain solves mazes **and** fights in the Arena — one brain, many jobs. **Words:** *input, hidden, output, egocentric.*
 
-**6 · Q-learning** — *learn from reward.*
+**7 · Data & labels** — *learn from examples.*
+- **Big idea:** **Teach** doesn't invent the right move — it **copies an expert**. Each example = *what it saw* + *the right move* (a **label**). The loop: run → find where it **failed** → add examples there → train again. More and better examples = a smarter brain. **The data is the real work.**
+- **On screen:** an example counter ticks up as it learns; a new maze exposes situations it never saw; adding examples there fixes it.
+- **Ask:** "Where did the 'right answers' come from? What happens if the examples are bad or unfair?" **Watch for:** this is *imitation learning* and the *data engine* — and the doorway to a values conversation about biased data. **Words:** *data, label, example, imitation.*
+
+**8 · Q-learning** — *learn from reward.*
 - **Big idea:** no teacher, no code — the robot **tries the maze over and over** and value spreads back from the goal until it has a map of "good moves." It **explores** (tries things) then **exploits** (keeps the best).
 - **Ask:** "Notice the colours spread *backwards* from the battery. Why would the tile next to the goal become 'good' first?" **Words:** *reward, reinforcement learning, explore vs exploit, policy.*
 
-**7 · Tuning** — *turn the knobs, change how it learns.*
+**9 · Tuning the grid** — *turn the knobs, change how it learns.*
 - **Big idea:** learning has **dials**, and the dial settings matter as much as the method. Two knobs sit on the Q-learning heatmap: **explore (ε)** — how often it tries something random instead of the best-known move — and **step (α)** — how big a nudge each lesson makes. Set explore to **0** and it gets **stuck** repeating one path and never finds the goal; turn explore **up** and value suddenly spreads and it solves. This is *hyperparameter tuning* — the part of ML that's more cooking than math.
 - **On screen:** the same Q heatmap, now with ▲/▼ steppers for ε and α; nudge them, hit reset/run, watch the colours spread faster, slower, or not at all.
 - **Ask:** "With explore at zero it never solves — why would *never trying anything new* trap it?" / "Turn the step knob way up. Does faster always mean better, or does it get jittery?" **Watch for:** there's a *sweet spot* — too little exploring and it's stuck, too much and it never settles; too small a step and it crawls, too big and it overshoots. **Words:** *hyperparameter, explore/exploit (ε), learning rate (α), tuning.*
 > **For the classroom:** this is the lesson that exposes the levers Appendix A says are usually hidden. Have students *predict* the effect of each knob before turning it, then test. AI4K12 *Learning*; great bridge to "why does training real AI take so much trial and error?"
 
-**8 · Tune a real brain** — *the same knobs, on a real net.*
-- **Big idea:** Tuning turned dials on a tabular grid; this turns them on a **real neural network doing backprop**. The net learns the "turn at a corner" task (the Hidden-layer job) while you watch the **loss curve**: with a good **learn rate** it slides smoothly to zero; **too low** and it barely moves (crawls); **too high** and the curve goes red and *won't settle* (thrashes). **Rounds** = how long it trains.
+**10 · Tuning a real net** — *the same knobs, on a real brain.*
+- **Big idea:** *Tuning the grid* turned the dials on a Q table; this turns them on a **real neural network doing backprop**. The net learns the "turn at a corner" task (the Hidden-layer job) while you watch the **loss curve**: with a good **learn rate** it slides smoothly to zero; **too low** and it barely moves (crawls); **too high** and the curve goes red and *won't settle* (thrashes). **Rounds** = how long it trains.
 - **On screen:** a learn-rate ladder + a rounds knob, the loss curve, and the four corner cases flipping to ✓ as it learns. The same three knobs live in the Arena trainer's **"Knobs"** panel, where they tune a real fighter.
 - **Ask:** "Watch the loss with a tiny learn rate, then a huge one. Which actually learns — and why is *bigger not always better*?" **Watch for:** there's a sweet spot; too-big steps overshoot and never settle. **Words:** *learning rate, loss, epoch, converge, overshoot.*
-> **For the classroom:** the backprop twin of the Tuning lesson — together they show that *every* learning method has knobs. Pair with the Arena **Knobs** panel so students feel the same dials change a real bot. AI4K12 *Learning*.
+> **For the classroom:** the backprop twin of the *Tuning the grid* lesson — together they show that *every* learning method has knobs. Pair with the Arena **Knobs** panel so students feel the same dials change a real bot. AI4K12 *Learning*.
 
-**9 · Evolution** — *breed the best (robot babies).*
+**11 · Evolution** — *breed the best (robot babies).*
 - **Big idea:** start with a crowd of random brains; the ones that get furthest **breed**; repeat. No teacher, no gradient — just survival of the fittest.
 - **On screen:** the population evolving on the maze + a climbing fitness curve. A **"How?"** button opens a breeding explainer: the population ranked by **fitness** (the top few glow — that's **selection**), a two-parents-→-baby diagram (**crossover** — "mix two winners' DNA"), and **mutation** (random tweaks). The headline: *the best robots make robot babies.*
 - **Ask:** "Nothing is being 'taught' here. How does it still get better?" / "Why take **two** parents instead of just copying the best one?" **Words:** *evolution, population, fitness, selection, crossover, mutation.*
 
-**10 · Transfer** — *reuse skills, new maze.*
+**12 · Transfer** — *reuse skills, new maze.*
 - **Big idea:** train on maze A, then on a **brand-new maze B it already does okay** — it learned *general* skills, not that one maze. A quick fine-tune masters B. (And it watches for the opposite failure — **over-fitting**, memorising one maze.)
 - **Ask:** "How can it be partway through a maze it has *never seen*?" **Words:** *transfer, fine-tune, generalise, over-fit.*
 
-**11 · Brain Cam** — *watch a brain think.*
+**13 · Brain Cam** — *watch a brain think.*
 - **Big idea:** an X-ray of a live network. Tap **Teach** and watch **backprop animate** — the weight-lines recolour as it learns, the loss bar falls. Tap any **neuron to zoom** into its weights. Flip **plain ↔ rnn**, change the **map** (it transfers), and **Save** a trained brain to your library.
 - **Ask:** "Tap a neuron. What do those numbers mean? Watch them change while it learns." A caption notes the **argmax**: the brain has five outputs and simply **does the strongest one**. **Words:** *backprop, activation, weight, argmax.* The clearest answer to "what is it actually doing?"
 
-**12 · Pilot** — *plan + steer (the self-driving split).*
+**14 · Pilot** — *plan + steer (the self-driving split).*
 - **Big idea:** a reactive brain only senses what's nearby, so it gets stuck. Add a **route planner** that lays down waypoints; now the brain just **steers dot-to-dot** and solves it. **The planner decides *where*; the brain decides *how*** — exactly how a self-driving stack splits the *map route* from the *neural net that handles the road*.
 - **Ask:** "Which job is the map doing? Which job is the brain doing? Why can't either do it alone?" **Words:** *planner, controller, waypoint, hierarchy.* *(In the **Train a fighter** Pilot trainer the kid can even **hand-place the waypoints** — tap tiles to draw the route the brain then learns to follow.)*
 
-**13 · Memory (RNN)** — *a brain that remembers.*
+**15 · Memory (RNN)** — *a brain that remembers.*
 - **Big idea:** a plain brain decides from *senses now*, so in a dead-end it forgets it's been there and **loops**. A **recurrent** brain feeds its hidden layer **back into itself** (memory), so it remembers its trail and **backs out**. The only change is one feedback path.
 - **Ask:** "Same maze, same teacher — why does only the one with memory escape?" **Words:** *memory, recurrent, state.* (Pilot added an *outside* planner; the RNN grows memory *inside* the brain.)
-
-**14 · Perception** — *the senses we hand the brain.*
-- **Big idea:** every other lesson **hands** the brain clean senses ("wall ahead = 1"). This shows where they come from: the robot's **immediate surroundings** (the tiles right next to it) turned into the numbers that *are* the brain's **input layer** — `wall ahead`, `wall left/right`, `pit ahead`, `goal bearing`. The honest catch: in this game we just **hand** the brain those numbers. A **real** robot would need a **camera and sensors** to work them out from the world — *that's* perception, the hard part real robots spend the most effort on.
-- **On screen:** the surroundings on the left, the sense values they produce dropping into the brain's input layer on the right; tap **Next view** to cycle situations (corridor, wall ahead, pit ahead, goal ahead…). Later phases note that **choosing which things to sense is an engineering decision**, and that these are the robot's **local** surroundings — *not a top-down map of the whole world.*
-- **Ask:** "In real life, how would a robot *know* there's a wall ahead — who tells it?" / "Why does it only sense what's right next to it, instead of the whole map?" **Watch for:** in a self-driving car this is the hard 90% — the world doesn't hand you "wall ahead = 1"; a camera + perception net has to produce it. **Words:** *perception, sensor, input layer, egocentric (local) vs. global.*
-
-**15 · Data & labels** — *learn from examples.*
-- **Big idea:** **Teach** doesn't invent the right move — it **copies an expert**. Each example = *what it saw* + *the right move* (a **label**). The loop: run → find where it **failed** → add examples there → train again. More and better examples = a smarter brain. **The data is the real work.**
-- **On screen:** an example counter ticks up as it learns; a new maze exposes situations it never saw; adding examples there fixes it.
-- **Ask:** "Where did the 'right answers' come from? What happens if the examples are bad or unfair?" **Watch for:** this is *imitation learning* and the *data engine* — and the doorway to a values conversation about biased data. **Words:** *data, label, example, imitation.*
 
 **16 · Self-play** — *get better by beating yourself.*
 - **Big idea:** how do you train a champion when there's **no expert to copy and no perfect answer key** — just "did I win?" You make the brain **fight a frozen copy of itself**. Every time a challenger out-fights the current champion, it **takes the crown**, and the *next* challenger has to beat that tougher version. The opponent keeps getting harder *because you keep getting better* — an **arms race** with no teacher at all. (This is the core trick behind AlphaGo / AlphaZero.)
@@ -257,7 +257,7 @@ Condensed pages. Same shape as the sample: **Big idea · On screen · Ask · Wat
 Not a lesson, but where training pays off. **Home → Arena → vs Computer → Train a fighter.** **Teach**, **Q-Learn**, or **Evolve** a brain (with an optional **Memory/RNN** toggle) to win matches, sparring up a difficulty ladder (**Bolt → Coil → Spin → Vex → Ace → Self**), watching a live **learning-curve** sparkline, then **Save** it and pick it as **your bot** in a Race or Sumo. It even fine-tunes to each new battle board so it actually wins. The last rung, **Self**, is the *Self-play* lesson in action — it spars against an evolving copy of itself.
 - **Ask:** "You trained a brain to solve mazes — now it's fighting. Same brain, different job. How?"
 - **Tournaments.** **vs Computer → Tournament** runs a field of your saved fighters as either a **Cup** (single-elimination bracket) or a **Ladder** (round-robin) — every match deterministic and replayed on screen, so the bracket is real, not random. The natural capstone after kids have trained a few fighters; pair it with the radio **class tournament** in §7.
-- **Knobs (optional, advanced).** A **"Knobs"** button hides three real hyperparameters — **learning rate**, **rounds**, and **explore** (mutation for Evolve, exploration for Q-Learn). They're tucked away so they're never in a beginner's path, but they let a curious student feel a setting change a *real* fighter's training — the hands-on partner to the **Tune a real brain** lesson.
+- **Knobs (optional, advanced).** A **"Knobs"** button hides three real hyperparameters — **learning rate**, **rounds**, and **explore** (mutation for Evolve, exploration for Q-Learn). They're tucked away so they're never in a beginner's path, but they let a curious student feel a setting change a *real* fighter's training — the hands-on partner to the **Tuning a real net** lesson.
 
 ### Talking about it (the Societal Impact strand)
 
@@ -297,7 +297,7 @@ So you can answer "is this *really* how it works?" with confidence. GridBot is t
 - **Training takes seconds, not months.** Mazes are small and the "expert" is a perfect maze-solver, so learning is fast. Real training is enormous and noisy.
 - **"Teach" copies a perfect solver.** That's real *imitation learning / distillation*, but real experts (human drivers) are imperfect and inconsistent.
 - **No real physics or sensors.** A grid, not a road; no slip, weather, or sensor noise.
-- **The math is hidden on purpose.** No equations, gradients, or learning-rate knobs are exposed — appropriate for the age, but it means kids don't yet "own" those levers. (A great direction for older students.)
+- **The math is mostly hidden on purpose.** No raw equations or gradients are shown — appropriate for the age. The *knobs* themselves, though, are now exposed where they teach something: the **Tuning the grid** / **Tuning a real net** lessons and the Arena trainer's optional **Knobs** panel let older kids turn learning rate, explore, and rounds and watch the effect. (The underlying calculus stays hidden.)
 
 None of these make the lessons *wrong* — they make them *legible*. Saying them out loud builds trust and is itself good science.
 
@@ -312,7 +312,7 @@ None of these make the lessons *wrong* — they make them *legible*. Saying them
 | CodeLab Debug | — | 2-AP-17, 3A-AP-21 (testing & debugging) |
 | NeuroLab One neuron / Many actions / Hidden layer | Learning | 3A-AP-15 (models); AI4K12 LO "ML" |
 | NeuroLab Robot brain / Perception | Perception | AI4K12 "Computers perceive via sensors" |
-| NeuroLab Q-learning / Tuning / Tune a real brain / Evolution | Learning | AI4K12 "Learning from data/experience" |
+| NeuroLab Q-learning / Tuning the grid / Tuning a real net / Evolution | Learning | AI4K12 "Learning from data/experience" |
 | NeuroLab Transfer / Data & labels | Learning | AI4K12 "training data"; data-ethics LOs |
 | NeuroLab Pilot / Memory | Representation & Reasoning + Learning | AI4K12 "reasoning & search" |
 | NeuroLab Self-play / The Right Tool | Learning | AI4K12 "Learning"; method selection / inductive bias |
