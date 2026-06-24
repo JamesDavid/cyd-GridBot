@@ -15,6 +15,9 @@ namespace screens {
 class ArenaTrainScreen : public app::IScreen {
  public:
   void begin(gb::Profile* profile);
+  // Opened from the code editor's "train brain >" -> Arena: seed the trainer with an existing
+  // program brain and write the trained result straight back into that program node on exit.
+  void beginEditBrain(gb::Profile* profile, gb::Program* prog, int brainIdx);
   void enter() override;
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
   bool savedFighter() const { return _saved; }  // tapped "Save fighter"
@@ -37,6 +40,11 @@ class ArenaTrainScreen : public app::IScreen {
   ui::Rect oppRowRect(int i) const;
   int  saveFighterToLibrary();  // persist the current brain as a fighter; returns its library index
   bool _oppPick = false;        // showing the opponent picker overlay
+  // edit-link: opened from the editor to train one program brain in place (write back on exit)
+  bool _editLink = false;
+  gb::Program* _editProg = nullptr;
+  int _editIdx = -1;
+  void writeBackEditBrain();    // copy the trained brain into the editing program's node
   // Optional "advanced" knobs overlay -- live training hyperparameters, tucked behind a button
   // so they're never in a beginner's way. LR + Rounds feed the backprop engines (Teach/Q-Learn);
   // Explore feeds Evolve's mutation scale and Q-Learn's epsilon. Defaults = the tuned baseline.
@@ -92,7 +100,7 @@ class ArenaTrainScreen : public app::IScreen {
   void drawNet();             // network graph + arena mini-map + status
   // Learning curve: how good the brain is (0..1) sampled each training step, so a kid (or an ML
   // engineer over a beer) sees fitness CLIMB as it learns -- the metric overlay the Brain Cam wanted.
-  static constexpr int CURVE_N = 40;   // sparkline samples (trimmed from 48 to free static DRAM)
+  static constexpr int CURVE_N = 32;   // sparkline samples (trimmed to free static DRAM)
   float _curve[CURVE_N] = {0};
   int   _curveLen = 0;
   float _score = 0.0f;        // current brain's score vs the opponent (HP margin / goal progress)

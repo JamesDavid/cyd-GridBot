@@ -302,6 +302,21 @@ void App::wake() {
   }
 }
 
+// The "train brain >" chooser: pick which trainer to open for this brain.
+void App::drawTrainPick() {
+  auto& g = hal::display.gfx();
+  g.fillScreen(C_BG);
+  g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
+  label(g, 6, 3, "Train this brain", C_ACCENT, textdatum_t::top_left, 2);
+  label(g, SCREEN_W / 2, 50, "Where do you want to train it?", C_DIM, textdatum_t::middle_center);
+  ui::Rect maze{30, 70, 260, 40}, arena{30, 120, 260, 40}, cancel{90, 178, 140, 30};
+  button(g, maze, "Maze trainer", C_SENSE, C_PANEL);
+  label(g, SCREEN_W / 2, 104, "learn to solve a level", C_DIM, textdatum_t::middle_center);
+  button(g, arena, "Arena (fight)", C_FUNC, C_PANEL);
+  label(g, SCREEN_W / 2, 154, "train to win battles", C_DIM, textdatum_t::middle_center);
+  button(g, cancel, "Cancel", C_INK, C_PANEL);
+}
+
 void App::tick(uint32_t now) {
   hal::audio.update(now);  // advance the background melody (no-op if not playing)
   hal::TouchPoint tp = hal::touch.read();
@@ -362,6 +377,23 @@ void App::tick(uint32_t now) {
       }
       break;
     }
+    case State::TRAIN_PICK: {   // chooser: train this brain in the maze trainer or the arena
+      int x, y;
+      if (_introTap.tapped(tp, now, x, y)) {
+        ui::Rect maze{30, 70, 260, 40}, arena{30, 120, 260, 40}, cancel{90, 178, 140, 30};
+        if (maze.contains(x, y)) {                 // maze / neuro trainer (solve a level)
+          _neuroTrain.begin(&_profile, &_game.program(), _pendingTrainIdx, &_game.maze());
+          _neuroTrain.enter(); _state = State::NEURO_TRAIN; hal::audio.blip();
+        } else if (arena.contains(x, y)) {          // arena fight trainer (seed this brain)
+          _arenaFromEditor = true;
+          _arenaTrain.beginEditBrain(&_profile, &_game.program(), _pendingTrainIdx);
+          _arenaTrain.enter(); _state = State::ARENA_TRAIN; hal::audio.blip();
+        } else if (cancel.contains(x, y)) {         // back to the editor, no training
+          _game.resumeCode(); _state = State::GAME; hal::audio.blip();
+        }
+      }
+      break;
+    }
     case State::CREATE: {
       Signal s = _create.tick(now, tp);
       if (s == Signal::BACK) {  // cancel
@@ -406,12 +438,12 @@ void App::tick(uint32_t now) {
     }
     case State::GAME: {
       Signal s = _game.tick(now, tp);
-      if (s == Signal::GOTO_NEURO_TRAIN) {  // train a NEURO block's brain on this maze
+      if (s == Signal::GOTO_NEURO_TRAIN) {  // "train brain >" -> pick which trainer (maze vs arena)
         hal::audio.stopMusic();
-        _neuroTrain.begin(&_profile, &_game.program(), _game.pendingNeuro(), &_game.maze());
+        _pendingTrainIdx = _game.pendingNeuro();
         _game.clearPendingNeuro();
-        _neuroTrain.enter();
-        _state = State::NEURO_TRAIN;
+        drawTrainPick();
+        _state = State::TRAIN_PICK;
         break;
       }
       // Editing a saved library bot: write the edited program back to that entry and return to
@@ -657,6 +689,14 @@ void App::tick(uint32_t now) {
     }
     case State::ARENA_TRAIN: {  // came from the Arena menu; return there (library may have grown)
       if (_arenaTrain.tick(now, tp) == Signal::BACK) {
+        if (_arenaFromEditor) {   // opened from the editor: brain was written back -> return to it
+          _arenaFromEditor = false;
+          _profile.stats.brainsTrained++;
+          _profile.achievements |= gb::evaluateAchievements(_profile);
+          saveProfile();
+          _game.resumeCode(); _state = State::GAME;
+          break;
+        }
         if (_arenaTrain.savedFighter()) { _profile.stats.fightersSaved++; _profile.stats.brainsTrained++; }
         _profile.achievements |= gb::evaluateAchievements(_profile);
         saveProfile();

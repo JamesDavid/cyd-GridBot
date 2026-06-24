@@ -192,6 +192,7 @@ void ArenaTrainScreen::begin(Profile* profile) {
   // Nothing saved yet? Start in BATTLE mode AND spar Vex (idx 3) -- the exact opponent they'll
   // face in a real Battle -- so a "wins!" in training means they win their first battle. The
   // hint banner walks them through it (Evolve -> Save).
+  _editLink = false; _editProg = nullptr; _editIdx = -1;
   bool first = _profile && _profile->library.empty();
   _matchType = first ? MatchType::SUMO : MatchType::RACE;
   setupBoard();
@@ -201,6 +202,46 @@ void ArenaTrainScreen::begin(Profile* profile) {
   _rnn = false; _qLearning = false;   // RNN brain (rbrain()) is allocated lazily on first toggle
   _taught = false; _saved = false; _savedIdx = -1; _curveLen = 0;
   evaluateAndTrace();
+}
+
+// Seed the trainer with an existing program brain (from the editor's "train brain >" -> Arena),
+// and remember to write the trained result back into that node when we leave.
+void ArenaTrainScreen::beginEditBrain(Profile* profile, Program* prog, int brainIdx) {
+  _profile = profile;
+  _editProg = prog; _editIdx = brainIdx; _editLink = true;
+  // detect whether this brain block is recurrent (rnn) by finding its N_NEURO node
+  bool isRnn = false;
+  if (prog) {
+    NodeList* lists[3] = {&prog->main, &prog->f1, &prog->f2};
+    for (NodeList* lst : lists)
+      for (Node& n : *lst) {
+        if (n.type == N_NEURO && n.brainIdx == brainIdx && n.rnn) isRnn = true;
+        for (Node& c : n.body)
+          if (c.type == N_NEURO && c.brainIdx == brainIdx && c.rnn) isRnn = true;
+      }
+  }
+  _matchType = MatchType::SUMO;     // fight training
+  setupBoard();
+  _oppIdx = 3;                      // spar Vex (the default Battle foe)
+  buildOpponent(_oppIdx);
+  _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
+  _rnn = isRnn; _qLearning = false; _animating = false;
+  _saved = false; _savedIdx = -1; _curveLen = 0;
+  if (isRnn) {
+    if (brainIdx < (int)prog->rbrains.size()) { rbrain() = prog->rbrains[brainIdx]; rbrain().trained = true; }
+    _taught = false;                // rnn path trains rbrain(); evaluateAndTrace won't touch _brain
+  } else {
+    if (prog && brainIdx < (int)prog->brains.size()) _brain = prog->brains[brainIdx];
+    _taught = true;                 // seeded FF brain -> don't let evaluateAndTrace overwrite it
+  }
+  evaluateAndTrace();
+}
+
+// Copy the trained brain back into the editing program's neuro node.
+void ArenaTrainScreen::writeBackEditBrain() {
+  if (!_editLink || !_editProg || _editIdx < 0) return;
+  if (_rnn) { if (_editIdx < (int)_editProg->rbrains.size()) _editProg->rbrains[_editIdx] = rbrain(); }
+  else      { if (_editIdx < (int)_editProg->brains.size())  _editProg->brains[_editIdx]  = _brain; }
 }
 
 // Switch Race <-> Sumo: different board (Sumo has no goal), different fitness, fresh training.
@@ -401,8 +442,11 @@ void ArenaTrainScreen::draw() {
   // on Battle too (where it flounders -- a deliberate "match the method to the problem" lesson).
   bool qOk = sumo || _rnn;   // only FF+Race has no Q engine
   button(g, R_QLRN, (_animating && _qLearning) ? "..." : "Q-Learn", qOk ? C_MOVE : C_DIM, C_PANEL);
-  button(g, R_SAVE, _saved ? "saved!" : "Save", _saved ? C_DIM : C_ACCENT, C_PANEL);
-  button(g, R_BACK, "Fight! >", C_GO, C_PANEL);   // save the fighter and jump into a battle
+  // edit-link (opened from the editor): "< Editor" bails out (no change), "Use it >" writes the
+  // brain back into the program. From the Arena menu: "Save" to library, "Fight! >" to battle.
+  if (_editLink) button(g, R_SAVE, "< Editor", C_INK, C_PANEL);
+  else           button(g, R_SAVE, _saved ? "saved!" : "Save", _saved ? C_DIM : C_ACCENT, C_PANEL);
+  button(g, R_BACK, _editLink ? "Use it >" : "Fight! >", C_GO, C_PANEL);
 }
 
 // The "watch it learn" panel: the brain's network graph (weights recolour as it trains) plus
@@ -608,8 +652,13 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       hal::audio.blip();
     }
   } else if (R_SAVE.contains(tx, ty)) {
+    if (_editLink) { hal::audio.blip(); return app::Signal::BACK; }  // "< Editor": bail out, no change applied
     if (saveFighterToLibrary() >= 0) { hal::audio.badge(); draw(); } else hal::audio.fail();
   } else if (R_BACK.contains(tx, ty)) {
+    if (_editLink) {   // "Use it >": write the trained brain back into the program, return to editor
+      writeBackEditBrain(); hal::audio.blip();
+      return app::Signal::BACK;
+    }
     // "Fight! >": stash the fighter and jump straight into a battle vs the current opponent.
     if (_profile && saveFighterToLibrary() >= 0) { _launchFight = true; hal::audio.blip(); }
     return app::Signal::BACK;

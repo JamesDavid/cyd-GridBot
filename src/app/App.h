@@ -58,7 +58,7 @@ class App {
   enum class State : uint8_t { SELECT, CREATE, HOME, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE,
                                NEURO_HUB, NEURO_LESSON, Q_LESSON, TUNE_LESSON, TUNENET_LESSON, SELFPLAY_LESSON, METHOD_LESSON, EVO_LESSON, NEURO_TRAIN, ARENA_TRAIN,
                                LESSONS_MENU, CODE_LAB, CODE_LESSON, TRANSFER_LESSON, BRAIN_VIEW, BRAIN_MAP,
-                               PILOT_LESSON, RNN_LESSON, PERCEPTION_LESSON, BACKPROP_LESSON, LIBRARY };
+                               PILOT_LESSON, RNN_LESSON, PERCEPTION_LESSON, BACKPROP_LESSON, LIBRARY, TRAIN_PICK };
 
   void gotoSelect();
   void gotoHome();
@@ -118,6 +118,10 @@ class App {
   screens::LibraryScreen _library;
   int _renameLibIdx = -1;   // library entry being renamed via the keyboard (-1 = none)
   int _editLibIdx = -1;     // library entry being edited in the GAME editor (-1 = none)
+  // "train brain >" from the editor pops a chooser: maze trainer vs arena (fight) trainer.
+  void drawTrainPick();     // the modal: pick which trainer to open for this brain
+  int _pendingTrainIdx = -1;   // brain index the editor asked to train (-> chosen trainer)
+  bool _arenaFromEditor = false;  // ARENA_TRAIN was opened from the editor (-> write back + return to editor)
   screens::BrainViewScreen _brainView;
   screens::BrainMapScreen _brainMap;
   TapDetector _introTap;
