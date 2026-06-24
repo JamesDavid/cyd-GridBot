@@ -227,6 +227,7 @@ void ArenaScreen::startCup(const std::vector<int>& parts) {
   for (int p : parts) { if ((int)_cupPlayers.size() < gb::BRACKET_MAX) _cupPlayers.push_back(p); }
   _type = _tSumo ? MatchType::SUMO : MatchType::RACE;
   _cupBracket.init((int)_cupPlayers.size());
+  _cupLog.clear();
   _cup = true; _cupMatch = -1;
   _phase = Phase::CUP; drawCupCard();             // opening card; tap to start the first match
 }
@@ -237,7 +238,8 @@ void ArenaScreen::cupAdvanceToNextMatch() {
     int next = -1;
     for (int m = 0; m < _cupBracket.matchCount(); m++) {
       int a, b; _cupBracket.pair(m, a, b);
-      if (b < 0) { if (_cupBracket.win[m] < 0) _cupBracket.reportWinner(m, a); }   // bye auto-advances
+      if (b < 0) { if (_cupBracket.win[m] < 0) { _cupBracket.reportWinner(m, a);   // bye auto-advances
+                     _cupLog.push_back({(int8_t)_cupBracket.round, (int8_t)a, (int8_t)-1, (int8_t)a}); } }
       else if (_cupBracket.win[m] < 0 && next < 0) next = m;
     }
     if (next >= 0) {                              // a real match to watch: set it up + play it
@@ -268,27 +270,57 @@ void ArenaScreen::drawCupCard() {
   } else {
     char hd[24]; snprintf(hd, sizeof(hd), "Round %d", _cupBracket.round + 1);
     label(g, SCREEN_W - 6, 6, hd, C_DIM, textdatum_t::top_right);
-    int mc = _cupBracket.matchCount();
-    int rowh = (BAND_H - 6) / (mc > 0 ? mc : 1); if (rowh > 22) rowh = 22; if (rowh < 12) rowh = 12;
-    for (int m = 0; m < mc; m++) {
-      int a, b; _cupBracket.pair(m, a, b);
-      int y = BAND_Y + 2 + m * rowh;
-      auto nameOf = [&](int pid) { return (pid >= 0 && pid < (int)_cupPlayers.size()) ? _cands[_cupPlayers[pid]].name.c_str() : "bye"; };
-      char row[40];
-      if (b < 0) snprintf(row, sizeof(row), "%s  (bye)", nameOf(a));
-      else       snprintf(row, sizeof(row), "%s  vs  %s", nameOf(a), nameOf(b));
-      label(g, 12, y + (rowh - 8) / 2, row, (_cupBracket.win[m] >= 0 || b < 0) ? C_GO : C_INK);
-      if (_cupBracket.win[m] >= 0)
-        label(g, SCREEN_W - 12, y + (rowh - 8) / 2, nameOf(_cupBracket.win[m]), C_ACCENT, textdatum_t::top_right);
-    }
+    drawBracket();   // the whole bracket as round-columns (history + the current round)
   }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   if (done) {
     button(g, R_CUP_AGAIN, "Again", C_GO, C_PANEL);    // bottom bar, clear of the champion art
     button(g, R_CUP_EXIT, "Exit", C_INK, C_PANEL);
-  } else {
-    button(g, R_AGAIN, _cupMatch < 0 ? "Start >" : "Next >", C_GO, C_PANEL_HI);
-    button(g, R_RESULT_EXIT, "Quit", C_INK, C_PANEL_HI);
+  } else {  // bottom bar (clear of the bracket, which fills the band)
+    button(g, R_CUP_AGAIN, _cupMatch < 0 ? "Start >" : "Next >", C_GO, C_PANEL);
+    button(g, R_CUP_EXIT, "Quit", C_INK, C_PANEL);
+  }
+}
+
+// The whole bracket as left-to-right round columns: resolved rounds come from the log, the live
+// round from the bracket. Each match is a little two-name box; the winner's name turns green.
+void ArenaScreen::drawBracket() {
+  auto& g = hal::display.gfx();
+  int n = (int)_cupPlayers.size();
+  int slots = 1; while (slots < n) slots <<= 1;          // field padded to a power of two
+  int R = 0; for (int s = slots; s > 1; s >>= 1) R++;    // number of rounds
+  if (R < 1) R = 1;
+  auto nm = [&](int pid, char* d, int dn) {
+    if (pid < 0) snprintf(d, dn, "bye");
+    else if (pid < (int)_cupPlayers.size()) snprintf(d, dn, "%.7s", _cands[_cupPlayers[pid]].name.c_str());
+    else snprintf(d, dn, "?");
+  };
+  int colW = (SCREEN_W - 6) / R;
+  int top = BAND_Y + 14, bandH = BOTBAR_Y - top - 2;
+  static const char* RLBL[4] = {"R1", "R2", "R3", "Final"};
+  for (int r = 0; r < R; r++) {
+    int mc = slots >> (r + 1); if (mc < 1) mc = 1;
+    int colX = 3 + r * colW;
+    label(g, colX + (colW - 4) / 2, BAND_Y + 2, (R - r <= 1) ? "Final" : (r < 3 ? RLBL[r] : "R?"),
+          C_DIM, textdatum_t::top_center);
+    int slotH = bandH / mc;
+    for (int m = 0; m < mc; m++) {
+      int a = -2, b = -2, win = -1;
+      if (r < _cupBracket.round) {                       // resolved round -> from the log
+        int cnt = 0;
+        for (auto& gm : _cupLog) if (gm.round == r) { if (cnt == m) { a = gm.a; b = gm.b; win = gm.win; break; } cnt++; }
+      } else if (r == _cupBracket.round && !_cupBracket.done()) {
+        _cupBracket.pair(m, a, b); win = _cupBracket.win[m];
+      }
+      int boxY = top + m * slotH + 1, boxH = slotH - 3; if (boxH > 28) boxH = 28;
+      g.fillRoundRect(colX, boxY, colW - 4, boxH, 3, C_PANEL);
+      g.drawRoundRect(colX, boxY, colW - 4, boxH, 3, C_PANEL_HI);
+      if (a > -2) {
+        char na[10], nb[10]; nm(a, na, sizeof(na)); nm(b, nb, sizeof(nb));
+        label(g, colX + 4, boxY + 2, na, (win == a) ? C_GO : C_INK);
+        if (boxH >= 16) label(g, colX + 4, boxY + boxH - 10, nb, (win == b) ? C_GO : (b < 0 ? C_DIM : C_INK));
+      }
+    }
   }
 }
 
@@ -297,6 +329,7 @@ void ArenaScreen::onMatchEnd() {
     int a, b; _cupBracket.pair(_cupMatch, a, b);
     int winner = (_arena.outcome() == ArenaOutcome::BOT1) ? b : a;   // BOT0 or DRAW -> 'a' (tiebreak)
     _cupBracket.reportWinner(_cupMatch, winner);
+    _cupLog.push_back({(int8_t)_cupBracket.round, (int8_t)a, (int8_t)b, (int8_t)winner});
     _phase = Phase::CUP; drawCupCard();              // show the updated bracket; tap to continue
   } else {
     _phase = Phase::DONE; finishOverlay();
@@ -851,8 +884,8 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         if (R_CUP_AGAIN.contains(tx, ty)) { std::vector<int> same = _cupPlayers; startCup(same); }  // re-run, same field
         else if (R_CUP_EXIT.contains(tx, ty) || R_BACK.contains(tx, ty)) drawGameType();
       } else {
-        if (R_AGAIN.contains(tx, ty)) cupAdvanceToNextMatch();   // Start / Next match
-        else if (R_RESULT_EXIT.contains(tx, ty)) { _cup = false; drawGameType(); }  // Quit
+        if (R_CUP_AGAIN.contains(tx, ty)) cupAdvanceToNextMatch();   // Start / Next match
+        else if (R_CUP_EXIT.contains(tx, ty)) { _cup = false; drawGameType(); }  // Quit
       }
       break;
     case Phase::PICK1:

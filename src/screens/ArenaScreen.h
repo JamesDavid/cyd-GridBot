@@ -81,6 +81,11 @@ class ArenaScreen : public app::IScreen {
   std::vector<int> _cupPlayers;  // candidate indices entered in the Cup (parallel to bracket ids)
   int _cupMatch = -1;            // bracket match index currently being played (-1 = none)
   bool _cup = false;             // a BOARD match is part of the Cup (route its result to the bracket)
+  // History of every Cup game so the bracket card can draw ALL rounds as a tree (the live Bracket
+  // only keeps the current round). a/b are player ids (b=-1 bye); win is the winning player id.
+  struct CupGame { int8_t round; int8_t a; int8_t b; int8_t win; };
+  std::vector<CupGame> _cupLog;
+  void drawBracket();            // the full bracket tree (rounds as columns)
 
   gb::Profile* _profile = nullptr;
   std::vector<Candidate> _cands;
