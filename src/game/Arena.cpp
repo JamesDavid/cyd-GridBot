@@ -41,7 +41,27 @@ void Arena::configSoccer(const Pose& ball, const Pose& goal0, const Pose& goal1)
     _bot[i].enemy.pose = &_goal[i];
     _bot[i].enemy.target = &_ball;
   }
+  _ballStall = 0;
   foldLog();
+}
+
+// A long-stalled ball drifts one tile toward whichever goal it is already NEARER to -- so once a
+// bot has shoved it past midfield, the loose ball keeps rolling that way and goes in, instead of two
+// equal bots freezing over it. Cardinal step along the dominant axis; only onto walkable floor/goal.
+void Arena::refDriftBall() {
+  auto md = [&](const Pose& a, const Pose& b) { int r = a.row - b.row, c = a.col - b.col; return (r < 0 ? -r : r) + (c < 0 ? -c : c); };
+  int near = md(_ball, _goal[0]) <= md(_ball, _goal[1]) ? 0 : 1;   // the goal the ball is nearer to
+  int gdr = _goal[near].row - _ball.row, gdc = _goal[near].col - _ball.col;
+  int dr = 0, dc = 0;
+  if ((gdr < 0 ? -gdr : gdr) >= (gdc < 0 ? -gdc : gdc) && gdr != 0) dr = gdr < 0 ? -1 : 1;
+  else dc = gdc < 0 ? -1 : 1;
+  int nr = _ball.row + dr, nc = _ball.col + dc;
+  bool intoGoal0 = (nc == _goal[0].col && nr >= _goal[0].row - 1 && nr <= _goal[0].row + 1);
+  bool intoGoal1 = (nc == _goal[1].col && nr >= _goal[1].row - 1 && nr <= _goal[1].row + 1);
+  if (!intoGoal0 && !intoGoal1 && (!_maze->inBounds(nr, nc) || !_maze->isWalkable(nr, nc))) return;
+  _ball.row = (int8_t)nr; _ball.col = (int8_t)nc;
+  if (intoGoal0) _scored[0] = true;
+  else if (intoGoal1) _scored[1] = true;
 }
 
 // Bot `mover` has stepped onto the ball's tile -- try to shove the ball one tile further in the
@@ -52,16 +72,39 @@ bool Arena::pushBall(int mover) {
   int nr = _ball.row + dr, nc = _ball.col + dc;
   // A goal is the END column +/- one row of the mouth centre (a 3-tile-tall mouth on the pitch;
   // a single tile elsewhere). Anything in the mouth column at those rows counts as a score.
-  auto inGoal = [&](int i) { int rr = nr - _goal[i].row; return nc == _goal[i].col && rr >= -1 && rr <= 1; };
-  bool intoGoal0 = inGoal(0);
-  bool intoGoal1 = inGoal(1);
+  auto inGoal = [&](int i, int r, int c) { int rr = r - _goal[i].row; return c == _goal[i].col && rr >= -1 && rr <= 1; };
+  auto land = [&](int r, int c) {
+    _ball.row = (int8_t)r; _ball.col = (int8_t)c;
+    if (inGoal(0, r, c)) _scored[0] = true;
+    else if (inGoal(1, r, c)) _scored[1] = true;
+    return true;
+  };
+
+  // Contested ball: a straight shove into the OPPOSING bot would just oscillate the ball one tile
+  // back and forth forever (the midfield deadlock). Break it like a real nutmeg -- the ball skips
+  // PAST the defender (one tile further along the push), giving the attacker a clear path to goal
+  // and leaving the defender behind it. If the skip is blocked, squirt the ball loose to a
+  // perpendicular tile instead. Deterministic (folded into the hash like everything else).
+  int other = 1 - mover;
+  const Pose& op = _bot[other].it.pose();
+  if (_bot[other].alive && nr == op.row && nc == op.col) {
+    int sr = _ball.row + 2 * dr, sc = _ball.col + 2 * dc;     // skip past the defender (goalward)
+    if (inGoal(0, sr, sc) || inGoal(1, sr, sc) || (_maze->inBounds(sr, sc) && _maze->isWalkable(sr, sc)))
+      return land(sr, sc);
+    int r1 = _ball.row - dc, c1 = _ball.col + dr;             // else deflect loose (the two perpendiculars)
+    int r2 = _ball.row + dc, c2 = _ball.col - dr;
+    auto gd = [&](int r, int c) { int a = r - _goal[mover].row, b = c - _goal[mover].col; return (a < 0 ? -a : a) + (b < 0 ? -b : b); };
+    bool ok1 = (inGoal(mover, r1, c1) || (_maze->inBounds(r1, c1) && _maze->isWalkable(r1, c1)));
+    bool ok2 = (inGoal(mover, r2, c2) || (_maze->inBounds(r2, c2) && _maze->isWalkable(r2, c2)));
+    if (ok1 && (!ok2 || gd(r1, c1) <= gd(r2, c2))) return land(r1, c1);
+    if (ok2) return land(r2, c2);
+    return false;   // boxed in -> no push (the bot bounces back)
+  }
+
   // A goal tile is always scorable; otherwise the ball can only roll onto walkable floor.
-  if (!intoGoal0 && !intoGoal1 && (!_maze->inBounds(nr, nc) || !_maze->isWalkable(nr, nc)))
+  if (!inGoal(0, nr, nc) && !inGoal(1, nr, nc) && (!_maze->inBounds(nr, nc) || !_maze->isWalkable(nr, nc)))
     return false;
-  _ball.row = (int8_t)nr; _ball.col = (int8_t)nc;
-  if (intoGoal0) _scored[0] = true;
-  else if (intoGoal1) _scored[1] = true;
-  return true;
+  return land(nr, nc);
 }
 
 void Arena::foldLog() {
@@ -154,12 +197,19 @@ ArenaOutcome Arena::tick() {
   // 2b) SOCCER ball physics: a bot that stepped onto the ball's tile shoves it one tile ahead
   // (its facing); the ball can't be walked THROUGH, so a blocked push bounces the bot back.
   if (_type == MatchType::SOCCER) {
+    Pose ballWas = _ball;
     for (int i = 0; i < 2; i++) {
       if (!moved[i] || !_bot[i].alive) continue;
       const Pose& p = _bot[i].it.pose();
       if (p.row == _ball.row && p.col == _ball.col)
         if (!pushBall(i)) _bot[i].it.setPose(before[i]);
     }
+    // Loose-ball "referee": if nobody has touched the ball for a while, it drifts toward the goal of
+    // whichever bot is better-positioned (nearer it). This un-sticks a midfield deadlock between two
+    // equally-good bots -- the ball keeps flowing and the bot winning the position battle gets the
+    // edge, instead of both freezing a tile apart forever.
+    if (_ball == ballWas) { if (++_ballStall >= 16 && !_scored[0] && !_scored[1]) { refDriftBall(); _ballStall = 0; } }
+    else _ballStall = 0;
   }
 
   // 3) Attacks resolve AFTER moves (SPEC §18.1). A zap shoves the enemy one tile in

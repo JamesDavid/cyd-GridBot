@@ -315,6 +315,16 @@ bool distillSoccer(Net& brain, uint32_t seed, int epochs) {
         }
         me.row = (int8_t)ar; me.col = (int8_t)ac;
       }
+      // Jitter the ball so the net learns to track a MOVING target. In a real 1v1 the ball gets
+      // shoved/deflected loose by the other bot; trained only against a STATIC ball, the net dithers
+      // on those novel bearings and stops chasing ("two bots freeze after one touch"). Same fix as
+      // the hunter's foe-jitter (#69) -- here the ball is the quarry.
+      if (rng.below(100) < 30) {
+        int jdr, jdc; facingDelta((Facing)rng.below(4), jdr, jdc);
+        int br = ball.row + jdr, bc = ball.col + jdc;
+        if (m.isWalkable(br, bc) && !(br == me.row && bc == me.col) &&
+            !(br == goal.row && bc == goal.col)) { ball.row = (int8_t)br; ball.col = (int8_t)bc; }
+      }
     }
   }
   return true;

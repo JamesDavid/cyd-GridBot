@@ -526,10 +526,33 @@ void test_soccer_two_bots_match_resolves() {
   TEST_ASSERT_NOT_EQUAL((int)ArenaOutcome::DRAW, out[0]);          // and decisively (someone scores / leads)
 }
 
+// Two GOOD soccer bots must MIX IT UP, not deadlock at midfield. The loose-ball deflection (a
+// contested shove squirts the ball perpendicular instead of oscillating) means most pairings end
+// with the ball actually shoved into a NET -- a real goal scored in open play, not a stalemate
+// resolved by the timeout ball-distance tiebreak.
+void test_soccer_two_bots_score_in_open_play() {
+  auto inNet = [](const Pose& b, const Pose& g) { return b.col == g.col && b.row >= g.row - 1 && b.row <= g.row + 1; };
+  int realGoals = 0;
+  for (uint32_t s = 1; s <= 6; s++) {
+    Net a, b;
+    a.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1); distillSoccer(a, s, 5000);
+    b.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1); distillSoccer(b, s + 40, 5000);
+    Maze m; Pose s0, s1, ball, g0, g1;
+    MazeGen::generateSoccerPitch(m, 1, s0, s1, ball, g0, g1);
+    Program pa = brainProgram(a), pb = brainProgram(b);
+    Arena ar; ar.setup(&m, &pa, &pb, s0, s1, MatchType::SOCCER, 400);
+    ar.configSoccer(ball, g0, g1);
+    ar.run();
+    if (inNet(ar.ball(), g0) || inNet(ar.ball(), g1)) realGoals++;
+  }
+  TEST_ASSERT_TRUE(realGoals >= 4);   // open-play goals on most pairings (no perpetual midfield lock)
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_soccer_push_into_goal);
   RUN_TEST(test_soccer_two_bots_match_resolves);
+  RUN_TEST(test_soccer_two_bots_score_in_open_play);
   RUN_TEST(test_soccer_pitch_walled_with_mouths);
   RUN_TEST(test_soccer_deterministic);
   RUN_TEST(test_soccer_taught_brain_scores);
