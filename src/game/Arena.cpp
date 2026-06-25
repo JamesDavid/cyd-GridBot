@@ -38,8 +38,9 @@ void Arena::configSoccer(const Pose& ball, const Pose& goal0, const Pose& goal1)
   // Re-aim each bot's senses for soccer: the TARGET (slots 4-6) is the ball, and the "enemy"
   // bearing (slots 7-9) points at the goal it's attacking -- so the brain learns ball + goal.
   for (int i = 0; i < 2; i++) {
-    _bot[i].enemy.pose = &_goal[i];
-    _bot[i].enemy.target = &_ball;
+    _bot[i].enemy.pose   = &_bot[1 - i].it.pose();  // the RIVAL bot (slots 7-9) -- real opponent sense
+    _bot[i].enemy.target = &_ball;                  // the BALL (slots 4-6)
+    _bot[i].enemy.net    = &_goal[i];               // the NET to score on (slots 10-11)
   }
   _ballStall = 0;
   foldLog();

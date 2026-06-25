@@ -17,10 +17,12 @@ constexpr int MAX_FRAME_DEPTH  = 64;   // bounds call-stack growth (recursive F1
 struct EnemyView {
   const Pose* pose = nullptr;
   int nearDist = 3;
-  // Soccer: a brain's TARGET (the goal-direction sense, slots 4-6) follows this tile instead of
-  // the maze goal -- we point it at the BALL so the fighter senses where to push. Null = use the
-  // maze goal as usual (Race), or no target (Sumo). `pose` then carries the goal to push toward.
+  // Soccer wiring (the richer 12-input brain): `target` = the BALL, `pose` = the RIVAL bot, and
+  // `net` = the goal to score on. When `net` is set the brain reads senseSoccer (walls+ball+rival+
+  // net) instead of the 10-input vector. Null `net` = not soccer (Race/Sumo/Pilot use `target` as a
+  // goal-bearing override and `pose` as the foe, as before).
   const Pose* target = nullptr;
+  const Pose* net = nullptr;
 };
 
 class Interpreter {

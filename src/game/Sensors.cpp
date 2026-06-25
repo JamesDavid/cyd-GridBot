@@ -48,4 +48,21 @@ void senseEgo(const Maze& m, const Pose& p, const EnemyView* enemy, float* out) 
   senseEgoTo(m, p, enemy, m.goalRow(), m.goalCol(), out);  // target = the goal
 }
 
+void senseSoccer(const Maze& m, const Pose& p, const Pose* ball, const Pose* rival,
+                 const Pose* net, float* out) {
+  int fdr, fdc; facingDelta(p.facing, fdr, fdc);
+  int ldr, ldc; facingDelta(turnLeft(p.facing), ldr, ldc);
+  int rdr, rdc; facingDelta(turnRight(p.facing), rdr, rdc);
+  out[0] = !m.isWalkable(p.row + fdr, p.col + fdc) ? 1.0f : 0.0f;   // wall ahead (no pits on a pitch)
+  out[1] = !m.isWalkable(p.row + ldr, p.col + ldc) ? 1.0f : 0.0f;   // wall left
+  out[2] = !m.isWalkable(p.row + rdr, p.col + rdc) ? 1.0f : 0.0f;   // wall right
+  float d;
+  if (ball)  projectEgo(m, p, ball->row, ball->col, out[3], out[4], out[5]);   // ball: bearing + dist
+  else      { out[3] = 0; out[4] = 0; out[5] = 1.0f; }
+  if (net)   projectEgo(m, p, net->row, net->col, out[6], out[7], d);          // net: bearing only
+  else      { out[6] = 0; out[7] = 0; }
+  if (rival) projectEgo(m, p, rival->row, rival->col, out[8], out[9], d);      // rival: bearing only
+  else      { out[8] = 0; out[9] = 1.0f; }
+}
+
 }  // namespace gb

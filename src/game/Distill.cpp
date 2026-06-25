@@ -267,63 +267,80 @@ static int idealSoccerAction(const Maze& m, const Pose& me, const Pose& ball, co
   return (act == 4) ? 0 : act;
 }
 
+// Opponent-aware expert: aim the shove at the goal-mouth tile FARTHEST from the rival (shoot where
+// the keeper isn't), then dribble to that corner with the base policy. Curls the ball around a
+// defender instead of pushing it straight into them -- the behaviour the rival-sense (7-9) enables.
+static int idealSoccerActionVs(const Maze& m, const Pose& me, const Pose& ball,
+                               const Pose& goalCenter, const Pose& rival) {
+  Pose goal = goalCenter; int bestRow = goalCenter.row, bestD = -1;
+  for (int dr = -1; dr <= 1; dr++) {
+    int gr = goalCenter.row + dr, d = gr - rival.row; if (d < 0) d = -d;
+    if (d > bestD) { bestD = d; bestRow = gr; }
+  }
+  goal.row = (int8_t)bestRow;
+  return idealSoccerAction(m, me, ball, goal);
+}
+
+// Drop a pose on a random walkable interior tile of pitch `m`.
+static void placeOn(const Maze& m, Rng& rng, Pose& p) {
+  do { p.row = (int8_t)rng.below(m.rows()); p.col = (int8_t)rng.below(m.cols()); } while (!m.isWalkable(p.row, p.col));
+}
+
 bool distillSoccer(Net& brain, uint32_t seed, int epochs) {
   Rng rng(seed);
-  // Train ON the real walled pitch so the brain learns to dribble with the boundary present (an
-  // open-ring brain dithers at the walls). Senses are relative, so alternating which mouth is the
-  // target teaches a general "push toward YOUR goal" policy that works for either side at runtime.
+  // Train ON the real walled pitch (so it learns the boundary) WITH a rival present, so the brain
+  // uses the rival-bearing senses to curl the ball around the defender. Always attack g0; the
+  // relative senses generalise to either side at runtime.
   Maze m; Pose ps0, ps1, kickoff, g0, g1;
   MazeGen::generateSoccerPitch(m, seed, ps0, ps1, kickoff, g0, g1);
-  int rows = m.rows(), cols = m.cols();
   float in[SENSOR_COUNT];
   int trained = 0;
   while (trained < epochs) {
-    Pose goal = (rng.below(2) ? g0 : g1);   // aim at either mouth for variety
-    // random ball + bot on interior walkable floor (all distinct)
-    Pose ball; ball.row = (int8_t)rng.below(rows); ball.col = (int8_t)rng.below(cols);
-    Pose me;   me.row = (int8_t)rng.below(rows); me.col = (int8_t)rng.below(cols); me.facing = (Facing)rng.below(4);
-    if (!m.isWalkable(ball.row, ball.col) || !m.isWalkable(me.row, me.col)) continue;
-    if ((ball.row == goal.row && ball.col == goal.col) ||
-        (me.row == ball.row && me.col == ball.col)) continue;
-    EnemyView ev; ev.pose = &goal;                // "enemy" bearing carries the goal (slots 7-9)
+    Pose goal = g0, ball, me, rival;
+    placeOn(m, rng, ball);
+    do placeOn(m, rng, me);    while (me.row == ball.row && me.col == ball.col);
+    do placeOn(m, rng, rival); while ((rival.row == ball.row && rival.col == ball.col) || (rival.row == me.row && rival.col == me.col));
+    me.facing = (Facing)rng.below(4);
+    if (ball.row == goal.row && ball.col == goal.col) continue;
     for (int step = 0; step < 36 && trained < epochs; step++) {
-      senseEgoTo(m, me, &ev, ball.row, ball.col, in);   // target = the ball (slots 4-6)
-      int act = idealSoccerAction(m, me, ball, goal);
+      senseSoccer(m, me, &ball, &rival, &goal, in);     // walls + ball + RIVAL + net (12 inputs)
+      int act = idealSoccerActionVs(m, me, ball, goal, rival);
       float tg[NET_MAX_OUT] = {0}; tg[act] = 1.0f;
-      // Oversample the DECISIVE move -- a forward that lands on the ball (a push). Like the hunter's
-      // rare zap, the finishing shove is a small fraction of states; without weighting the net learns
-      // to approach but never commits, so the ball stalls a tile short. Forwards count double too.
+      // Oversample the decisive ball-contact push (it's a small fraction of states) so the net
+      // commits to finishing instead of dithering a tile short; forwards count double.
       int fdr, fdc; facingDelta(me.facing, fdr, fdc);
       bool pushNow = (act == 0 && me.row + fdr == ball.row && me.col + fdc == ball.col);
       int reps = pushNow ? 5 : (act == 0 ? 2 : 1);
-      if (dangerAhead(m, me)) reps += 1;               // a touch of edge-safety weight
+      if (dangerAhead(m, me)) reps += 1;
       for (int r = 0; r < reps; r++) brain.trainStep(in, tg);
       trained += reps;
-      // advance the expert along its own trajectory; a forward that lands on the ball pushes it.
       if (act == 1) me.facing = turnLeft(me.facing);
       else if (act == 2) me.facing = turnRight(me.facing);
       else {
         int dr, dc; facingDelta(me.facing, dr, dc);
         int ar = me.row + dr, ac = me.col + dc;
-        if (!m.inBounds(ar, ac) || !m.isWalkable(ar, ac)) break;
-        if (ar == ball.row && ac == ball.col) {           // stepping into the ball -> shove it
+        if (!m.inBounds(ar, ac) || !m.isWalkable(ar, ac) || (ar == rival.row && ac == rival.col)) break;  // wall/rival
+        if (ar == ball.row && ac == ball.col) {
           int nr = ball.row + dr, nc = ball.col + dc;
           bool intoGoal = (nr == goal.row && nc == goal.col);
-          if (!intoGoal && !m.isWalkable(nr, nc)) break;   // can't push (wall) -> new scenario
+          if (!intoGoal && !m.isWalkable(nr, nc)) break;
           ball.row = (int8_t)nr; ball.col = (int8_t)nc;
-          if (intoGoal) break;                             // scored -> fresh scenario
+          if (intoGoal) break;
         }
         me.row = (int8_t)ar; me.col = (int8_t)ac;
       }
-      // Jitter the ball so the net learns to track a MOVING target. In a real 1v1 the ball gets
-      // shoved/deflected loose by the other bot; trained only against a STATIC ball, the net dithers
-      // on those novel bearings and stops chasing ("two bots freeze after one touch"). Same fix as
-      // the hunter's foe-jitter (#69) -- here the ball is the quarry.
+      // Jitter the ball AND the rival so the net tracks BOTH as they move in a real match (without
+      // it, the net dithers on the novel bearings a moving ball/defender create -- the #69 fix).
       if (rng.below(100) < 30) {
-        int jdr, jdc; facingDelta((Facing)rng.below(4), jdr, jdc);
-        int br = ball.row + jdr, bc = ball.col + jdc;
-        if (m.isWalkable(br, bc) && !(br == me.row && bc == me.col) &&
+        int jr, jc; facingDelta((Facing)rng.below(4), jr, jc);
+        int br = ball.row + jr, bc = ball.col + jc;
+        if (m.isWalkable(br, bc) && !(br == me.row && bc == me.col) && !(br == rival.row && bc == rival.col) &&
             !(br == goal.row && bc == goal.col)) { ball.row = (int8_t)br; ball.col = (int8_t)bc; }
+      }
+      if (rng.below(100) < 25) {
+        int jr, jc; facingDelta((Facing)rng.below(4), jr, jc);
+        int rr = rival.row + jr, rc = rival.col + jc;
+        if (m.isWalkable(rr, rc) && !(rr == me.row && rc == me.col) && !(rr == ball.row && rc == ball.col)) { rival.row = (int8_t)rr; rival.col = (int8_t)rc; }
       }
     }
   }
@@ -341,7 +358,7 @@ static int ballGoalDist(const Pose& ball, const Pose& goal) {
   return (dr < 0 ? -dr : dr) + (dc < 0 ? -dc : dc);
 }
 static float qSoccerStep(const Maze& m, const Pose& me, const Pose& ball, const Pose& goal,
-                         int act, Pose& nm, Pose& nball, bool& terminal) {
+                         const Pose& rival, int act, Pose& nm, Pose& nball, bool& terminal) {
   int dr, dc; facingDelta(me.facing, dr, dc);
   int ar = me.row + dr, ac = me.col + dc;
   int oldD = ballGoalDist(ball, goal);
@@ -350,7 +367,7 @@ static float qSoccerStep(const Maze& m, const Pose& me, const Pose& ball, const 
   else if (act == 2) { nm.facing = turnRight(me.facing); r = -0.01f; }
   else if (act == 3 || act == 4) { r = -0.03f; }              // jump / zap: no-op in soccer (a waste)
   else {                                                      // FORWARD
-    if (!m.inBounds(ar, ac) || !m.isWalkable(ar, ac)) { r = -0.05f; }        // wall / edge -> bonk, stay
+    if (!m.inBounds(ar, ac) || !m.isWalkable(ar, ac) || (ar == rival.row && ac == rival.col)) { r = -0.05f; }  // wall/rival -> bonk
     else if (ar == ball.row && ac == ball.col) {              // step onto the ball -> shove it ahead
       int br = ball.row + dr, bc = ball.col + dc;
       bool intoGoal = (bc == goal.col && br >= goal.row - 1 && br <= goal.row + 1);
@@ -367,7 +384,7 @@ static float qSoccerStep(const Maze& m, const Pose& me, const Pose& ball, const 
 // starts near the goal with the bot right behind it, so the +1 win is reached early and propagates;
 // else both are random on interior floor. The relative senses mean a brain that learns to attack g0
 // works for either side at runtime (bot 1 just sees its own goal in the same bearing slots).
-static void soccerScenario(const Maze& m, Rng& rng, const Pose& g0, bool near, Pose& ball, Pose& me) {
+static void soccerScenario(const Maze& m, Rng& rng, const Pose& g0, bool near, Pose& ball, Pose& me, Pose& rival) {
   int rows = m.rows(), cols = m.cols();
   do {
     if (near) { ball.row = (int8_t)(g0.row + (int)rng.below(3) - 1); ball.col = (int8_t)(cols - 2 - (int)rng.below(2)); }
@@ -378,6 +395,12 @@ static void soccerScenario(const Maze& m, Rng& rng, const Pose& g0, bool near, P
     else      { me.row = (int8_t)rng.below(rows); me.col = (int8_t)rng.below(cols); }
     me.facing = (Facing)rng.below(4);
   } while (!m.isWalkable(me.row, me.col) || (me.row == ball.row && me.col == ball.col));
+  // a rival defender, often near its goal (the side the learner is attacking) so it's in the way
+  do {
+    if (rng.below(2) == 0) { rival.row = (int8_t)(g0.row + (int)rng.below(3) - 1); rival.col = (int8_t)(cols - 2 - (int)rng.below(3)); }
+    else                   { rival.row = (int8_t)rng.below(rows); rival.col = (int8_t)rng.below(cols); }
+  } while (!m.isWalkable(rival.row, rival.col) || (rival.row == ball.row && rival.col == ball.col) ||
+           (rival.row == me.row && rival.col == me.col));
 }
 
 bool qTrainSoccer(Net& brain, uint32_t seed, int episodes, int globalDone, int globalTotal, float epsScale) {
@@ -389,19 +412,18 @@ bool qTrainSoccer(Net& brain, uint32_t seed, int episodes, int globalDone, int g
   const int NA = 5; const float G = 0.92f;
   float in[SENSOR_COUNT], nin[SENSOR_COUNT], out[NET_MAX_OUT], nout[NET_MAX_OUT];
   for (int e = 0; e < episodes; e++) {
-    Pose goal = g0, ball, me;
-    soccerScenario(m, rng, g0, (rng.below(2) == 0), ball, me);
-    EnemyView ev; ev.pose = &goal;                 // goal bearing in the "enemy" slots
+    Pose goal = g0, ball, me, rival;
+    soccerScenario(m, rng, g0, (rng.below(2) == 0), ball, me, rival);
     float eps = 0.05f + 0.30f * epsScale * (1.0f - (float)(globalDone + e) / (float)globalTotal);
     for (int step = 0; step < 40; step++) {
-      senseEgoTo(m, me, &ev, ball.row, ball.col, in);
+      senseSoccer(m, me, &ball, &rival, &goal, in);   // walls + ball + net + RIVAL
       brain.forward(in, out);
       int bestI = 0; for (int k = 1; k < NA; k++) if (out[k] > out[bestI]) bestI = k;
       int act = (rng.below(1000) < (uint32_t)(eps * 1000.0f)) ? (int)rng.below(NA) : bestI;
-      Pose nm, nball; bool terminal; float r = qSoccerStep(m, me, ball, goal, act, nm, nball, terminal);
+      Pose nm, nball; bool terminal; float r = qSoccerStep(m, me, ball, goal, rival, act, nm, nball, terminal);
       float target = r;
       if (!terminal) {
-        senseEgoTo(m, nm, &ev, nball.row, nball.col, nin);
+        senseSoccer(m, nm, &nball, &rival, &goal, nin);
         brain.forward(nin, nout);
         float mx = nout[0]; for (int k = 1; k < NA; k++) if (nout[k] > mx) mx = nout[k];
         target += G * mx;
@@ -427,20 +449,19 @@ bool qTrainSoccerRnn(RNet& brain, uint32_t seed, int episodes, int globalDone, i
   float *rew = gQrew, *qmax = gQmax, *qt = gQt;   // shared scratch (saves DRAM)
   float out[RNET_MAX_OUT];
   for (int e = 0; e < episodes; e++) {
-    Pose goal = g0, ball, me;
-    soccerScenario(m, rng, g0, (rng.below(2) == 0), ball, me);
-    EnemyView ev; ev.pose = &goal;
+    Pose goal = g0, ball, me, rival;
+    soccerScenario(m, rng, g0, (rng.below(2) == 0), ball, me, rival);
     brain.resetState();
     float eps = 0.05f + 0.30f * epsScale * (1.0f - (float)(globalDone + e) / (float)globalTotal);
     int T = 0;
     for (int step = 0; step < RNET_MAX_T && step < 40; step++) {
       float* x = gEpiX + T * SENSOR_COUNT;
-      senseEgoTo(m, me, &ev, ball.row, ball.col, x);
+      senseSoccer(m, me, &ball, &rival, &goal, x);
       brain.step(x, out);                          // Q(s_t); advances the recurrent memory
       int bestI = 0; for (int k = 1; k < NA; k++) if (out[k] > out[bestI]) bestI = k;
       int act = (rng.below(1000) < (uint32_t)(eps * 1000.0f)) ? (int)rng.below(NA) : bestI;
       qmax[T] = out[bestI]; gEpiAct[T] = act;
-      Pose nm, nball; bool terminal; rew[T] = qSoccerStep(m, me, ball, goal, act, nm, nball, terminal);
+      Pose nm, nball; bool terminal; rew[T] = qSoccerStep(m, me, ball, goal, rival, act, nm, nball, terminal);
       T++; me = nm; ball = nball;
       if (terminal) break;
     }
@@ -465,20 +486,19 @@ bool distillSoccerRnn(RNet& brain, uint32_t seed, int episodes) {
   MazeGen::generateSoccerPitch(m, seed, ps0, ps1, kick, g0, g1);
   (void)g1;
   for (int e = 0; e < episodes; e++) {
-    Pose goal = g0, ball, me;            // attack the right mouth; relative senses generalise to either
-    soccerScenario(m, rng, g0, (rng.below(2) == 0), ball, me);
-    EnemyView ev; ev.pose = &goal;
+    Pose goal = g0, ball, me, rival;     // attack the right mouth; relative senses generalise to either
+    soccerScenario(m, rng, g0, (rng.below(2) == 0), ball, me, rival);
     int T = 0;
     for (int step = 0; step < RNET_MAX_T && step < 36; step++) {
-      senseEgoTo(m, me, &ev, ball.row, ball.col, gEpiX + T * SENSOR_COUNT);
-      int a = idealSoccerAction(m, me, ball, goal);
+      senseSoccer(m, me, &ball, &rival, &goal, gEpiX + T * SENSOR_COUNT);
+      int a = idealSoccerActionVs(m, me, ball, goal, rival);
       gEpiAct[T] = a; T++;
       if (a == 1) me.facing = turnLeft(me.facing);
       else if (a == 2) me.facing = turnRight(me.facing);
       else {
         int dr, dc; facingDelta(me.facing, dr, dc);
         int ar = me.row + dr, ac = me.col + dc;
-        if (!m.inBounds(ar, ac) || !m.isWalkable(ar, ac)) break;
+        if (!m.inBounds(ar, ac) || !m.isWalkable(ar, ac) || (ar == rival.row && ac == rival.col)) break;
         if (ar == ball.row && ac == ball.col) {
           int nr = ball.row + dr, nc = ball.col + dc;
           bool intoGoal = (nc == goal.col && nr >= goal.row - 1 && nr <= goal.row + 1);

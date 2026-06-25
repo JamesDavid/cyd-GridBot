@@ -198,18 +198,18 @@ Outcome Interpreter::step() {
           int tr = _maze->goalRow(), tc = _maze->goalCol();
           if (_wpIdx < _wpN) { tr = _wp[_wpIdx] / _maze->cols(); tc = _wp[_wpIdx] % _maze->cols(); }
           senseEgoTo(*_maze, _pose, _enemy, tr, tc, s);
-        } else if (_enemy && _enemy->target) {
-          // Soccer: sense the ball as the target (slots 4-6); `enemy->pose` carries the goal.
-          senseEgoTo(*_maze, _pose, _enemy, _enemy->target->row, _enemy->target->col, s);
+        } else if (_enemy && _enemy->net) {
+          // Soccer: the richer 12-input vector -- ball (target), rival (pose), and the net.
+          senseSoccer(*_maze, _pose, _enemy->target, _enemy->pose, _enemy->net, s);
         } else {
           senseEgo(*_maze, _pose, _enemy, s);
         }
         int act = useRnn ? _prog->rbrains[n.brainIdx].argmaxStep(s)
                          : _prog->brains[n.brainIdx].argmax(s);
-        // Soccer (enemy->target = the ball) has no zap -- a battle-trained brain that fires when it
-        // faces its goal would freeze in place forever. Remap the zap action to a forward step so any
-        // brain at least plays (a true soccer brain never picks zap, so it's unaffected).
-        if (_enemy && _enemy->target && act == 4) act = 0;
+        // Soccer has no zap -- a battle-trained brain that fires when it faces its goal would freeze
+        // in place forever. Remap the zap action to a forward step so any brain at least plays (a true
+        // soccer brain never picks zap, so it's unaffected).
+        if (_enemy && _enemy->net && act == 4) act = 0;
         _lastCmd = kBrainAction[act];
         Outcome o = execCmd(_lastCmd);
         if (o != OUT_OK) { finish(o); return o; }
