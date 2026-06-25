@@ -4,16 +4,20 @@ The living list of planned/possible work. The README shows only the juiciest
 highlights and links here. Items are grouped; checked = done, unchecked = future.
 
 ## Playtest ideas — make it more fun (from on-device playtesting)
-- [x] **Achievements / badges** (13): First Steps, Bright Spark, Hopper, Looper,
+- [x] **Achievements / badges** (17): First Steps, Bright Spark, Hopper, Looper,
       Architect, Sixth Sense, Champion, On Fire, Unstoppable, Explorer, Veteran,
-      Artist, Star Collector. Sticky bitmask in the profile, count on the stats
-      header, celebrated on the level-intro when earned, **+ a badges gallery screen
-      with icons** (reachable from Stats).
+      Artist, Star Collector, **Brainiac** (train a brain), **Mind Over Maze** (clear a
+      level with a brain), **Battle-Ready** (save a fighter), and **Generalist** (one
+      brain clears the held-out gauntlet). Sticky bitmask in the profile, count on the
+      stats header, celebrated on the level-intro when earned, **+ a badges gallery
+      screen with icons** (reachable from Stats).
 - [x] **Juice**: smooth tile-to-tile tween, breadcrumb trail, character shake on bonk,
       and a win celebration with a **multicolour confetti burst + animated star fly-in**
       (each earned star pops into the YOU WIN overlay over dim placeholders).
 - [x] **Character emotes**: happy face on win, dizzy/✖-eyes on bonk. (Future: pit splash.)
-- [ ] **Drag-to-reorder** program lines; an **Undo** button for edits.
+- [x] **Reorder program lines** — done via **Up/Dn** buttons on the selected line
+      (`moveSelected`); drag-to-reorder is the unbuilt nicety.
+- [ ] An **Undo** button for edits.
 - [x] **Level biomes/themes**: floor/wall palette varies per level band (Meadow,
       Cavern, Glacier, Circuit, Nebula) so progress feels visual.
 - [x] One-line **par hint** ("par N") shown in the game chrome so kids can aim for the
@@ -33,7 +37,7 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [x] Brick-red walls + void (background-colour) pits so hazards read clearly.
 - [x] Program list scrolls (auto-follows newest + tappable scrollbar) and the pane
       extends full-height — no command-count limit on screen.
-- [x] Bigger chrome titles; compressed unlock curve (sensing at L22, not L55);
+- [x] Bigger chrome titles; compressed unlock curve (sensing at L15, not L55);
       multi-maze challenges interspersed every 5th level past sensing.
 - [x] Failure feedback on the maze before returning to code (see below).
 - [x] Smooth tile-to-tile character tween during animation (glides between tiles).
@@ -82,7 +86,7 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [x] Race (reach goal first) and Sumo (PUSH into a pit) vs House AI or Hotseat.
 - [x] **Soccer** (shove a ball into your goal) vs House AI or Hotseat — see Arena mode below.
 - [x] Radio battle + Pokemon-style trade (ESP-NOW) — hardware-pending.
-- [x] **Puzzle Race (shared maze)**: both players get a 45s timer to write code for the
+- [x] **Puzzle Race (shared maze)**: both players get a 90s timer to write code for the
       SAME maze; whoever's bot ends up closest to the goal (BFS distance, 0 = reached)
       wins. A code-authoring contest, not a live battle. Hotseat lock-in handoff.
 - [ ] More mode types: relay, co-op (two bots must both reach goals), king-of-the-hill.
