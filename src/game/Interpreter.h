@@ -59,10 +59,15 @@ class Interpreter {
     size_t ip = 0;
     FrameKind kind = F_SEQ;
     uint8_t repsLeft = 0;
-    Cond cond = WALL_AHEAD;
+    Cond cond = WALL_AHEAD;        // F_REPEAT_UNTIL loop condition...
+    Cond cond2 = WALL_AHEAD;       // ...with an optional ANDed/ORed second condition
+    uint8_t combine = 0;           // CondCombine
   };
 
-  void push(FrameKind k, const NodeList* body, uint8_t reps = 0, Cond cond = WALL_AHEAD);
+  void push(FrameKind k, const NodeList* body, uint8_t reps = 0, Cond cond = WALL_AHEAD,
+            Cond cond2 = WALL_AHEAD, uint8_t combine = 0);
+  // Evaluate a compound condition: `a`, or `a AND/OR b` per the combiner (CB_NONE/AND/OR).
+  bool evalCondPair(Cond a, Cond b, uint8_t combine) const;
   Outcome execCmd(Cmd cmd);
   Outcome move(int dr, int dc);  // facing unchanged
   Outcome jump();

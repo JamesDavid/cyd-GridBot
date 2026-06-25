@@ -27,14 +27,24 @@ void Interpreter::load(const Program* prog, const Maze* maze, const Pose& start,
   // An empty program that doesn't start on the goal will end as DONE_NO_WIN.
 }
 
-void Interpreter::push(FrameKind k, const NodeList* body, uint8_t reps, Cond cond) {
+void Interpreter::push(FrameKind k, const NodeList* body, uint8_t reps, Cond cond,
+                       Cond cond2, uint8_t combine) {
   Frame f;
   f.body = body;
   f.ip = 0;
   f.kind = k;
   f.repsLeft = reps;
   f.cond = cond;
+  f.cond2 = cond2;
+  f.combine = combine;
   _stack.push_back(f);
+}
+
+bool Interpreter::evalCondPair(Cond a, Cond b, uint8_t combine) const {
+  bool ra = evalCond(a);
+  if (combine == CB_NONE) return ra;
+  bool rb = evalCond(b);
+  return (combine == CB_AND) ? (ra && rb) : (ra || rb);
 }
 
 bool Interpreter::evalCond(Cond c) const {
@@ -155,7 +165,7 @@ Outcome Interpreter::step() {
       if (fr.kind == F_REPEAT) {
         if (fr.repsLeft > 1) { fr.repsLeft--; fr.ip = 0; continue; }
       } else if (fr.kind == F_REPEAT_UNTIL) {
-        if (!evalCond(fr.cond)) { fr.ip = 0; continue; }
+        if (!evalCondPair(fr.cond, fr.cond2, fr.combine)) { fr.ip = 0; continue; }
       }
       _stack.pop_back();
       continue;
@@ -178,17 +188,16 @@ Outcome Interpreter::step() {
         continue;
       }
       case N_REPEAT_UNTIL: {
-        Cond c = n.cond;
         const NodeList* body = &n.body;
         fr.ip++;
-        if (!body->empty() && !evalCond(c)) push(F_REPEAT_UNTIL, body, 0, c);
+        if (!body->empty() && !evalCondPair(n.cond, n.cond2, n.combine))
+          push(F_REPEAT_UNTIL, body, 0, n.cond, n.cond2, n.combine);
         continue;
       }
       case N_IF: {
-        Cond c = n.cond;
         const NodeList* body = &n.body;
         fr.ip++;
-        if (!body->empty() && evalCond(c)) push(F_SEQ, body);
+        if (!body->empty() && evalCondPair(n.cond, n.cond2, n.combine)) push(F_SEQ, body);
         continue;
       }
       case N_CALL: {

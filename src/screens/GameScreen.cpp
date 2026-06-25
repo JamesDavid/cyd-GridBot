@@ -549,8 +549,14 @@ static void nodeLabel(const Node& n, char* buf, size_t bn, Glyph& gl, uint16_t& 
       }
       break;
     case N_REPEAT:       gl = Glyph::REPEAT; col = C_LOOP;  snprintf(buf, bn, "repeat %d", n.count); break;
-    case N_REPEAT_UNTIL: gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "until %s", condName(n.cond)); break;
-    case N_IF:           gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "if %s", condName(n.cond)); break;
+    case N_REPEAT_UNTIL:
+    case N_IF: {
+      gl = Glyph::SENSE; col = C_SENSE;
+      const char* kw = (n.type == N_IF) ? "if" : "until";
+      if (n.combine == CB_NONE) snprintf(buf, bn, "%s %s", kw, condName(n.cond));
+      else snprintf(buf, bn, "%s %s %s %s", kw, condName(n.cond), n.combine == CB_AND ? "&" : "|", condName(n.cond2));
+      break;
+    }
     case N_CALL:         gl = Glyph::CALL;   col = C_FUNC;  snprintf(buf, bn, "call F%d", n.func); break;
     case N_NEURO:        gl = Glyph::SENSE;  col = ui::rgb(120, 230, 245);
       snprintf(buf, bn, n.rnn ? (n.pilot ? "rnn pilot" : "rnn brain")
@@ -665,7 +671,7 @@ void GameScreen::drawProgramList() {
     }
 
     label(g, LIST_X + 2, y + 6, rownum[ri].c_str(), C_DIM);
-    char lab[20]; Glyph gl = Glyph::PLAY; uint16_t col = C_INK;
+    char lab[30]; Glyph gl = Glyph::PLAY; uint16_t col = C_INK;
     nodeLabel(*row.node, lab, sizeof(lab), gl, col);
     drawGlyph(g, gl, gx + 7, y + ROW_H / 2 - 1, 12, col);
 

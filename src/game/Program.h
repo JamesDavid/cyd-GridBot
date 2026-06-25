@@ -13,10 +13,16 @@ namespace gb {
 // kept in sync with gb::SENSOR_COUNT (Sensors.h) without creating an include cycle
 constexpr int SENSOR_COUNT_FOR_BRAIN = 10;
 
+// Compound condition combiner for N_IF / N_REPEAT_UNTIL: a second condition ANDed/ORed with the
+// first (one level, no nesting). CB_NONE = just `cond`; CB_AND/CB_OR fold in `cond2`.
+enum CondCombine : uint8_t { CB_NONE, CB_AND, CB_OR };
+
 struct Node {
   NodeType type = N_CMD;
   Cmd  cmd  = CMD_FWD;     // N_CMD
   Cond cond = WALL_AHEAD;  // N_IF, N_REPEAT_UNTIL
+  Cond cond2 = WALL_AHEAD; // N_IF / N_REPEAT_UNTIL second condition (when combine != CB_NONE)
+  uint8_t combine = CB_NONE;  // CondCombine: how cond2 joins cond
   uint8_t count = 2;       // N_REPEAT (2..5)
   uint8_t func  = 1;       // N_CALL  (1 or 2)
   uint8_t brainIdx = 0;    // N_NEURO -> index into Program::brains (and rbrains, parallel)

@@ -226,6 +226,24 @@ void test_written_count_rewards_loops() {
   TEST_ASSERT_EQUAL(2, programWrittenCount(p));
 }
 
+// Compound IF conditions: `cond AND cond2` fires only if BOTH hold; `cond OR cond2` if EITHER.
+void test_compound_and_or_conditions() {
+  Maze m; m.reset(1, 2); m.fill(FLOOR);
+  m.set(0, 1, WALL);                        // the tile ahead is a WALL (not a pit)
+  Pose s; s.row = 0; s.col = 0; s.facing = EAST; m.setStart(s); m.set(0, 0, START);
+  m.clearGoal();
+  // IF (WALL_AHEAD AND PIT_AHEAD) TURN_R -> AND is false (no pit) -> no turn
+  { Program p; Node f = Node::ifCond(WALL_AHEAD); f.cond2 = PIT_AHEAD; f.combine = CB_AND;
+    f.body.push_back(Node::command(CMD_TURN_R)); p.main.push_back(f);
+    Interpreter it; it.load(&p, &m, s, 20); it.runToEnd();
+    TEST_ASSERT_EQUAL(EAST, it.pose().facing); }            // AND false -> unchanged
+  // IF (WALL_AHEAD OR PIT_AHEAD) TURN_R -> OR is true (wall ahead) -> turns right (E->S)
+  { Program p; Node f = Node::ifCond(WALL_AHEAD); f.cond2 = PIT_AHEAD; f.combine = CB_OR;
+    f.body.push_back(Node::command(CMD_TURN_R)); p.main.push_back(f);
+    Interpreter it; it.load(&p, &m, s, 20); it.runToEnd();
+    TEST_ASSERT_EQUAL(SOUTH, it.pose().facing); }           // OR true -> turned
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_forward_to_goal_wins);
@@ -242,6 +260,7 @@ int main(int, char**) {
   RUN_TEST(test_jump_over_pit);
   RUN_TEST(test_repeat_until_goal);
   RUN_TEST(test_repeat_until_step_cap);
+  RUN_TEST(test_compound_and_or_conditions);
   RUN_TEST(test_written_count_rewards_loops);
   return UNITY_END();
 }

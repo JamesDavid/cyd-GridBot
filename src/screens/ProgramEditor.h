@@ -58,6 +58,10 @@ class ProgramEditor {
   // trainSlot = the "train this brain" line under a NEURO node. Both have index = -1.
   struct Row { gb::Node* node; gb::NodeList* list; int index; int depth; uint16_t bracket; bool addSlot; bool trainSlot = false; };
 
+  void drawCondEdit();   // the compound-condition overlay (cond1 + AND/OR + cond2) for a tapped IF/UNTIL
+  bool _condEdit = false;
+  gb::Node* _condNode = nullptr;
+
   void flatten(gb::NodeList& list, int depth, std::vector<Row>& out, uint16_t bracket = 0);
   gb::NodeList* appendTarget();
   void appendNodeToTarget(const gb::Node& n);

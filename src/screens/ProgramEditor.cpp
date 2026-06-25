@@ -80,8 +80,14 @@ static void nodeLabel(const Node& n, char* buf, size_t bn, Glyph& gl, uint16_t& 
       }
       break;
     case N_REPEAT:       gl = Glyph::REPEAT; col = C_LOOP;  snprintf(buf, bn, "repeat %d", n.count); break;
-    case N_REPEAT_UNTIL: gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "until %s", condName(n.cond)); break;
-    case N_IF:           gl = Glyph::SENSE;  col = C_SENSE; snprintf(buf, bn, "if %s", condName(n.cond)); break;
+    case N_REPEAT_UNTIL:
+    case N_IF: {
+      gl = Glyph::SENSE; col = C_SENSE;
+      const char* kw = (n.type == N_IF) ? "if" : "until";
+      if (n.combine == CB_NONE) snprintf(buf, bn, "%s %s", kw, condName(n.cond));
+      else snprintf(buf, bn, "%s %s %s %s", kw, condName(n.cond), n.combine == CB_AND ? "&" : "|", condName(n.cond2));
+      break;
+    }
     case N_CALL:         gl = Glyph::CALL;   col = C_FUNC;  snprintf(buf, bn, "call F%d", n.func); break;
     case N_NEURO:        gl = Glyph::SENSE;  col = ui::rgb(120, 230, 245);
       snprintf(buf, bn, n.rnn ? (n.pilot ? "rnn pilot" : "rnn brain")
@@ -95,11 +101,13 @@ void ProgramEditor::attach(Program* prog, const EditorConfig& cfg, int par, Prof
   _editList = &_prog->main;
   _selected = -1; _scroll = 0; _followTail = true;
   _failNode = nullptr; _neuroIdx = -1;
+  _condEdit = false; _condNode = nullptr;
 }
 
 void ProgramEditor::rebind(Program* prog) {
   _prog = prog; _editList = &_prog->main;
   _selected = -1; _scroll = 0; _followTail = true; _failNode = nullptr;
+  _condEdit = false; _condNode = nullptr;
 }
 
 bool ProgramEditor::cornerUnlocked(int slot) const {
@@ -191,7 +199,7 @@ int ProgramEditor::drawReadOnlyList(LGFX& g, const NodeList& list, int x, int y,
       g.drawFastVLine(bx, y + 1, rowH - 2, bracket);
       g.drawFastHLine(bx, y + rowH / 2, 4, bracket);
     }
-    char lab[20]; Glyph gl = Glyph::PLAY; uint16_t col = C_INK;
+    char lab[30]; Glyph gl = Glyph::PLAY; uint16_t col = C_INK;
     nodeLabel(n, lab, sizeof(lab), gl, col);
     drawGlyph(g, gl, x + 6 + depth * 12, y + rowH / 2 - 1, 11, col);
     label(g, gx, y + 2, lab, col);
@@ -238,7 +246,33 @@ void ProgramEditor::appendCommand(Cmd c) {
   appendNodeToTarget(Node::command(c));
 }
 
+// Compound-condition overlay rects (fill the list column -- big chips, room for AND/OR + cond2).
+static inline Rect ceCond1Rect()    { return {(int16_t)(LIST_X + 8), (int16_t)(BAND_Y + 40), (int16_t)(LIST_W - 16), 26}; }
+static inline Rect ceCombRect(int i){ return {(int16_t)(LIST_X + 8 + i * 47), (int16_t)(BAND_Y + 90), 44, 26}; }
+static inline Rect ceCond2Rect()    { return {(int16_t)(LIST_X + 8), (int16_t)(BAND_Y + 140), (int16_t)(LIST_W - 16), 26}; }
+static inline Rect ceDoneRect()     { return {(int16_t)(LIST_X + 8), (int16_t)(BAND_Y + 176), (int16_t)(LIST_W - 16), 26}; }
+
+// The condition editor: tap a selected IF/UNTIL's condition to open it. cond1, a combiner
+// (only / and / or), and -- when combined -- cond2. Big chips so it fits the narrow column.
+void ProgramEditor::drawCondEdit() {
+  auto& g = hal::display.gfx();
+  g.fillRect(LIST_X, BAND_Y, LIST_W, SCREEN_H - BAND_Y, C_PANEL);
+  label(g, LIST_X + 6, BAND_Y + 5, _condNode->type == N_IF ? "if ..." : "until ...", C_SENSE);
+  label(g, LIST_X + 8, BAND_Y + 26, "condition:", C_DIM);
+  button(g, ceCond1Rect(), condName(_condNode->cond), C_SENSE, C_PANEL_HI);
+  label(g, LIST_X + 8, BAND_Y + 74, "join with:", C_DIM);
+  const char* cl[3] = {"only", "and", "or"};
+  for (int i = 0; i < 3; i++)
+    button(g, ceCombRect(i), cl[i], _condNode->combine == i ? C_GO : C_INK, C_PANEL_HI);
+  if (_condNode->combine != CB_NONE) {
+    label(g, LIST_X + 8, BAND_Y + 124, "and condition:", C_DIM);
+    button(g, ceCond2Rect(), condName(_condNode->cond2), C_SENSE, C_PANEL_HI);
+  }
+  button(g, ceDoneRect(), "Done", C_GO, C_PANEL_HI);
+}
+
 void ProgramEditor::drawProgramList() {
+  if (_condEdit && _condNode) { drawCondEdit(); return; }
   auto& g = hal::display.gfx();
   g.fillRect(LIST_X, BAND_Y, LIST_W, SCREEN_H - BAND_Y, C_PANEL);
   const char* body = (_editList == &_prog->f1) ? "F1" : (_editList == &_prog->f2) ? "F2" : "MAIN";
@@ -332,7 +366,7 @@ void ProgramEditor::drawProgramList() {
     }
 
     label(g, LIST_X + 2, y + 6, rownum[ri].c_str(), C_DIM);
-    char lab[20]; Glyph gl = Glyph::PLAY; uint16_t col = C_INK;
+    char lab[30]; Glyph gl = Glyph::PLAY; uint16_t col = C_INK;
     nodeLabel(*row.node, lab, sizeof(lab), gl, col);
     drawGlyph(g, gl, gx + 7, y + ROW_H / 2 - 1, 12, col);
 
@@ -386,6 +420,15 @@ void ProgramEditor::handlePadTap(int x, int y) {
 }
 
 ProgramEditor::Action ProgramEditor::handleListTap(int x, int y) {
+  // The compound-condition overlay swallows taps while open: cycle cond1, pick the combiner,
+  // cycle cond2 (when combined), or Done to close.
+  if (_condEdit && _condNode) {
+    if (ceCond1Rect().contains(x, y)) { _condNode->cond = nextCond(_condNode->cond); hal::audio.blip(); drawProgramList(); return Action::NONE; }
+    for (int i = 0; i < 3; i++) if (ceCombRect(i).contains(x, y)) { _condNode->combine = (uint8_t)i; hal::audio.blip(); drawProgramList(); return Action::NONE; }
+    if (_condNode->combine != CB_NONE && ceCond2Rect().contains(x, y)) { _condNode->cond2 = nextCond(_condNode->cond2); hal::audio.blip(); drawProgramList(); return Action::NONE; }
+    if (ceDoneRect().contains(x, y)) { _condEdit = false; _condNode = nullptr; hal::audio.blip(); drawProgramList(); return Action::NONE; }
+    return Action::NONE;
+  }
   if (_cfg.func) {
     NodeList* lists[3] = {&_prog->main, &_prog->f1, &_prog->f2};
     for (int i = 0; i < 3; i++) {
@@ -431,11 +474,8 @@ ProgramEditor::Action ProgramEditor::handleListTap(int x, int y) {
             sn->type = (sn->type == N_REPEAT_UNTIL) ? N_IF : N_REPEAT_UNTIL;
             hal::audio.blip(); drawProgramList(); return Action::NONE;
           }
-          if (condRect(yy).contains(x, y)) {
-            // obstacles -> goal -> foe -> SOCCER (ball, net) -> side walls (shared nextCond order).
-            // The foe/ball/net senses are arena conditions, exposed here too so a kid can write and
-            // test a battle- or soccer-bot's logic (they simply read false with no foe/ball/net).
-            sn->cond = nextCond(sn->cond);
+          if (condRect(yy).contains(x, y)) {   // open the condition editor (cond1 + AND/OR + cond2)
+            _condEdit = true; _condNode = sn;
             hal::audio.blip(); drawProgramList(); return Action::NONE;
           }
         } else if (sn->type == N_CALL) {
@@ -500,6 +540,7 @@ void ProgramEditor::moveSelected(int dir) {
 
 ProgramEditor::Action ProgramEditor::handleTap(int x, int y) {
   if (_cfg.readOnly) return Action::NONE;
+  if (_condEdit) return handleListTap(x, y);   // the condition overlay is modal
   if (R_CLEAR.contains(x, y)) { _editList->clear(); _selected = -1; _failNode = nullptr; hal::audio.blip(); drawProgramList(); drawControlPad(); return Action::NONE; }
   if (R_DELPAD.contains(x, y)) { if (_selected >= 0) { deleteSelected(); drawControlPad(); } return Action::NONE; }
   if (R_UP.contains(x, y)) { if (_selected >= 0) moveSelected(-1); return Action::NONE; }

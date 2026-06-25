@@ -66,7 +66,7 @@ class ArenaTrainScreen : public app::IScreen {
   gb::RNet* _rbrain = nullptr;
   gb::RNet& rbrain();    // lazily allocate + return the RNN brain
   bool _rnn = false;     // brain-type toggle: train/save/show the RNN brain rather than feedforward
-  static constexpr int PATH_N = 32;  // traced-route samples (trimmed to free static DRAM)
+  static constexpr int PATH_N = 28;  // traced-route samples (trimmed to free static DRAM)
   uint8_t _path[PATH_N];
   int _pathLen = 0;
   uint8_t _oppPath[PATH_N];  // the opponent's route when it runs ITS code (shown in red)

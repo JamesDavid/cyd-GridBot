@@ -11,7 +11,7 @@ void nodeListToJson(const NodeList& list, JsonArray out) {
       case N_CMD: o["c"] = (int)n.cmd; break;
       case N_REPEAT: o["n"] = (int)n.count; break;
       case N_REPEAT_UNTIL:
-      case N_IF: o["cd"] = (int)n.cond; break;
+      case N_IF: o["cd"] = (int)n.cond; if (n.combine) { o["cd2"] = (int)n.cond2; o["cm"] = (int)n.combine; } break;
       case N_CALL: o["fn"] = (int)n.func; break;
       case N_NEURO: o["bi"] = (int)n.brainIdx; if (n.pilot) o["pl"] = true; if (n.rnn) o["rn"] = true; break;
       default: break;
@@ -32,7 +32,8 @@ void nodeListFromJson(JsonArrayConst in, NodeList& out) {
       case N_CMD: n.cmd = (Cmd)(int)(o["c"] | 0); break;
       case N_REPEAT: n.count = (uint8_t)(int)(o["n"] | 2); break;
       case N_REPEAT_UNTIL:
-      case N_IF: n.cond = (Cond)(int)(o["cd"] | 0); break;
+      case N_IF: n.cond = (Cond)(int)(o["cd"] | 0); n.combine = (uint8_t)(int)(o["cm"] | 0);
+                 n.cond2 = (Cond)(int)(o["cd2"] | 0); break;
       case N_CALL: n.func = (uint8_t)(int)(o["fn"] | 1); break;
       case N_NEURO: n.brainIdx = (uint8_t)(int)(o["bi"] | 0); n.pilot = (o["pl"] | false); n.rnn = (o["rn"] | false); break;
       default: break;
