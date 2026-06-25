@@ -141,7 +141,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![Arena menu](docs/img/arena-menu.png) |
 |:--|
-| **Arena** (battling unlocks at the **Sense** tier — once you can write `if` conditions you can code a fighter; neural *training* unlocks later). **Opponent first, then game.** Pick who you're playing — **vs Computer**, **Hotseat** (two kids, one device), or **Radio** (two CYDs) — then the game. Computer offers **Race** / **Sumo** / **Train a fighter** / **Tournament** (a **Cup** knock-out bracket or a round-robin **Ladder** of your saved fighters, run deterministically and replayed match-by-match on screen); Hotseat adds **Puzzle Race** and **Seed Challenge**. |
+| **Arena** (battling unlocks at the **Sense** tier — once you can write `if` conditions you can code a fighter; neural *training* unlocks later). **Opponent first, then game.** Pick who you're playing — **vs Computer**, **Hotseat** (two kids, one device), **Radio** (two CYDs: battle, trade, or join a multi-device **Room** tournament), or **Train a fighter** — then the game. Computer offers **Race** / **Soccer** / **Battle** (Sumo, last bot standing) / **Tournament** (a **Cup** knock-out bracket or a round-robin **Ladder** of your saved fighters, run deterministically and replayed match-by-match on screen); Hotseat adds **Puzzle Race** and **Seed Challenge**. |
 
 | ![Pick an opponent](docs/img/arena-pick.png) |
 |:--|
@@ -159,9 +159,13 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 |:--|
 | **It animates everywhere, but only bites in the Arena.** On RUN, a zap fires a bright spark into the tile ahead. In a Sumo match that spark **shoves a rival into a pit** (or off the board) for the knockout; anywhere else it's a harmless flash — a no-op for solving mazes, so it never breaks a campaign run. |
 
+| ![Soccer](docs/soccer.gif) |
+|:--|
+| **Soccer — robots that actually play.** A third Arena game: a **walled pitch** with a goal mouth at each end and a ball in the middle. Step onto the ball and your robot **shoves it one tile** — dribble it into the opponent's net to score. Matches are **timed and multi-goal** with a live **scoreline** up top; after each goal the ball **kicks off to a fresh spot** so a match never deadlocks into two bots shoving the same square. It's the same `10 → 8 → 5` brain as everything else — it just senses the **ball** as its objective and the **goal** and **rival** as bearings — so you can **Teach / Q-Learn / Evolve** a soccer bot, *or* hand-code one with the new `ball-ahead` / `net-left` sense blocks and **and/or** conditions. There's even a pre-trained **house team** with soccer names — Strika, Dribbla, Volley, Nutmeg, Boots — and soccer drops straight into **Hotseat, Tournaments, and the networked Room**. *(GIF: two trained house bots, Strika vs Dribbla, trading a goal — captured frame-by-frame on a real CYD.)* |
+
 | ![Radio friend](docs/img/radio.png) |
 |:--|
-| **Radio friend (ESP-NOW).** Two GridBots within range can **battle** — both screens run the *same* deterministic match from a shared seed — or **trade**, Pokémon-style: send a friend your favourite bot (and your custom robot art) and get theirs into your library. *(Built; hardware-pending — needs two physical boards to verify end-to-end.)* |
+| **Radio friend (ESP-NOW).** Two GridBots within range can **battle** — both screens run the *same* deterministic match from a shared seed — or **trade**, Pokémon-style: send a friend your favourite bot (and your custom robot art) and get theirs into your library. The multi-device **Room tournament** (every board's fighter gathered into one shared bracket, replayed from a shared seed) is **verified on two boards**; the 1:1 battle/trade path is built and wants a focused two-board pass. |
 
 | ![Puzzle Race](docs/img/puzzle-race.png) |
 |:--|
@@ -325,10 +329,13 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
   test, which hands you fair rematches and replays for free.
 - **Neural nets on a no-PSRAM ESP32** — a tiny MLP + backprop, Q-learning, evolution, and
   distillation in a few KB, with a learned brain embedded as an interpreter node and trained
-  on-device fast enough to animate. **97 host tests** cover the engine.
+  on-device fast enough to animate. **107 host tests** cover the engine.
 
 **Still open / known limits**
-- ESP-NOW radio battle/trade is built but **hardware-pending** — needs two physical boards.
+- The multi-device **Room tournament** is **verified on two boards** (a soccer Cup replayed to
+  the same champion on both); the **1:1** ESP-NOW battle/trade path is built but still wants a
+  focused two-board pass. Big/neural fighters in the Room need BotCard chunking (it currently
+  fields a compact coded hunter).
 - The campaign editor still carries its own copy of the editor code rather than delegating to
   the shared component (tracked in the backlog).
 - The on-screen mini-map and fog levels are reserved but not built.
@@ -342,9 +349,14 @@ first-time hints, locked-block tooltips) · ✅ **program carry-over** across le
 solver, keep winning) · ✅ a **zap block** (the robot icon) so code bots fight Sumo · ✅ a
 kid-friendly **Arena** (opponent-first menu, beatable AI, **pick both bot and foe**, HP
 readout + ZAP!/OUT! hit bursts, "Play again" rematch, trained fighters that adapt to each
-board) · ✅ **battling at the Sense tier** — code a fighter with `if` conditions and save it,
-no neural training required · ✅ **local tournaments** — a **Cup** knock-out bracket and a
-round-robin **Ladder**, run deterministically and replayed on screen · ✅ the full **NeuroBot**
+board) · ✅ **Soccer** — a walled-pitch, push-the-ball, timed-multi-goal Arena game with a live
+scoreline, a pre-trained house team, hand-codeable `ball`/`net` senses + **and/or** conditions,
+and Teach / Q-Learn / Evolve soccer trainers · ✅ **battling at the Sense tier** — code a fighter
+with `if` conditions and save it, no neural training required · ✅ **local tournaments** — a
+**Cup** knock-out bracket and a round-robin **Ladder**, run deterministically and replayed on
+screen · ✅ a **networked Room tournament** (ESP-NOW) **verified on two boards** — every device's
+fighter gathered into one shared bracket and replayed from a shared seed to the same champion ·
+✅ the full **NeuroBot**
 mode (backprop / Q-learning / evolution **with a breeding explainer** (crossover + "robot babies")
 / transfer / **Tuning the grid** (explore/step knobs) / **Tuning a real net** (learn rate + rounds
 on a live net) / **Pilot** (plan + steer, now with **hand-placed waypoints**) / **Memory** (an RNN) /
@@ -359,10 +371,12 @@ name card for shared classroom devices) · ✅ a **boot splash** (firmware versi
 
 Still on deck (full list in **[BACKLOG.md](BACKLOG.md)**):
 
-- More **mode types** — relay, co-op, king-of-the-hill — building on Race / Sumo / Puzzle Race.
-- **Networked tournaments** (bar/classroom mode) — the local Cup engine is done; the multi-peer
-  ESP-NOW lobby that gathers every device's fighters into a shared bracket and replays matches
-  from a shared seed needs **2+ boards to verify**.
+- More **mode types** — relay, co-op, king-of-the-hill — building on Race / Soccer / Sumo /
+  Puzzle Race.
+- **Gem Hunt** — make gems a *required* objective (collect them all before the goal opens),
+  reusing the soccer-style objective sensing so bots can be coded or trained to solve it.
+- **Networked Room polish** — the two-board Cup works; next is **BotCard chunking** so big and
+  neural fighters (not just a compact coded hunter) ride the radio, plus champion-screen sync.
 - **Daily shared-seed challenges** and a leaderboard.
 - Deeper ML topics (regularization/overfitting, reward shaping, batching) building on the
   existing **Tuning**, **draw-the-path**, **Pilot** (planner+follower), **Self-play**, and
@@ -376,7 +390,7 @@ Still on deck (full list in **[BACKLOG.md](BACKLOG.md)**):
 
 Working firmware, verified on a real CYD — the campaign (all unlock tiers), the arena,
 lessons, NeuroBot training, the pixel editor, and achievements all run on hardware. Built
-phase-by-phase from `SPEC.md` following `IMPLEMENTATION_STEPS.md`; **97 host unit tests** plus
+phase-by-phase from `SPEC.md` following `IMPLEMENTATION_STEPS.md`; **107 host unit tests** plus
 an on-device self-test gate every change.
 
 **License: [PolyForm Noncommercial 1.0.0](LICENSE).** Free for personal, hobby, research, and

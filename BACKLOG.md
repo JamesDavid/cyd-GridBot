@@ -45,6 +45,16 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
       are a rarer bonus placed on a reachable detour OFF the path, so you must steer to
       grab them; collecting every gem on a board pays an all-clear coin bonus on the
       win. Both spend in the shop. Generation is gem-reachability unit-tested.
+- [ ] **Gem Hunt / gems-before-goal** *(backlogged 2026-06-25)*. Today gems are a purely
+      **optional** bonus — you win by reaching the GOAL regardless. Make them a **required**
+      objective: the goal won't complete until every gem on the board is collected. Most of
+      the plumbing already exists (placement, render, `_gemTaken`/`_gemTotal`/`recountGems`,
+      all-clear payout) — the work is gating the win in `GameScreen::settleOutcome` behind a
+      per-level "gems required" flag (so it doesn't retroactively harden existing levels),
+      plus, for bot support, a **`GEMS_LEFT?` condition** + gem **sensing** reusing the
+      soccer objective-sensing pattern (target = nearest uncollected gem, then the goal).
+      Scope fork (user's call): per-level flag (recommended) vs every-gem-level vs a separate
+      "Gem Hunt" level type/mode.
 - [ ] Fog levels (limited view) as an alternative sensing backdrop (SPEC §7.1). We
       ship the one-program-many-mazes variant instead.
 - [ ] `ELSE` branch and `ON_COLOR` condition (intentionally deferred, SPEC §16.4).
@@ -70,6 +80,7 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 
 ## Multiplayer modes (the "mix")
 - [x] Race (reach goal first) and Sumo (PUSH into a pit) vs House AI or Hotseat.
+- [x] **Soccer** (shove a ball into your goal) vs House AI or Hotseat — see Arena mode below.
 - [x] Radio battle + Pokemon-style trade (ESP-NOW) — hardware-pending.
 - [x] **Puzzle Race (shared maze)**: both players get a 45s timer to write code for the
       SAME maze; whoever's bot ends up closest to the goal (BFS distance, 0 = reached)
@@ -87,8 +98,30 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
       resolve a brain's `N_NEURO` action).
 - [x] Fuller AI bot roster — **Rusty** (always-forward), **Bolt** (dasher), **Vex**
       (ENEMY_NEAR hunter), **Ace** (solves the board on the fly) — + an opponent picker UI.
+- [x] **Soccer match type** — a walled pitch (`MazeGen::generateSoccerPitch`) with a
+      **symmetric 4-tile goal mouth** at each end; bots shove a ball one tile when they step
+      onto it; **timed multi-goal matches** with a live **scoreline** (most goals at the cap
+      wins; level → ball-position tiebreak → draw). Fully deterministic (ball + score folded
+      into the match hash): a random-scatter **referee** rehomes a long-stalled loose ball and
+      a **random kickoff** after each goal breaks bot-vs-bot deadlocks. Sensing reuses the
+      10-input brain layout via `EnemyView.target` — the brain senses the **ball** as its
+      objective (aheadness/rightness/distance), its **goal** bearing, and the **rival**
+      bearing — so no net-shape or saved-brain change. Hand-codeable too: **`BALL_*`/`NET_*`
+      conditions** + **AND/OR compound `if`s** (`if A & B` / `if A | B`). A pre-trained house
+      team with soccer names — **Strika / Dribbla / Volley / Nutmeg / Boots**. Trainers: Teach
+      (`distillSoccer`/`distillSoccerRnn`), Evolve (soccer fitness), Q-Learn
+      (`qTrainSoccer`/`qTrainSoccerRnn`). Wired into **vs-Computer, Hotseat, Tournament
+      (Cup/Ladder), and the networked Room**. Demo GIF: `docs/soccer.gif`.
+- [x] **Networked tournament (Room) — VERIFIED on two boards (COM3 + COM5).** ESP-NOW
+      multi-device Cup: every board broadcasts its fighter, all ingest into a uuid-sorted
+      roster (identical order, no central authority), the host broadcasts a shared SEED, and
+      each device replays the SAME bracket locally from that seed (deterministic Arena → same
+      champion everywhere). The SEED packet carries a **discipline byte** (Race/Sumo/Soccer),
+      so a Room Cup can be any discipline. IA: **Room moved into the Radio menu**;
+      **Train-a-fighter promoted to the Arena top menu**. *Polish left: BotCard chunking for
+      big/neural fighters (currently fields a compact coded hunter); champion-screen sync.*
 - [ ] Author the arena bot in the Code view (currently uses the latest library entry).
-- [x] Hotseat (2 kids, 1 device) lock-in / handoff screen (Arena + Puzzle Race).
+- [x] Hotseat (2 kids, 1 device) lock-in / handoff screen (Arena + Puzzle Race + Soccer).
 
 ## NeuroBot / on-device ML
 - [x] **Draw-the-path training** (imitation learning by demonstration). DONE: the "Train
@@ -124,7 +157,9 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [ ] Resolve the §1.1 2-USB panel question on the real unit (ILI9341 vs ST7789,
       invert/BGR). Currently configured for the known-good ILI9341; flags are
       build-time togglable.
-- [ ] Two-CYD ESP-NOW radio for networked deterministic matches (SPEC §18.4, far later).
+- [x] Two-CYD ESP-NOW radio for networked deterministic matches (SPEC §18.4) — the Room
+      tournament is **verified on two boards** (COM3+COM5); the 1:1 Radio battle/trade path
+      is built but still wants a focused two-board pass.
 - [ ] 4" ST7796 and ESP32-S3 CrowPanel targets (extra envs).
 
 ## Tooling (PIO_DEBUG loop)
