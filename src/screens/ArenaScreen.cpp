@@ -897,11 +897,17 @@ void ArenaScreen::debugStep() {
   _running = false;  // pause auto so frames can be captured one tick at a time
   Pose b0 = _arena.pose(0), b1 = _arena.pose(1);
   ArenaOutcome o = _arena.tick();
-  eraseBotAt(b0.row, b0.col); eraseBotAt(b1.row, b1.col);
-  if (_type == MatchType::SOCCER) eraseBotAt(_ballPrev.row, _ballPrev.col);
-  if (_arena.alive(0)) drawBot(0, _arena.pose(0), _cands[_pick0].avatar);
-  if (_arena.alive(1)) drawBot(1, _arena.pose(1), _cands[_pick1].avatar);
-  if (_type == MatchType::SOCCER) { drawBall(); _ballPrev = _arena.ball(); }
+  if (_type == MatchType::SOCCER && _arena.justScored()) {
+    // mirror the live tick: a goal kicked off -> full redraw + scoreline + a "GOAL!" flash
+    drawBoard(); _ballPrev = _arena.ball();
+    label(hal::display.gfx(), SCREEN_W / 2, SCREEN_H / 2 - 4, "GOAL!", C_GO, textdatum_t::middle_center, 3);
+  } else {
+    eraseBotAt(b0.row, b0.col); eraseBotAt(b1.row, b1.col);
+    if (_type == MatchType::SOCCER) eraseBotAt(_ballPrev.row, _ballPrev.col);
+    if (_arena.alive(0)) drawBot(0, _arena.pose(0), _cands[_pick0].avatar);
+    if (_arena.alive(1)) drawBot(1, _arena.pose(1), _cands[_pick1].avatar);
+    if (_type == MatchType::SOCCER) { drawBall(); _ballPrev = _arena.ball(); }
+  }
   if (o != ArenaOutcome::RUNNING) onMatchEnd();
 }
 
