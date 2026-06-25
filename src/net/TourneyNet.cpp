@@ -82,11 +82,11 @@ void TourneyNet::join(const BotCard& mine) {
   _haveHost = false; _seed = 0; _lastBeacon = 0;
 }
 
-void TourneyNet::start(uint32_t seed, bool sumo) {
+void TourneyNet::start(uint32_t seed, uint8_t disc) {
   if (_role != TRole::HOST) return;
-  _seed = seed; _sumo = sumo; _state = TState::SEEDED;
+  _seed = seed; _disc = disc; _state = TState::SEEDED;
   uint8_t pkt[7] = {TM_SEED, (uint8_t)(seed), (uint8_t)(seed >> 8), (uint8_t)(seed >> 16),
-                    (uint8_t)(seed >> 24), (uint8_t)(sumo ? 1 : 0), (uint8_t)_roster.size()};
+                    (uint8_t)(seed >> 24), disc, (uint8_t)_roster.size()};
   for (int i = 0; i < 8; i++) { esp_now_send(BCAST, pkt, sizeof(pkt)); delay(15); }  // repeat: one SEED packet can drop
 }
 
@@ -162,7 +162,7 @@ void TourneyNet::onRecv(const uint8_t* mac, const uint8_t* data, int len) {
     case TM_SEED:
       if (len >= 7 && _role == TRole::PEER) {
         _seed = (uint32_t)data[1] | ((uint32_t)data[2] << 8) | ((uint32_t)data[3] << 16) | ((uint32_t)data[4] << 24);
-        _sumo = data[5] != 0;
+        _disc = data[5];
         _state = TState::SEEDED;   // the lobby screen now builds the bracket from _seed + sorted roster
       }
       break;

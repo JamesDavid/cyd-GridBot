@@ -7,7 +7,7 @@
 //   HOST opens a lobby and periodically broadcasts HELLO{lobbyId}. PEERs that hear it send their
 //   BotCard (JOIN, chunked). The host collects a de-duped roster (by uuid) and re-broadcasts it
 //   (ROSTER) so every device shows the same player list. On "Start", the host broadcasts SEED
-//   {seed, sumo, playerCount}; because the Arena is fully deterministic, every device then builds
+//   {seed, discipline, playerCount}; because the Arena is fully deterministic, every device builds
 //   the SAME bracket from the shared seed + roster and replays each match locally -- no frame
 //   streaming. Devices report match outcomes (RESULT) and the host broadcasts round ADVANCE.
 //   (RESULT/ADVANCE + the local replay are driven by the lobby screen; this layer owns lobby +
@@ -33,7 +33,10 @@ class TourneyNet {
   bool begin();                          // WiFi STA + esp_now init + our recv callback
   void host(const BotCard& mine);        // open a lobby (become HOST); I'm player 0
   void join(const BotCard& mine);        // look for a lobby and join it (become PEER)
-  void start(uint32_t seed, bool sumo);  // HOST only: lock roster + broadcast the bracket seed
+  // HOST only: lock roster + broadcast the bracket seed. `disc` is the discipline byte that rides
+  // in the SEED packet -- it's the gb::MatchType value (0 Race, 1 Sumo, 2 Soccer), so a Room Cup can
+  // be any of the three. Kept as a raw uint8_t here to avoid a game<-net dependency.
+  void start(uint32_t seed, uint8_t disc);
   void leave();                          // tear down (re-registering Radio is the caller's job)
   void loop(uint32_t now);               // pump HELLO/ROSTER broadcasts + chunked sends
 
@@ -44,7 +47,7 @@ class TourneyNet {
   const std::vector<BotCard>& roster() const { return _roster; }
   bool     seeded() const { return _state == TState::SEEDED; }
   uint32_t seed() const { return _seed; }
-  bool     sumo() const { return _sumo; }
+  uint8_t  discipline() const { return _disc; }   // gb::MatchType value (0 Race / 1 Sumo / 2 Soccer)
 
   void onRecv(const uint8_t* mac, const uint8_t* data, int len);  // from the static trampoline
 
@@ -67,7 +70,7 @@ class TourneyNet {
   bool _haveHost = false;
   uint32_t _lobbyId = 0;                   // distinguishes overlapping lobbies in one room
   uint32_t _seed = 0;
-  bool _sumo = true;
+  uint8_t _disc = 1;        // discipline byte (gb::MatchType): default Sumo
   uint32_t _lastBeacon = 0;                // last HELLO/card broadcast
   static constexpr int RX_SLOTS = 4;       // simultaneous incoming card transfers (small room)
   RxSlot _rx[RX_SLOTS];

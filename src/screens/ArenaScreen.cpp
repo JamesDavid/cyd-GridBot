@@ -51,6 +51,7 @@ static const Rect R_OPP_ROOM  = {20, 166, 280, 34};   // multi-device tournament
 static const Rect R_ROOM_HOST  = {40, 72,  240, 38};
 static const Rect R_ROOM_JOIN  = {40, 122, 240, 38};
 static const Rect R_ROOM_START = {112, (int16_t)(BOTBAR_Y + 2), 96, 26};
+static const Rect R_ROOM_DISC  = {212, (int16_t)(BOTBAR_Y + 2), 102, 26};  // host: cycle the room discipline
 // Level 2 — pick the GAME (depends on the opponent); vertical slots reused per branch
 static const Rect R_G1 = {20, 56,  280, 34};
 static const Rect R_G2 = {20, 94,  280, 34};
@@ -481,9 +482,15 @@ void ArenaScreen::drawNetLobby() {
   }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
-  if (tn.isHost() && tn.playerCount() >= 2) button(g, R_ROOM_START, "Start >", C_GO, C_PANEL);
-  else if (tn.role() == net::TRole::PEER) label(g, SCREEN_W / 2, BOTBAR_Y + 9, "waiting for host to start", C_DIM, textdatum_t::top_center);
-  else if (tn.isHost()) label(g, SCREEN_W / 2, BOTBAR_Y + 9, "need 2+ boards", C_DIM, textdatum_t::top_center);
+  if (tn.isHost()) {
+    // host chooses the discipline for the whole room (rides in the SEED packet to every device)
+    const char* dn = _type == MatchType::SOCCER ? "Soccer >" : _type == MatchType::SUMO ? "Battle >" : "Race >";
+    button(g, R_ROOM_DISC, dn, ui::rgb(120, 230, 245), C_PANEL);
+    if (tn.playerCount() >= 2) button(g, R_ROOM_START, "Start >", C_GO, C_PANEL);
+    else label(g, SCREEN_W / 2, BOTBAR_Y - 10, "need 2+ boards", C_DIM, textdatum_t::bottom_center);
+  } else if (tn.role() == net::TRole::PEER) {
+    label(g, SCREEN_W / 2, BOTBAR_Y + 9, "waiting for host to start", C_DIM, textdatum_t::top_center);
+  }
 }
 
 // Turn the lobby roster into the Cup field and start a networked Cup (shared seed -> every device
@@ -501,7 +508,7 @@ void ArenaScreen::buildRosterField() {
     cd.house = false; cd.smart = false; cd.neuro = false;  // a concrete program -> don't re-distill
     _cands.push_back(cd);
   }
-  _type = tn.sumo() ? MatchType::SUMO : MatchType::RACE;   // networked Cups are Race or Battle
+  _type = (MatchType)tn.discipline();   // the host's chosen discipline (Race / Battle / Soccer)
   std::vector<int> parts;
   for (int i = 0; i < (int)_cands.size(); i++) parts.push_back(i);
   startCup(parts);                  // uses _type, seeds the bracket, _phase=CUP, draws the card
@@ -674,7 +681,7 @@ void ArenaScreen::startMatch() {
   // usually KO each other well before this; the cap is a safety net (then ring-control decides).
   // Cup matches use a shorter cap so a stalemate resolves quickly (Sumo by ring-control, Soccer by
   // ball position) instead of dragging a spectator bracket out -- a single match keeps the full run.
-  int cap = sumo ? (_cup ? 90 : 150) : soccer ? (_cup ? 200 : 300) : gb::ARENA_STEP_CAP;
+  int cap = sumo ? (_cup ? 90 : 150) : soccer ? (_cup ? 200 : 220) : gb::ARENA_STEP_CAP;
   _arena.setup(&_maze, &p0, &p1, _s0, _s1, _type, cap);
   if (soccer) { _arena.configSoccer(_ball, _goal0, _goal1); _ballPrev = _arena.ball(); }
   _phase = Phase::BOARD;
@@ -861,7 +868,8 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
 
   if (_phase == Phase::BOARD && _running && _last == 0) {
     _last = now;  // arm the timer; the first tick is one interval later (lets capture start at tick 0)
-  } else if (_phase == Phase::BOARD && _running && now - _last >= (uint32_t)(_cup ? 90 : 250)) {
+  } else if (_phase == Phase::BOARD && _running &&
+             now - _last >= (uint32_t)(_cup ? 90 : _type == MatchType::SOCCER ? 130 : 250)) {  // soccer paces faster (more repositioning)
     _last = now;
     Pose b0 = _arena.pose(0), b1 = _arena.pose(1);
     int hp0 = _arena.hp(0), hp1 = _arena.hp(1);
@@ -910,7 +918,7 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       if (R_OPP_RADIO.contains(tx, ty)) return app::Signal::GOTO_RADIO;  // radio screen has its own battle/trade
       else if (R_OPP_AI.contains(tx, ty))  { _hotseat = false; drawGameType(); }
       else if (R_OPP_HOT.contains(tx, ty)) { _hotseat = true;  drawGameType(); }
-      else if (R_OPP_ROOM.contains(tx, ty)) { net::tourney().begin(); net::tourney().leave(); _roomN = -1; _phase = Phase::NETLOBBY; drawNetLobby(); }
+      else if (R_OPP_ROOM.contains(tx, ty)) { net::tourney().begin(); net::tourney().leave(); _roomN = -1; _type = MatchType::SUMO; _phase = Phase::NETLOBBY; drawNetLobby(); }
       break;
     case Phase::NETLOBBY: {
       net::TourneyNet& tn = net::tourney();
@@ -937,9 +945,13 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         }
         if (R_ROOM_HOST.contains(tx, ty)) tn.host(mine); else tn.join(mine);
         _roomN = -1; drawNetLobby();
+      } else if (tn.isHost() && R_ROOM_DISC.contains(tx, ty)) {  // cycle Battle -> Soccer -> Race
+        _type = _type == MatchType::SUMO ? MatchType::SOCCER
+              : _type == MatchType::SOCCER ? MatchType::RACE : MatchType::SUMO;
+        hal::audio.blip(); drawNetLobby();
       } else if (tn.isHost() && tn.playerCount() >= 2 && R_ROOM_START.contains(tx, ty)) {
         uint32_t seed = (_profile ? _profile->seedBase : 7u) + (uint32_t)now;
-        tn.start(seed, true);   // networked Battle (Sumo): most deterministic across devices
+        tn.start(seed, (uint8_t)_type);   // broadcast the chosen discipline (Race/Battle/Soccer)
       }
       break;
     }
