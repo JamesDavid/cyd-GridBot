@@ -464,19 +464,23 @@ void test_soccer_deterministic() {
   TEST_ASSERT_EQUAL_UINT32(h[0], h[1]);
 }
 
-// A walled SOCCER pitch must be built right: a wall around the whole outside, with a 3-tile goal
-// mouth (open floor) cut into the centre of each end, and the ball + starts on walkable floor.
+// A walled SOCCER pitch must be built right: a wall around the whole outside, with a symmetric
+// 4-tile goal mouth (open floor) cut into the centre of each end (one wall tile above, one below),
+// and the ball + starts on walkable floor.
 void test_soccer_pitch_walled_with_mouths() {
   Maze m; Pose s0, s1, ball, g0, g1;
   MazeGen::generateSoccerPitch(m, 1, s0, s1, ball, g0, g1);
-  int rows = m.rows(), cols = m.cols(), rmid = rows / 2;
-  // every border tile is a wall EXCEPT the 3-tile mouth at the centre of each end
+  int rows = m.rows(), cols = m.cols();
+  // every border tile is a wall EXCEPT the 4-tile mouth (goalRow-2..goalRow+1) at each end
   for (int c = 0; c < cols; c++) { TEST_ASSERT_EQUAL((int)WALL, (int)m.at(0, c)); TEST_ASSERT_EQUAL((int)WALL, (int)m.at(rows - 1, c)); }
   for (int r = 0; r < rows; r++) {
-    bool mouth = (r >= rmid - 1 && r <= rmid + 1);
+    bool mouth = inGoalMouth(r, g0.row);
     TEST_ASSERT_EQUAL(mouth ? (int)FLOOR : (int)WALL, (int)m.at(r, 0));
     TEST_ASSERT_EQUAL(mouth ? (int)FLOOR : (int)WALL, (int)m.at(r, cols - 1));
   }
+  // symmetric: exactly ONE wall tile above the mouth (row 1) and one below (rows-2)
+  TEST_ASSERT_EQUAL((int)WALL, (int)m.at(g0.row + SOCCER_MOUTH_LO - 1, 0));   // wall just above the mouth
+  TEST_ASSERT_EQUAL((int)WALL, (int)m.at(g0.row + SOCCER_MOUTH_HI + 1, 0));   // wall just below the mouth
   TEST_ASSERT_TRUE(m.isWalkable(ball.row, ball.col));
   TEST_ASSERT_TRUE(m.isWalkable(s0.row, s0.col));
   TEST_ASSERT_TRUE(m.isWalkable(s1.row, s1.col));
@@ -498,7 +502,7 @@ void test_soccer_taught_brain_scores() {
     Arena ar; ar.setup(&m, &me, &idle, s0, s1, MatchType::SOCCER, 300);
     ar.configSoccer(ball, g0, g1);
     bool won = ((int)ar.run() == (int)ArenaOutcome::BOT0);
-    bool inNet = (ar.ball().col == g0.col && ar.ball().row >= g0.row - 1 && ar.ball().row <= g0.row + 1);
+    bool inNet = (ar.ball().col == g0.col && inGoalMouth(ar.ball().row, g0.row));
     if (won && inNet) realGoals++;   // a genuine goal: the ball is shoved into the mouth
   }
   TEST_ASSERT_TRUE(realGoals >= 4);   // most taught brains actually dribble the ball into the net
@@ -526,13 +530,13 @@ void test_soccer_two_bots_match_resolves() {
   TEST_ASSERT_NOT_EQUAL((int)ArenaOutcome::DRAW, out[0]);          // and decisively (someone scores / leads)
 }
 
-// Two GOOD soccer bots must MIX IT UP, not deadlock at midfield. The loose-ball deflection (a
-// contested shove squirts the ball perpendicular instead of oscillating) means most pairings end
-// with the ball actually shoved into a NET -- a real goal scored in open play, not a stalemate
-// resolved by the timeout ball-distance tiebreak.
-void test_soccer_two_bots_score_in_open_play() {
-  auto inNet = [](const Pose& b, const Pose& g) { return b.col == g.col && b.row >= g.row - 1 && b.row <= g.row + 1; };
-  int realGoals = 0;
+// Two GOOD soccer bots must MIX IT UP, not deadlock at midfield. The stalled-ball referee DROPS a
+// loose ball at a fresh spot (never nudges it goalward), so the ball stays LIVELY and the bots
+// scramble; every match RESOLVES, and goals -- when they come -- are bot-earned in open play (the
+// rest go to the ball-position tiebreak). We assert the ball stays in play and goals still happen.
+void test_soccer_two_bots_scramble_and_resolve() {
+  auto inNet = [](const Pose& b, const Pose& g) { return b.col == g.col && inGoalMouth(b.row, g.row); };
+  int realGoals = 0, lively = 0;
   for (uint32_t s = 1; s <= 6; s++) {
     Net a, b;
     a.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1); distillSoccer(a, s, 5000);
@@ -540,12 +544,14 @@ void test_soccer_two_bots_score_in_open_play() {
     Maze m; Pose s0, s1, ball, g0, g1;
     MazeGen::generateSoccerPitch(m, 1, s0, s1, ball, g0, g1);
     Program pa = brainProgram(a), pb = brainProgram(b);
-    Arena ar; ar.setup(&m, &pa, &pb, s0, s1, MatchType::SOCCER, 400);
+    Arena ar; ar.setup(&m, &pa, &pb, s0, s1, MatchType::SOCCER, 300);
     ar.configSoccer(ball, g0, g1);
-    ar.run();
-    if (inNet(ar.ball(), g0) || inNet(ar.ball(), g1)) realGoals++;
+    ArenaOutcome o = ar.run();
+    if (o == ArenaOutcome::BOT0 || o == ArenaOutcome::BOT1) lively++;  // resolves to a WINNER (no hang)
+    if (inNet(ar.ball(), g0) || inNet(ar.ball(), g1)) realGoals++;     // some end in an open-play goal
   }
-  TEST_ASSERT_TRUE(realGoals >= 4);   // open-play goals on most pairings (no perpetual midfield lock)
+  TEST_ASSERT_TRUE(lively >= 5);     // matches resolve to a winner -- no perpetual midfield freeze
+  TEST_ASSERT_TRUE(realGoals >= 1);  // and bots still finish some in open play (rest -> tiebreak)
 }
 
 // SOCCER "Q-Learn" (qTrainSoccer): reward-driven, no teacher. Replicating the UI's chunked run
@@ -553,7 +559,7 @@ void test_soccer_two_bots_score_in_open_play() {
 // alone and score into the net on a spread of kickoffs -- proving RL is a viable third soccer path
 // alongside Teach (imitation) and Evolve (selection).
 void test_soccer_qlearn_ff_scores() {
-  auto inNet = [](const Pose& b, const Pose& g) { return b.col == g.col && b.row >= g.row - 1 && b.row <= g.row + 1; };
+  auto inNet = [](const Pose& b, const Pose& g) { return b.col == g.col && inGoalMouth(b.row, g.row); };
   Net q; q.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
   for (int c = 0; c < 8; c++) qTrainSoccer(q, 7u + 101u * (uint32_t)(8 - c), 1000, c * 1000, 8000);
   Maze m; Pose s0, s1, ball, g0, g1;
@@ -575,7 +581,7 @@ void test_soccer_qlearn_ff_scores() {
 // trains, and learns SOME dribbling (scores at least once vs an idle keeper). A smoke + capability
 // test -- recurrent semi-gradient TD is noisier, so we don't gate it as hard as the feedforward one.
 void test_soccer_qlearn_rnn_runs() {
-  auto inNet = [](const Pose& b, const Pose& g) { return b.col == g.col && b.row >= g.row - 1 && b.row <= g.row + 1; };
+  auto inNet = [](const Pose& b, const Pose& g) { return b.col == g.col && inGoalMouth(b.row, g.row); };
   RNet r; r.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
   for (int c = 0; c < 8; c++) qTrainSoccerRnn(r, 3u + 101u * (uint32_t)(8 - c), 1000, c * 1000, 8000);
   TEST_ASSERT_TRUE(r.trained);
@@ -598,7 +604,7 @@ int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_soccer_push_into_goal);
   RUN_TEST(test_soccer_two_bots_match_resolves);
-  RUN_TEST(test_soccer_two_bots_score_in_open_play);
+  RUN_TEST(test_soccer_two_bots_scramble_and_resolve);
   RUN_TEST(test_soccer_qlearn_ff_scores);
   RUN_TEST(test_soccer_qlearn_rnn_runs);
   RUN_TEST(test_soccer_pitch_walled_with_mouths);

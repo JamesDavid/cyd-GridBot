@@ -273,7 +273,7 @@ static int idealSoccerAction(const Maze& m, const Pose& me, const Pose& ball, co
 static int idealSoccerActionVs(const Maze& m, const Pose& me, const Pose& ball,
                                const Pose& goalCenter, const Pose& rival) {
   Pose goal = goalCenter; int bestRow = goalCenter.row, bestD = -1;
-  for (int dr = -1; dr <= 1; dr++) {
+  for (int dr = SOCCER_MOUTH_LO; dr <= SOCCER_MOUTH_HI; dr++) {   // aim at the mouth row farthest from the keeper
     int gr = goalCenter.row + dr, d = gr - rival.row; if (d < 0) d = -d;
     if (d > bestD) { bestD = d; bestRow = gr; }
   }
@@ -322,7 +322,7 @@ bool distillSoccer(Net& brain, uint32_t seed, int epochs) {
         if (!m.inBounds(ar, ac) || !m.isWalkable(ar, ac) || (ar == rival.row && ac == rival.col)) break;  // wall/rival
         if (ar == ball.row && ac == ball.col) {
           int nr = ball.row + dr, nc = ball.col + dc;
-          bool intoGoal = (nr == goal.row && nc == goal.col);
+          bool intoGoal = (nc == goal.col && inGoalMouth(nr, goal.row));
           if (!intoGoal && !m.isWalkable(nr, nc)) break;
           ball.row = (int8_t)nr; ball.col = (int8_t)nc;
           if (intoGoal) break;
@@ -370,7 +370,7 @@ static float qSoccerStep(const Maze& m, const Pose& me, const Pose& ball, const 
     if (!m.inBounds(ar, ac) || !m.isWalkable(ar, ac) || (ar == rival.row && ac == rival.col)) { r = -0.05f; }  // wall/rival -> bonk
     else if (ar == ball.row && ac == ball.col) {              // step onto the ball -> shove it ahead
       int br = ball.row + dr, bc = ball.col + dc;
-      bool intoGoal = (bc == goal.col && br >= goal.row - 1 && br <= goal.row + 1);
+      bool intoGoal = (bc == goal.col && inGoalMouth(br, goal.row));
       if (intoGoal) { nball.row = (int8_t)br; nball.col = (int8_t)bc; nm.row = (int8_t)ar; nm.col = (int8_t)ac; r = 1.0f; terminal = true; }
       else if (m.inBounds(br, bc) && m.isWalkable(br, bc)) { nball.row = (int8_t)br; nball.col = (int8_t)bc; nm.row = (int8_t)ar; nm.col = (int8_t)ac; }
       else { r = -0.05f; }                                    // ball against a wall -> can't push, stay
@@ -387,7 +387,7 @@ static float qSoccerStep(const Maze& m, const Pose& me, const Pose& ball, const 
 static void soccerScenario(const Maze& m, Rng& rng, const Pose& g0, bool near, Pose& ball, Pose& me, Pose& rival) {
   int rows = m.rows(), cols = m.cols();
   do {
-    if (near) { ball.row = (int8_t)(g0.row + (int)rng.below(3) - 1); ball.col = (int8_t)(cols - 2 - (int)rng.below(2)); }
+    if (near) { ball.row = (int8_t)(g0.row + (int)rng.below(4) - 2); ball.col = (int8_t)(cols - 2 - (int)rng.below(2)); }
     else      { ball.row = (int8_t)rng.below(rows); ball.col = (int8_t)rng.below(cols); }
   } while (!m.isWalkable(ball.row, ball.col) || (ball.row == g0.row && ball.col == g0.col));
   do {
@@ -397,7 +397,7 @@ static void soccerScenario(const Maze& m, Rng& rng, const Pose& g0, bool near, P
   } while (!m.isWalkable(me.row, me.col) || (me.row == ball.row && me.col == ball.col));
   // a rival defender, often near its goal (the side the learner is attacking) so it's in the way
   do {
-    if (rng.below(2) == 0) { rival.row = (int8_t)(g0.row + (int)rng.below(3) - 1); rival.col = (int8_t)(cols - 2 - (int)rng.below(3)); }
+    if (rng.below(2) == 0) { rival.row = (int8_t)(g0.row + (int)rng.below(4) - 2); rival.col = (int8_t)(cols - 2 - (int)rng.below(3)); }
     else                   { rival.row = (int8_t)rng.below(rows); rival.col = (int8_t)rng.below(cols); }
   } while (!m.isWalkable(rival.row, rival.col) || (rival.row == ball.row && rival.col == ball.col) ||
            (rival.row == me.row && rival.col == me.col));
@@ -501,7 +501,7 @@ bool distillSoccerRnn(RNet& brain, uint32_t seed, int episodes) {
         if (!m.inBounds(ar, ac) || !m.isWalkable(ar, ac) || (ar == rival.row && ac == rival.col)) break;
         if (ar == ball.row && ac == ball.col) {
           int nr = ball.row + dr, nc = ball.col + dc;
-          bool intoGoal = (nc == goal.col && nr >= goal.row - 1 && nr <= goal.row + 1);
+          bool intoGoal = (nc == goal.col && inGoalMouth(nr, goal.row));
           if (!intoGoal && !m.isWalkable(nr, nc)) break;
           ball.row = (int8_t)nr; ball.col = (int8_t)nc;
           if (intoGoal) break;

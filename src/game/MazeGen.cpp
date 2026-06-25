@@ -317,8 +317,9 @@ void generateSoccerPitch(Maze& out, uint32_t seed, Pose& s0, Pose& s1,
   // solid wall around the whole outside
   for (int c = 0; c < cols; c++) { out.set(0, c, WALL); out.set(rows - 1, c, WALL); }
   for (int r = 0; r < rows; r++) { out.set(r, 0, WALL); out.set(r, cols - 1, WALL); }
-  // carve a 3-tile goal mouth into the centre of each end wall (rmid-1..rmid+1 stay FLOOR)
-  for (int dr = -1; dr <= 1; dr++) {
+  // carve a symmetric 4-tile goal mouth into the centre of each end wall (one wall tile above, one
+  // below: rows rmid-2..rmid+1 stay FLOOR; rows 1 and rows-2 are the flanking walls).
+  for (int dr = SOCCER_MOUTH_LO; dr <= SOCCER_MOUTH_HI; dr++) {
     out.set(rmid + dr, 0, FLOOR);          // left mouth  (bot 1 / goal1)
     out.set(rmid + dr, cols - 1, FLOOR);   // right mouth (bot 0 / goal0)
   }

@@ -397,10 +397,10 @@ void ArenaTrainScreen::draw() {
           assets::drawGoalToken(g, x + tile / 2, y + tile / 2, tile, 0);
       }
     if (_matchType == MatchType::SOCCER) {
-      // The two goal MOUTHS (3 tiles tall): your target is green, the opponent's red. Tint the
+      // The two goal MOUTHS (4 tiles tall): your target is green, the opponent's red. Tint the
       // mouth tiles so the open gaps in the wall read clearly as goals; then draw the ball (white).
       auto mouth = [&](const Pose& gp, uint16_t col) {
-        for (int dr = -1; dr <= 1; dr++) {
+        for (int dr = SOCCER_MOUTH_LO; dr <= SOCCER_MOUTH_HI; dr++) {
           int x = ox + gp.col * tile, y = oy + (gp.row + dr) * tile;
           g.fillRect(x, y, tile - 1, tile - 1, col);
           g.drawRect(x, y, tile - 1, tile - 1, C_INK);

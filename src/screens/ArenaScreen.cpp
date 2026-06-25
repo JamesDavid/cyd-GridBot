@@ -723,10 +723,9 @@ void ArenaScreen::drawCell(int r, int c) {
     g.fillCircle(x + tile / 2, y + tile / 2, tile / 3, C_ACCENT);
     label(g, x + tile / 2, y + tile / 2, "G", C_BG, textdatum_t::middle_center);
   }
-  if (_type == MatchType::SOCCER) {   // tint the open goal mouths (3 tiles tall) -- yours green, foe red
-    int d0 = r - _goal0.row, d1 = r - _goal1.row;
-    bool m0 = (c == _goal0.col && d0 >= -1 && d0 <= 1);
-    bool m1 = (c == _goal1.col && d1 >= -1 && d1 <= 1);
+  if (_type == MatchType::SOCCER) {   // tint the open goal mouths (4 tiles tall) -- yours green, foe red
+    bool m0 = (c == _goal0.col && inGoalMouth(r, _goal0.row));
+    bool m1 = (c == _goal1.col && inGoalMouth(r, _goal1.row));
     if (m0 || m1) {
       g.fillRect(x, y, tile - 1, tile - 1, m0 ? ui::rgb(20, 90, 50) : ui::rgb(110, 30, 30));
       g.drawRect(x, y, tile - 1, tile - 1, C_INK);

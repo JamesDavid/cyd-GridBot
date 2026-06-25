@@ -69,7 +69,7 @@ class Arena {
   Pose _goal[2];              // goal[i] = the tile bot i is trying to push the ball onto
   bool _scored[2] = {false, false};
   int16_t _ballStall = 0;     // soccer: ticks the ball has sat untouched (a "loose ball" timer)
-  void refDriftBall();        // nudge a long-stalled ball toward the nearer bot's goal (anti-deadlock)
+  void refDriftBall();        // drop a long-stalled ball at a fresh (deterministic) spot to scramble for
 
   const Maze* _maze = nullptr;
   MatchType _type = MatchType::RACE;

@@ -47,22 +47,26 @@ void Arena::configSoccer(const Pose& ball, const Pose& goal0, const Pose& goal1)
 }
 
 // A long-stalled ball drifts one tile toward whichever goal it is already NEARER to -- so once a
-// bot has shoved it past midfield, the loose ball keeps rolling that way and goes in, instead of two
-// equal bots freezing over it. Cardinal step along the dominant axis; only onto walkable floor/goal.
+// a long-stalled ball: drop it at a FRESH spot so both bots have to scramble for it -- never toward
+// a goal (the ref must not score for anyone), just a loose ball. The spot is DETERMINISTIC (hashed
+// from the tick + positions, no RNG) so a networked Cup still replays byte-identically on every
+// device. Picks a walkable interior tile that isn't on a bot or a goal mouth.
 void Arena::refDriftBall() {
-  auto md = [&](const Pose& a, const Pose& b) { int r = a.row - b.row, c = a.col - b.col; return (r < 0 ? -r : r) + (c < 0 ? -c : c); };
-  int near = md(_ball, _goal[0]) <= md(_ball, _goal[1]) ? 0 : 1;   // the goal the ball is nearer to
-  int gdr = _goal[near].row - _ball.row, gdc = _goal[near].col - _ball.col;
-  int dr = 0, dc = 0;
-  if ((gdr < 0 ? -gdr : gdr) >= (gdc < 0 ? -gdc : gdc) && gdr != 0) dr = gdr < 0 ? -1 : 1;
-  else dc = gdc < 0 ? -1 : 1;
-  int nr = _ball.row + dr, nc = _ball.col + dc;
-  bool intoGoal0 = (nc == _goal[0].col && nr >= _goal[0].row - 1 && nr <= _goal[0].row + 1);
-  bool intoGoal1 = (nc == _goal[1].col && nr >= _goal[1].row - 1 && nr <= _goal[1].row + 1);
-  if (!intoGoal0 && !intoGoal1 && (!_maze->inBounds(nr, nc) || !_maze->isWalkable(nr, nc))) return;
-  _ball.row = (int8_t)nr; _ball.col = (int8_t)nc;
-  if (intoGoal0) _scored[0] = true;
-  else if (intoGoal1) _scored[1] = true;
+  int rows = _maze->rows(), cols = _maze->cols();
+  uint32_t h = (uint32_t)_ticks * 2654435761u
+             ^ ((uint32_t)_ball.row << 6) ^ ((uint32_t)_ball.col << 1)
+             ^ ((uint32_t)_bot[0].it.pose().col << 12) ^ ((uint32_t)_bot[1].it.pose().row << 18);
+  const Pose& a = _bot[0].it.pose(); const Pose& b = _bot[1].it.pose();
+  for (int t = 0; t < 24; t++) {
+    h = h * 1664525u + 1013904223u;
+    int r = 1 + (int)((h >> 9) % (uint32_t)(rows - 2));    // interior rows 1..rows-2
+    int c = 1 + (int)((h >> 17) % (uint32_t)(cols - 2));   // interior cols 1..cols-2
+    if (!_maze->isWalkable(r, c)) continue;
+    if ((r == a.row && c == a.col) || (r == b.row && c == b.col)) continue;
+    if ((c == _goal[0].col) || (c == _goal[1].col)) continue;   // not in a goal mouth
+    _ball.row = (int8_t)r; _ball.col = (int8_t)c; return;
+  }
+  _ball.row = (int8_t)(rows / 2); _ball.col = (int8_t)(cols / 2);  // fallback: kick off from centre
 }
 
 // Bot `mover` has stepped onto the ball's tile -- try to shove the ball one tile further in the
@@ -73,7 +77,7 @@ bool Arena::pushBall(int mover) {
   int nr = _ball.row + dr, nc = _ball.col + dc;
   // A goal is the END column +/- one row of the mouth centre (a 3-tile-tall mouth on the pitch;
   // a single tile elsewhere). Anything in the mouth column at those rows counts as a score.
-  auto inGoal = [&](int i, int r, int c) { int rr = r - _goal[i].row; return c == _goal[i].col && rr >= -1 && rr <= 1; };
+  auto inGoal = [&](int i, int r, int c) { return c == _goal[i].col && inGoalMouth(r, _goal[i].row); };
   auto land = [&](int r, int c) {
     _ball.row = (int8_t)r; _ball.col = (int8_t)c;
     if (inGoal(0, r, c)) _scored[0] = true;
@@ -205,10 +209,10 @@ ArenaOutcome Arena::tick() {
       if (p.row == _ball.row && p.col == _ball.col)
         if (!pushBall(i)) _bot[i].it.setPose(before[i]);
     }
-    // Loose-ball "referee": only if nobody has touched the ball for a GOOD while does it drift toward
-    // the nearer goal -- a last-resort against a true midfield deadlock. Now that the bots sense the
-    // rival and can out-maneuver, they usually finish on their own first; the longer fuse (was 16)
-    // keeps goals bot-driven and makes the ref's nudge rare.
+    // Loose-ball "referee": if nobody touches the ball for a good while (a true midfield deadlock),
+    // it's dropped at a fresh spot so both bots scramble for it again -- never nudged toward a goal,
+    // so the ref never scores; goals stay bot-driven. Now that the bots sense the rival and
+    // out-maneuver, this is a rare last resort.
     if (_ball == ballWas) { if (++_ballStall >= 28 && !_scored[0] && !_scored[1]) { refDriftBall(); _ballStall = 0; } }
     else _ballStall = 0;
   }
