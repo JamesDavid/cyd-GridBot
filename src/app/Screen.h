@@ -29,6 +29,7 @@ enum class Signal : uint8_t {
   GOTO_MYBOTS,     // open the library manager ("My Bots") from the Home hub
   RENAME_LIB,      // rename a library entry (My Bots -> keyboard -> back)
   EDIT_LIB,        // edit a library bot's program in the code editor (My Bots -> Game edit mode)
+  GOTO_ROOM,       // open the multi-device tournament Room (from the Radio screen)
 };
 
 class IScreen {

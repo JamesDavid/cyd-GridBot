@@ -725,6 +725,7 @@ void App::tick(uint32_t now) {
     case State::RADIO: {
       Signal s = _radio.tick(now, tp);
       if (s == Signal::BACK) { saveProfile(); _arena.begin(&_profile); _arena.enter(); _state = State::ARENA; }
+      else if (s == Signal::GOTO_ROOM) { _arena.begin(&_profile); _arena.enterRoom(); _state = State::ARENA; }
       break;
     }
     case State::BADGES: {

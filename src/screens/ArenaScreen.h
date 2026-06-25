@@ -17,6 +17,7 @@ namespace screens {
 class ArenaScreen : public app::IScreen {
  public:
   void begin(gb::Profile* profile);
+  void enterRoom();   // jump straight into the multi-device tournament Room lobby (from Radio screen)
   void enter() override;
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
   void debugStep();   // capture aid: advance the match one tick, paused

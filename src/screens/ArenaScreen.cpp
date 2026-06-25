@@ -52,11 +52,13 @@ static const Rect R_ROOM_HOST  = {40, 72,  240, 38};
 static const Rect R_ROOM_JOIN  = {40, 122, 240, 38};
 static const Rect R_ROOM_START = {112, (int16_t)(BOTBAR_Y + 2), 96, 26};
 static const Rect R_ROOM_DISC  = {212, (int16_t)(BOTBAR_Y + 2), 102, 26};  // host: cycle the room discipline
-// Level 2 — pick the GAME (depends on the opponent); vertical slots reused per branch
-static const Rect R_G1 = {20, 56,  280, 34};
-static const Rect R_G2 = {20, 94,  280, 34};
-static const Rect R_G3 = {20, 132, 280, 34};
-static const Rect R_G4 = {20, 170, 280, 34};
+// Level 2 — pick the GAME (depends on the opponent); vertical slots reused per branch. Tightened
+// to fit FIVE rows (Race / Battle / Soccer / + two branch-specific) above the bottom bar.
+static const Rect R_G1 = {20, 46,  280, 28};
+static const Rect R_G2 = {20, 77,  280, 28};
+static const Rect R_G3 = {20, 108, 280, 28};
+static const Rect R_G4 = {20, 139, 280, 28};
+static const Rect R_G5 = {20, 170, 280, 28};
 static const Rect R_READY= {84, 150, 150, 34};
 // result-overlay buttons (a kid wants to instantly retry, not dead-end on a loss)
 static const Rect R_AGAIN = {62, 129, 96, 26};
@@ -131,6 +133,13 @@ int ArenaScreen::houseBotIndex(const char* name) const {
 }
 
 void ArenaScreen::enter() { drawMenu(); }
+
+// Jump straight into the multi-device Room lobby (the Radio screen hands off here via GOTO_ROOM).
+void ArenaScreen::enterRoom() {
+  net::tourney().begin(); net::tourney().leave();
+  _roomN = -1; _type = MatchType::SUMO; _phase = Phase::NETLOBBY;
+  drawNetLobby();
+}
 
 // Round-robin battle ladder: every fighter plays every other (home AND away on one fair ring so
 // start-position bias cancels), wins are tallied, and the field is ranked. Headless + deterministic.
@@ -418,9 +427,9 @@ void ArenaScreen::drawTChoice() {
   label(g, 6, 3, "Tournament", C_ACCENT, textdatum_t::top_left, 2);
   label(g, SCREEN_W / 2, 36, "Pick a format", C_INK, textdatum_t::top_center);
   button(g, R_G1, "Ladder", C_MOVE, C_PANEL);
-  label(g, SCREEN_W / 2, 94, "everyone plays everyone; ranked by wins", C_DIM, textdatum_t::top_center);
+  label(g, SCREEN_W / 2, 80, "everyone plays everyone; ranked by wins", C_DIM, textdatum_t::top_center);
   button(g, R_G3, "Cup", C_ACCENT, C_PANEL);
-  label(g, SCREEN_W / 2, 170, "knockout bracket - lose and you're out", C_DIM, textdatum_t::top_center);
+  label(g, SCREEN_W / 2, 142, "knockout bracket - lose and you're out", C_DIM, textdatum_t::top_center);
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
 }
@@ -448,11 +457,13 @@ void ArenaScreen::drawMenu() {
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Arena", C_ACCENT, textdatum_t::top_left, 2);
-  label(g, SCREEN_W / 2, 38, "Who do you want to play?", C_INK, textdatum_t::top_center);
+  label(g, SCREEN_W / 2, 38, "What do you want to do?", C_INK, textdatum_t::top_center);
   button(g, R_OPP_AI,    "vs Computer", C_GO, C_PANEL);
   button(g, R_OPP_HOT,   "Hotseat - 2 players, 1 device", C_FUNC, C_PANEL);
-  button(g, R_OPP_RADIO, "Radio - trade/battle a friend", C_MOVE, C_PANEL);
-  button(g, R_OPP_ROOM,  "Room - tournament w/ friends", C_ACCENT, C_PANEL);
+  button(g, R_OPP_RADIO, "Radio - friend: battle/trade/room", C_MOVE, C_PANEL);
+  // Train a fighter is a NeuroBot prep activity (not a match), so it lives here, not under vs-Computer.
+  if (_profile && _profile->unlocks.neuro)
+    button(g, R_OPP_ROOM, "Train a fighter (NeuroBot)", ui::rgb(120, 230, 245), C_PANEL);
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
 }
@@ -528,21 +539,21 @@ void ArenaScreen::drawGameType() {
   // seeker, so Battle no longer needs NeuroBot -- that stays for training NEURAL fighters (Lv 28).
   bool neuro  = _profile && _profile->unlocks.neuro;
   bool battle = _profile && _profile->unlocks.sense;
+  // Race / Battle / Soccer are the shared match types (Battle + Soccer unlock at Sense, L15); then
+  // the branch-specific extras.
+  button(g, R_G1, "Race - first to the goal", C_GO, C_PANEL);
+  button(g, R_G2, battle ? "Battle - last bot standing" : "Battle - needs Sense (Lv15)",
+         battle ? C_ACCENT : C_LOCK, C_PANEL);
+  button(g, R_G3, battle ? "Soccer - score in the goal" : "Soccer - needs Sense (Lv15)",
+         battle ? ui::rgb(120, 230, 245) : C_LOCK, C_PANEL);
   if (_hotseat) {
-    button(g, R_G1, "Race - first to the goal", C_GO, C_PANEL);
-    button(g, R_G2, battle ? "Battle" : "Battle - needs Sense (Lv15)",
-           battle ? C_ACCENT : C_LOCK, C_PANEL);
-    button(g, R_G3, "Puzzle Race - beat the clock", C_LOOP, C_PANEL);
-    button(g, R_G4, "Seed Challenge - same board", C_SENSE, C_PANEL);
+    button(g, R_G4, "Puzzle Race - beat the clock", C_LOOP, C_PANEL);
+    button(g, R_G5, "Seed Challenge - same board", C_SENSE, C_PANEL);
   } else {
-    button(g, R_G1, "Race - first to the goal", C_GO, C_PANEL);
-    button(g, R_G2, battle ? "Battle" : "Battle - needs Sense (Lv15)",
-           battle ? C_ACCENT : C_LOCK, C_PANEL);
-    if (neuro)
-      button(g, R_G3, "Train a fighter (NeuroBot)", ui::rgb(120, 230, 245), C_PANEL);
-    // Tournament: a battle ladder of your own fighters -- needs at least two saved bots.
+    // Tournament: a ladder/cup of your own fighters -- needs at least two saved bots. (Train a
+    // fighter now lives on the Arena top menu, since it's prep, not a vs-Computer match.)
     if (neuro && _profile && _profile->library.size() >= 2)
-      button(g, R_G4, "Tournament - race or battle", C_MOVE, C_PANEL);
+      button(g, R_G4, "Tournament - race / soccer / battle", C_MOVE, C_PANEL);
   }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Opponents", C_INK, C_PANEL);
@@ -918,7 +929,8 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       if (R_OPP_RADIO.contains(tx, ty)) return app::Signal::GOTO_RADIO;  // radio screen has its own battle/trade
       else if (R_OPP_AI.contains(tx, ty))  { _hotseat = false; drawGameType(); }
       else if (R_OPP_HOT.contains(tx, ty)) { _hotseat = true;  drawGameType(); }
-      else if (R_OPP_ROOM.contains(tx, ty)) { net::tourney().begin(); net::tourney().leave(); _roomN = -1; _type = MatchType::SUMO; _phase = Phase::NETLOBBY; drawNetLobby(); }
+      else if (R_OPP_ROOM.contains(tx, ty) && _profile && _profile->unlocks.neuro)
+        return app::Signal::GOTO_ARENA_TRAIN;   // the "Train a fighter" slot (Room moved to Radio)
       break;
     case Phase::NETLOBBY: {
       net::TourneyNet& tn = net::tourney();
@@ -972,12 +984,13 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
           label(g, SCREEN_W / 2, BOTBAR_Y - 16, "Code a fighter in CodeLab, then Save to My Bots!",
                 C_ACCENT, textdatum_t::bottom_center);
         }
-      } else if (_hotseat && R_G3.contains(tx, ty)) {
-        return app::Signal::GOTO_PUZZLE;
+      } else if (R_G3.contains(tx, ty)) {    // Soccer (both branches) -- unlocks with Battle (Sense L15)
+        if (!(_profile && _profile->unlocks.sense)) { hal::audio.fail(); }
+        else { _type = MatchType::SOCCER; buildCandidates(true); _pickScroll = 0; _phase = Phase::PICK1; drawPick(0); }
       } else if (_hotseat && R_G4.contains(tx, ty)) {
+        return app::Signal::GOTO_PUZZLE;
+      } else if (_hotseat && R_G5.contains(tx, ty)) {
         return app::Signal::GOTO_CHALLENGE;
-      } else if (!_hotseat && _profile && _profile->unlocks.neuro && R_G3.contains(tx, ty)) {
-        return app::Signal::GOTO_ARENA_TRAIN;
       } else if (!_hotseat && _profile && _profile->unlocks.neuro && _profile->library.size() >= 2
                  && R_G4.contains(tx, ty)) {
         _phase = Phase::TDISC; drawTDisc();            // tournament: pick discipline first
