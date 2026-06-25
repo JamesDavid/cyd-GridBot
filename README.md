@@ -333,9 +333,9 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
 
 **Still open / known limits**
 - The multi-device **Room tournament** is **verified on two boards** (a soccer Cup replayed to
-  the same champion on both); the **1:1** ESP-NOW battle/trade path is built but still wants a
-  focused two-board pass. Big/neural fighters in the Room need BotCard chunking (it currently
-  fields a compact coded hunter).
+  the same champion on both) — including **chunked BotCards** so each board brings its *real*
+  saved fighter and a lockstep auto-advance. The separate **1:1** ESP-NOW battle/trade path is
+  built but still wants a focused two-board pass.
 - The campaign editor still carries its own copy of the editor code rather than delegating to
   the shared component (tracked in the backlog).
 - The on-screen mini-map and fog levels are reserved but not built.
@@ -375,14 +375,14 @@ Still on deck (full list in **[BACKLOG.md](BACKLOG.md)**):
   Puzzle Race.
 - **Gem Hunt** — make gems a *required* objective (collect them all before the goal opens),
   reusing the soccer-style objective sensing so bots can be coded or trained to solve it.
-- **Networked Room polish** — the two-board Cup works; next is **BotCard chunking** so big and
-  neural fighters (not just a compact coded hunter) ride the radio, plus champion-screen sync.
+- **Verify the 1:1 radio** battle/trade path on two boards (the multi-device **Room
+  tournament** — chunked real fighters, lockstep auto-advance — is already verified there).
 - **Daily shared-seed challenges** and a leaderboard.
 - Deeper ML topics (regularization/overfitting, reward shaping, batching) building on the
   existing **Tuning**, **draw-the-path**, **Pilot** (planner+follower), **Self-play**, and
   **RNN memory** trainers.
-- **Verify the radio link** on two boards; an optional **mini-map** in the Code view; **Undo**
-  in the editor (reorder already ships as Up/Dn).
+- An optional **mini-map** in the Code view; **Undo** in the editor (reorder already ships as
+  Up/Dn).
 
 ---
 

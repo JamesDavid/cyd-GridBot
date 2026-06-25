@@ -117,9 +117,11 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
       roster (identical order, no central authority), the host broadcasts a shared SEED, and
       each device replays the SAME bracket locally from that seed (deterministic Arena → same
       champion everywhere). The SEED packet carries a **discipline byte** (Race/Sumo/Soccer),
-      so a Room Cup can be any discipline. IA: **Room moved into the Radio menu**;
-      **Train-a-fighter promoted to the Arena top menu**. *Polish left: BotCard chunking for
-      big/neural fighters (currently fields a compact coded hunter); champion-screen sync.*
+      so a Room Cup can be any discipline. **BotCards are chunked** (CBEGIN/CCHUNK/CEND +
+      per-sender-MAC reassembly), so each board brings its **real saved fighter** — any
+      size — not a compact stand-in (only a player with an empty library falls back to a coded
+      hunter); the Cup **auto-advances in lockstep** on every device. IA: **Room moved into the
+      Radio menu**; **Train-a-fighter promoted to the Arena top menu**.
 - [ ] Author the arena bot in the Code view (currently uses the latest library entry).
 - [x] Hotseat (2 kids, 1 device) lock-in / handoff screen (Arena + Puzzle Race + Soccer).
 
