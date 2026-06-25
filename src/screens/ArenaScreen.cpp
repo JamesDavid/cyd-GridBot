@@ -269,7 +269,7 @@ void ArenaScreen::cupAdvanceToNextMatch() {
     for (int m = 0; m < _cupBracket.matchCount(); m++) {
       int a, b; _cupBracket.pair(m, a, b);
       if (b < 0) { if (_cupBracket.win[m] < 0) { _cupBracket.reportWinner(m, a);   // bye auto-advances
-                     _cupLog.push_back({(int8_t)_cupBracket.round, (int8_t)a, (int8_t)-1, (int8_t)a}); } }
+                     _cupLog.push_back({(int8_t)_cupBracket.round, (int8_t)a, (int8_t)-1, (int8_t)a, 0, 0}); } }
       else if (_cupBracket.win[m] < 0 && next < 0) next = m;
     }
     if (next >= 0) {                              // a real match to watch: set it up + play it
@@ -335,10 +335,10 @@ void ArenaScreen::drawBracket() {
           C_DIM, textdatum_t::top_center);
     int slotH = bandH / mc;
     for (int m = 0; m < mc; m++) {
-      int a = -2, b = -2, win = -1;
+      int a = -2, b = -2, win = -1, ga = -1, gb = -1;
       if (r < _cupBracket.round) {                       // resolved round -> from the log
         int cnt = 0;
-        for (auto& gm : _cupLog) if (gm.round == r) { if (cnt == m) { a = gm.a; b = gm.b; win = gm.win; break; } cnt++; }
+        for (auto& gm : _cupLog) if (gm.round == r) { if (cnt == m) { a = gm.a; b = gm.b; win = gm.win; ga = gm.ga; gb = gm.gb; break; } cnt++; }
       } else if (r == _cupBracket.round && !_cupBracket.done()) {
         _cupBracket.pair(m, a, b); win = _cupBracket.win[m];
       }
@@ -349,6 +349,11 @@ void ArenaScreen::drawBracket() {
         char na[10], nb[10]; nm(a, na, sizeof(na)); nm(b, nb, sizeof(nb));
         label(g, colX + 4, boxY + 2, na, (win == a) ? C_GO : C_INK);
         if (boxH >= 16) label(g, colX + 4, boxY + boxH - 10, nb, (win == b) ? C_GO : (b < 0 ? C_DIM : C_INK));
+        // soccer: the scoreline at the right edge (0-0 win = "won on position", not a scored goal)
+        if (_type == MatchType::SOCCER && ga >= 0 && b >= 0) {
+          char s[4]; snprintf(s, sizeof(s), "%d", ga); label(g, colX + colW - 7, boxY + 2, s, (win == a) ? C_GO : C_DIM, textdatum_t::top_right);
+          if (boxH >= 16) { snprintf(s, sizeof(s), "%d", gb); label(g, colX + colW - 7, boxY + boxH - 10, s, (win == b) ? C_GO : C_DIM, textdatum_t::top_right); }
+        }
       }
     }
   }
@@ -359,7 +364,9 @@ void ArenaScreen::onMatchEnd() {
     int a, b; _cupBracket.pair(_cupMatch, a, b);
     int winner = (_arena.outcome() == ArenaOutcome::BOT1) ? b : a;   // BOT0 or DRAW -> 'a' (tiebreak)
     _cupBracket.reportWinner(_cupMatch, winner);
-    _cupLog.push_back({(int8_t)_cupBracket.round, (int8_t)a, (int8_t)b, (int8_t)winner});
+    int8_t ga = (_type == MatchType::SOCCER) ? (int8_t)_arena.goals(0) : 0;   // the scoreline (soccer)
+    int8_t gb = (_type == MatchType::SOCCER) ? (int8_t)_arena.goals(1) : 0;
+    _cupLog.push_back({(int8_t)_cupBracket.round, (int8_t)a, (int8_t)b, (int8_t)winner, ga, gb});
     _phase = Phase::CUP; drawCupCard();              // show the updated bracket; tap to continue
   } else {
     _phase = Phase::DONE; finishOverlay();
@@ -776,10 +783,20 @@ void ArenaScreen::drawBot(int i, const Pose& p, int avatar) {
 void ArenaScreen::drawScore() {
   auto& g = hal::display.gfx();
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
+  if (_type == MatchType::SOCCER) {
+    // Live scoreline: "P0 name  G0 - G1  P1 name".
+    const char* n0 = _hotseat ? "P1" : (_cup ? _cands[_pick0].name.c_str() : "You");
+    const char* n1 = _hotseat ? "P2" : _cands[_pick1].name.c_str();
+    char nm0[12], nm1[12]; snprintf(nm0, sizeof(nm0), "%.10s", n0); snprintf(nm1, sizeof(nm1), "%.10s", n1);
+    label(g, 6, 6, nm0, C_GO);
+    char sc[12]; snprintf(sc, sizeof(sc), "%d - %d", _arena.goals(0), _arena.goals(1));
+    label(g, SCREEN_W / 2, 6, sc, C_ACCENT, textdatum_t::top_center);
+    label(g, SCREEN_W - 6, 6, nm1, C_BAD, textdatum_t::top_right);
+    return;
+  }
   if (_type != MatchType::SUMO) {
     char hdr[44];
-    snprintf(hdr, sizeof(hdr), "%s: %s vs %s", _type == MatchType::SOCCER ? "Soccer" : "Race",
-             _cands[_pick0].name.c_str(), _cands[_pick1].name.c_str());
+    snprintf(hdr, sizeof(hdr), "Race: %s vs %s", _cands[_pick0].name.c_str(), _cands[_pick1].name.c_str());
     label(g, 6, 4, hdr, C_ACCENT);
     return;
   }
@@ -845,7 +862,12 @@ void ArenaScreen::finishOverlay() {
   int w = 220, h = 78, x = (SCREEN_W - w) / 2, y = (SCREEN_H - h) / 2;
   g.fillRoundRect(x, y, w, h, 10, C_PANEL);
   g.drawRoundRect(x, y, w, h, 10, col);
-  label(g, SCREEN_W / 2, y + 22, msg, col, textdatum_t::middle_center, 2);
+  label(g, SCREEN_W / 2, y + 20, msg, col, textdatum_t::middle_center, 2);
+  if (_type == MatchType::SOCCER) {   // the final scoreline (0-0 = won on position, not a goal)
+    char sc[24]; snprintf(sc, sizeof(sc), "%d - %d%s", _arena.goals(0), _arena.goals(1),
+                          (_arena.goals(0) == _arena.goals(1)) ? "  (on position)" : "");
+    label(g, SCREEN_W / 2, y + 38, sc, C_INK, textdatum_t::middle_center);
+  }
   // vs-Computer + NeuroBot: offer to retrain your fighter for this matchup, not just bounce out.
   bool canTrain = !_hotseat && _profile && _profile->unlocks.neuro;
   if (canTrain) {
@@ -885,23 +907,30 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     int hp0 = _arena.hp(0), hp1 = _arena.hp(1);
     bool al0 = _arena.alive(0), al1 = _arena.alive(1);
     ArenaOutcome o = _arena.tick();
-    eraseBotAt(b0.row, b0.col); eraseBotAt(b1.row, b1.col);
-    if (_type == MatchType::SOCCER) eraseBotAt(_ballPrev.row, _ballPrev.col);  // wipe the ball's old tile
-    if (_arena.alive(0)) drawBot(0, _arena.pose(0), _cands[_pick0].avatar);
-    if (_arena.alive(1)) drawBot(1, _arena.pose(1), _cands[_pick1].avatar);
-    if (_type == MatchType::SOCCER) { drawBall(); _ballPrev = _arena.ball(); }
-    if (_type == MatchType::SUMO) {
-      drawScore();                                  // refresh the big HP strip (it just changed)
-      // pop a burst over whoever took a hit this tick: knocked off the ring -> OUT!, else ZAP!
-      bool hit = false;
-      for (int i = 0; i < 2; i++) {
-        bool wasAlive = i ? al1 : al0; int wasHp = i ? hp1 : hp0;
-        if (wasAlive && !_arena.alive(i))      { drawHit(i, "OUT!", C_FUNC); hit = true; }
-        else if (_arena.hp(i) < wasHp)         { drawHit(i, "ZAP!", C_BAD);  hit = true; }
-      }
-      hit ? hal::audio.fail() : hal::audio.tick();  // a zap/knock gets its own sting
+    if (_type == MatchType::SOCCER && _arena.justScored()) {
+      // a goal kicked off (ball + both bots reset) -> full redraw + scoreline + a "GOAL!" flash
+      drawBoard(); _ballPrev = _arena.ball();
+      label(hal::display.gfx(), SCREEN_W / 2, SCREEN_H / 2 - 4, "GOAL!", C_GO, textdatum_t::middle_center, 3);
+      hal::audio.win();
     } else {
-      hal::audio.tick();
+      eraseBotAt(b0.row, b0.col); eraseBotAt(b1.row, b1.col);
+      if (_type == MatchType::SOCCER) eraseBotAt(_ballPrev.row, _ballPrev.col);  // wipe the ball's old tile
+      if (_arena.alive(0)) drawBot(0, _arena.pose(0), _cands[_pick0].avatar);
+      if (_arena.alive(1)) drawBot(1, _arena.pose(1), _cands[_pick1].avatar);
+      if (_type == MatchType::SOCCER) { drawBall(); _ballPrev = _arena.ball(); }
+      if (_type == MatchType::SUMO) {
+        drawScore();                                  // refresh the big HP strip (it just changed)
+        // pop a burst over whoever took a hit this tick: knocked off the ring -> OUT!, else ZAP!
+        bool hit = false;
+        for (int i = 0; i < 2; i++) {
+          bool wasAlive = i ? al1 : al0; int wasHp = i ? hp1 : hp0;
+          if (wasAlive && !_arena.alive(i))      { drawHit(i, "OUT!", C_FUNC); hit = true; }
+          else if (_arena.hp(i) < wasHp)         { drawHit(i, "ZAP!", C_BAD);  hit = true; }
+        }
+        hit ? hal::audio.fail() : hal::audio.tick();  // a zap/knock gets its own sting
+      } else {
+        hal::audio.tick();
+      }
     }
     if (o != ArenaOutcome::RUNNING) { _running = false; onMatchEnd(); }
   }

@@ -47,6 +47,8 @@ class Arena {
   bool alive(int i) const { return _bot[i].alive; }
   int hp(int i) const { return _bot[i].hp; }   // Sumo health (for the health bar)
   bool won(int i) const { return _bot[i].won; }
+  int goals(int i) const { return _goals[i]; }  // Soccer: goals scored by bot i (the scoreline)
+  bool justScored() const { return _justScored; }  // a goal landed THIS tick (for a "GOAL!" burst)
   ArenaOutcome outcome() const { return _outcome; }
   int ticks() const { return _ticks; }
 
@@ -63,11 +65,16 @@ class Arena {
   };
   void foldLog();
 
-  // Soccer state (deterministic, folded into the hash like every other field).
+  // Soccer state (deterministic, folded into the hash like every other field). A soccer match is
+  // TIMED, not sudden-death: a goal increments the scorer's tally and re-kicks off (ball + bots to
+  // their starts); the higher score at the cap wins (level -> ball-position tiebreak, then draw).
   bool pushBall(int mover);   // bot `mover` stands on the ball -> shove it; false if blocked
+  void kickoff();             // reset the ball to centre + both bots to their starts (after a goal)
   Pose _ball;                 // ball tile
+  Pose _kickoff;              // the centre kickoff tile (ball returns here after each goal)
   Pose _goal[2];              // goal[i] = the tile bot i is trying to push the ball onto
-  bool _scored[2] = {false, false};
+  int8_t _goals[2] = {0, 0};  // goals scored by each bot (the scoreline)
+  bool _justScored = false;   // a goal landed this tick (one-frame flag for the "GOAL!" burst)
   int16_t _ballStall = 0;     // soccer: ticks the ball has sat untouched (a "loose ball" timer)
   void refDriftBall();        // drop a long-stalled ball at a fresh (deterministic) spot to scramble for
 

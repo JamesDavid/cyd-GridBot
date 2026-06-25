@@ -27,14 +27,17 @@ void Arena::setup(const Maze* maze, const Program* p0, const Program* p1,
   _bot[1].enemy.pose = &_bot[0].it.pose();
   _bot[0].it.setEnemy(&_bot[0].enemy);
   _bot[1].it.setEnemy(&_bot[1].enemy);
-  _scored[0] = _scored[1] = false;
+  _goals[0] = _goals[1] = 0;
+  _justScored = false;
   foldLog();
 }
 
 void Arena::configSoccer(const Pose& ball, const Pose& goal0, const Pose& goal1) {
   _ball = ball;
+  _kickoff = ball;            // the ball returns here after each goal
   _goal[0] = goal0;
   _goal[1] = goal1;
+  _goals[0] = _goals[1] = 0;
   // Re-aim each bot's senses for soccer: the TARGET (slots 4-6) is the ball, and the "enemy"
   // bearing (slots 7-9) points at the goal it's attacking -- so the brain learns ball + goal.
   for (int i = 0; i < 2; i++) {
@@ -79,9 +82,9 @@ bool Arena::pushBall(int mover) {
   // a single tile elsewhere). Anything in the mouth column at those rows counts as a score.
   auto inGoal = [&](int i, int r, int c) { return c == _goal[i].col && inGoalMouth(r, _goal[i].row); };
   auto land = [&](int r, int c) {
-    _ball.row = (int8_t)r; _ball.col = (int8_t)c;
-    if (inGoal(0, r, c)) _scored[0] = true;
-    else if (inGoal(1, r, c)) _scored[1] = true;
+    if (inGoal(0, r, c))      { _goals[0]++; _justScored = true; kickoff(); }   // tally + re-kickoff
+    else if (inGoal(1, r, c)) { _goals[1]++; _justScored = true; kickoff(); }
+    else { _ball.row = (int8_t)r; _ball.col = (int8_t)c; }
     return true;
   };
 
@@ -112,6 +115,13 @@ bool Arena::pushBall(int mover) {
   return land(nr, nc);
 }
 
+// After a goal: re-kickoff -- ball back to centre, both bots back to their starts (a fair restart).
+void Arena::kickoff() {
+  _ball = _kickoff;
+  for (int i = 0; i < 2; i++) _bot[i].it.setPose(_bot[i].start);
+  _ballStall = 0;
+}
+
 void Arena::foldLog() {
   // Fingerprint the full per-tick state so the determinism test is exact.
   auto fold = [&](uint32_t v) { _hash = (_hash ^ v) * 16777619u; };
@@ -125,7 +135,7 @@ void Arena::foldLog() {
   }
   if (_type == MatchType::SOCCER) {  // ball + score are live state in soccer
     fold((uint32_t)_ball.row); fold((uint32_t)_ball.col);
-    fold((uint32_t)(_scored[0] ? 1 : 0)); fold((uint32_t)(_scored[1] ? 1 : 0));
+    fold((uint32_t)_goals[0]); fold((uint32_t)_goals[1]);
   }
 }
 
@@ -202,6 +212,7 @@ ArenaOutcome Arena::tick() {
   // 2b) SOCCER ball physics: a bot that stepped onto the ball's tile shoves it one tile ahead
   // (its facing); the ball can't be walked THROUGH, so a blocked push bounces the bot back.
   if (_type == MatchType::SOCCER) {
+    _justScored = false;
     Pose ballWas = _ball;
     for (int i = 0; i < 2; i++) {
       if (!moved[i] || !_bot[i].alive) continue;
@@ -212,8 +223,8 @@ ArenaOutcome Arena::tick() {
     // Loose-ball "referee": if nobody touches the ball for a good while (a true midfield deadlock),
     // it's dropped at a fresh spot so both bots scramble for it again -- never nudged toward a goal,
     // so the ref never scores; goals stay bot-driven. Now that the bots sense the rival and
-    // out-maneuver, this is a rare last resort.
-    if (_ball == ballWas) { if (++_ballStall >= 28 && !_scored[0] && !_scored[1]) { refDriftBall(); _ballStall = 0; } }
+    // out-maneuver, this is a rare last resort. (A goal kicks off, so ballWas != _ball -> no stall.)
+    if (_ball == ballWas) { if (++_ballStall >= 28) { refDriftBall(); _ballStall = 0; } }
     else _ballStall = 0;
   }
 
@@ -247,9 +258,8 @@ ArenaOutcome Arena::tick() {
 
   foldLog();
 
-  if (_type == MatchType::SOCCER) {  // first bot to shove the ball into its goal wins
-    if (_scored[0]) { _bot[0].won = true; _outcome = ArenaOutcome::BOT0; }
-    else if (_scored[1]) { _bot[1].won = true; _outcome = ArenaOutcome::BOT1; }
+  if (_type == MatchType::SOCCER) {
+    // Timed match: never resolves mid-play (a goal just re-kicks off). The cap decides it below.
   } else if (_type == MatchType::RACE) {
     if (win[0] && win[1]) { _outcome = ArenaOutcome::DRAW; }
     else if (win[0]) { _bot[0].won = true; _outcome = ArenaOutcome::BOT0; }
@@ -269,15 +279,21 @@ ArenaOutcome Arena::tick() {
   bool over = (!active0 && !active1) || _ticks >= _stepCap;
   if (over && _outcome == ArenaOutcome::RUNNING) {
     if (_type == MatchType::SOCCER) {
-      // Nobody scored in time -> the side whose goal the ball is nearer to wins (it was pressing).
-      auto bd = [&](int i) {
-        int dr = _ball.row - _goal[i].row, dc = _ball.col - _goal[i].col;
-        return (dr < 0 ? -dr : dr) + (dc < 0 ? -dc : dc);
-      };
-      int d0 = bd(0), d1 = bd(1);
-      if (d0 < d1) { _bot[0].won = true; _outcome = ArenaOutcome::BOT0; }
-      else if (d1 < d0) { _bot[1].won = true; _outcome = ArenaOutcome::BOT1; }
-      else _outcome = ArenaOutcome::DRAW;
+      // Full time: higher SCORE wins. Level on goals -> the side whose goal the ball is nearer to
+      // (it was pressing); dead level -> draw.
+      if (_goals[0] != _goals[1]) {
+        int w = _goals[0] > _goals[1] ? 0 : 1;
+        _bot[w].won = true; _outcome = w ? ArenaOutcome::BOT1 : ArenaOutcome::BOT0;
+      } else {
+        auto bd = [&](int i) {
+          int dr = _ball.row - _goal[i].row, dc = _ball.col - _goal[i].col;
+          return (dr < 0 ? -dr : dr) + (dc < 0 ? -dc : dc);
+        };
+        int d0 = bd(0), d1 = bd(1);
+        if (d0 < d1) { _bot[0].won = true; _outcome = ArenaOutcome::BOT0; }
+        else if (d1 < d0) { _bot[1].won = true; _outcome = ArenaOutcome::BOT1; }
+        else _outcome = ArenaOutcome::DRAW;
+      }
     } else if (_type == MatchType::SUMO && _bot[0].alive && _bot[1].alive) {
       int cr = _maze->rows() / 2, cc = _maze->cols() / 2;
       auto dist = [&](int i) {

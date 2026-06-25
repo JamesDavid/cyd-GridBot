@@ -445,7 +445,8 @@ void test_soccer_push_into_goal() {
   ar.configSoccer(ball, g0, g1);
   ArenaOutcome o = ar.run();
   TEST_ASSERT_EQUAL((int)ArenaOutcome::BOT0, (int)o);
-  TEST_ASSERT_EQUAL(4, ar.ball().col);                   // the ball ended in the goal
+  TEST_ASSERT_TRUE(ar.goals(0) > 0);                     // bot0 put the ball in the net (timed match)
+  TEST_ASSERT_EQUAL(0, ar.goals(1));                     // idle bot scored none
 }
 
 void test_soccer_deterministic() {
@@ -501,11 +502,10 @@ void test_soccer_taught_brain_scores() {
     Program me = brainProgram(taught), idle;
     Arena ar; ar.setup(&m, &me, &idle, s0, s1, MatchType::SOCCER, 300);
     ar.configSoccer(ball, g0, g1);
-    bool won = ((int)ar.run() == (int)ArenaOutcome::BOT0);
-    bool inNet = (ar.ball().col == g0.col && inGoalMouth(ar.ball().row, g0.row));
-    if (won && inNet) realGoals++;   // a genuine goal: the ball is shoved into the mouth
+    ar.run();
+    if (ar.goals(0) > 0) realGoals++;   // the taught bot actually scored (the ball went in the net)
   }
-  TEST_ASSERT_TRUE(realGoals >= 4);   // most taught brains actually dribble the ball into the net
+  TEST_ASSERT_TRUE(realGoals >= 4);   // most taught brains dribble at least one goal vs an idle keeper
 }
 
 // A real soccer MATCH (what the live arena's tournaments run): two distilled soccer bots play a
@@ -535,8 +535,7 @@ void test_soccer_two_bots_match_resolves() {
 // scramble; every match RESOLVES, and goals -- when they come -- are bot-earned in open play (the
 // rest go to the ball-position tiebreak). We assert the ball stays in play and goals still happen.
 void test_soccer_two_bots_scramble_and_resolve() {
-  auto inNet = [](const Pose& b, const Pose& g) { return b.col == g.col && inGoalMouth(b.row, g.row); };
-  int realGoals = 0, lively = 0;
+  int withGoals = 0, decisive = 0;
   for (uint32_t s = 1; s <= 6; s++) {
     Net a, b;
     a.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1); distillSoccer(a, s, 5000);
@@ -547,11 +546,11 @@ void test_soccer_two_bots_scramble_and_resolve() {
     Arena ar; ar.setup(&m, &pa, &pb, s0, s1, MatchType::SOCCER, 300);
     ar.configSoccer(ball, g0, g1);
     ArenaOutcome o = ar.run();
-    if (o == ArenaOutcome::BOT0 || o == ArenaOutcome::BOT1) lively++;  // resolves to a WINNER (no hang)
-    if (inNet(ar.ball(), g0) || inNet(ar.ball(), g1)) realGoals++;     // some end in an open-play goal
+    if (o == ArenaOutcome::BOT0 || o == ArenaOutcome::BOT1) decisive++;  // resolves to a WINNER
+    if (ar.goals(0) + ar.goals(1) > 0) withGoals++;                      // real goals were scored
   }
-  TEST_ASSERT_TRUE(lively >= 5);     // matches resolve to a winner -- no perpetual midfield freeze
-  TEST_ASSERT_TRUE(realGoals >= 1);  // and bots still finish some in open play (rest -> tiebreak)
+  TEST_ASSERT_TRUE(decisive >= 5);   // every match resolves to a winner -- no perpetual freeze
+  TEST_ASSERT_TRUE(withGoals >= 3);  // and most are decided by actual scoring, not just position
 }
 
 // SOCCER "Q-Learn" (qTrainSoccer): reward-driven, no teacher. Replicating the UI's chunked run
@@ -559,7 +558,6 @@ void test_soccer_two_bots_scramble_and_resolve() {
 // alone and score into the net on a spread of kickoffs -- proving RL is a viable third soccer path
 // alongside Teach (imitation) and Evolve (selection).
 void test_soccer_qlearn_ff_scores() {
-  auto inNet = [](const Pose& b, const Pose& g) { return b.col == g.col && inGoalMouth(b.row, g.row); };
   Net q; q.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
   for (int c = 0; c < 8; c++) qTrainSoccer(q, 7u + 101u * (uint32_t)(8 - c), 1000, c * 1000, 8000);
   Maze m; Pose s0, s1, ball, g0, g1;
@@ -572,7 +570,7 @@ void test_soccer_qlearn_ff_scores() {
     Arena ar; ar.setup(&m, &me, &idle, a, s1, MatchType::SOCCER, 300);
     ar.configSoccer(ball, g0, g1);
     ar.run();
-    if (inNet(ar.ball(), g0)) scored++;
+    if (ar.goals(0) > 0) scored++;
   }
   TEST_ASSERT_TRUE(scored >= 3);             // reward-trained brain dribbles the ball home on most
 }
@@ -581,7 +579,6 @@ void test_soccer_qlearn_ff_scores() {
 // trains, and learns SOME dribbling (scores at least once vs an idle keeper). A smoke + capability
 // test -- recurrent semi-gradient TD is noisier, so we don't gate it as hard as the feedforward one.
 void test_soccer_qlearn_rnn_runs() {
-  auto inNet = [](const Pose& b, const Pose& g) { return b.col == g.col && inGoalMouth(b.row, g.row); };
   RNet r; r.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
   for (int c = 0; c < 8; c++) qTrainSoccerRnn(r, 3u + 101u * (uint32_t)(8 - c), 1000, c * 1000, 8000);
   TEST_ASSERT_TRUE(r.trained);
@@ -595,7 +592,7 @@ void test_soccer_qlearn_rnn_runs() {
     Arena ar; ar.setup(&m, &me, &idle, a, s1, MatchType::SOCCER, 300);
     ar.configSoccer(ball, g0, g1);
     ar.run();
-    if (inNet(ar.ball(), g0)) scored++;
+    if (ar.goals(0) > 0) scored++;
   }
   TEST_ASSERT_TRUE(scored >= 1);             // learns at least some reward-driven dribbling
 }

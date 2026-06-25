@@ -87,7 +87,7 @@ class ArenaScreen : public app::IScreen {
   bool _cup = false;             // a BOARD match is part of the Cup (route its result to the bracket)
   // History of every Cup game so the bracket card can draw ALL rounds as a tree (the live Bracket
   // only keeps the current round). a/b are player ids (b=-1 bye); win is the winning player id.
-  struct CupGame { int8_t round; int8_t a; int8_t b; int8_t win; };
+  struct CupGame { int8_t round; int8_t a; int8_t b; int8_t win; int8_t ga; int8_t gb; };  // ga/gb = soccer score
   std::vector<CupGame> _cupLog;
   void drawBracket();            // the full bracket tree (rounds as columns)
   // Networked room (multi-device ESP-NOW Cup): the field comes from the lobby roster and every
