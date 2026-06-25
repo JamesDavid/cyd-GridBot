@@ -11,6 +11,7 @@
 #include "game/Distill.h"
 #include "game/ProgramJson.h"
 #include "net/TourneyNet.h"
+#include "store/ProfileStore.h"
 #include <ArduinoJson.h>
 
 using namespace ui;
@@ -50,8 +51,10 @@ static const Rect R_OPP_ROOM  = {20, 166, 280, 34};   // multi-device tournament
 // net lobby
 static const Rect R_ROOM_HOST  = {40, 72,  240, 38};
 static const Rect R_ROOM_JOIN  = {40, 122, 240, 38};
+static const Rect R_ROOM_FIELD = {40, 168, 240, 30};   // pre-host: cycle WHICH library fighter to field
 static const Rect R_ROOM_START = {112, (int16_t)(BOTBAR_Y + 2), 96, 26};
 static const Rect R_ROOM_DISC  = {212, (int16_t)(BOTBAR_Y + 2), 102, 26};  // host: cycle the room discipline
+static const Rect R_ROOM_SAVE  = {10, 168, 180, 26};   // in-room: copy the OTHER fighters into My Bots
 // Level 2 — pick the GAME (depends on the opponent); vertical slots reused per branch. Tightened
 // to fit FIVE rows (Race / Battle / Soccer / + two branch-specific) above the bottom bar.
 static const Rect R_G1 = {20, 46,  280, 28};
@@ -497,6 +500,13 @@ void ArenaScreen::drawNetLobby() {
     label(g, SCREEN_W / 2, 46, "Tournament with nearby boards", C_DIM, textdatum_t::top_center);
     button(g, R_ROOM_HOST, "Host a room", C_GO, C_PANEL);
     button(g, R_ROOM_JOIN, "Join a room", C_MOVE, C_PANEL);
+    // which of your saved fighters to bring (so a battle bot and a soccer bot are both pickable)
+    int libN = _profile ? (int)_profile->library.size() : 0;
+    if (_roomFighter >= libN) _roomFighter = 0;
+    char fb[40];
+    if (libN > 0) snprintf(fb, sizeof(fb), "Field: %.16s >", _profile->library[_roomFighter].name.c_str());
+    else          snprintf(fb, sizeof(fb), "Field: Hunter (no saved bots)");
+    button(g, R_ROOM_FIELD, fb, ui::rgb(120, 230, 245), C_PANEL);
   } else {
     char hd[24]; snprintf(hd, sizeof(hd), "%s  %d in", tn.isHost() ? "hosting" : "joined", tn.playerCount());
     label(g, SCREEN_W - 6, 6, hd, C_GO, textdatum_t::top_right);
@@ -508,6 +518,8 @@ void ArenaScreen::drawNetLobby() {
       char row[44]; snprintf(row, sizeof(row), "%.8s  (%.12s)", r[i].name.c_str(), r[i].botName.c_str());
       label(g, 16, y + 6, row, C_INK);
     }
+    // grab the OTHER fighters into My Bots, so the loser can train against the winner afterwards
+    if ((int)r.size() >= 2) button(g, R_ROOM_SAVE, "Save foes > My Bots", C_ACCENT, C_PANEL);
   }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
@@ -520,6 +532,53 @@ void ArenaScreen::drawNetLobby() {
   } else if (tn.role() == net::TRole::PEER) {
     label(g, SCREEN_W / 2, BOTBAR_Y + 9, "waiting for host to start", C_DIM, textdatum_t::top_center);
   }
+}
+
+// Build the card this device broadcasts to the room: the chosen library fighter (so a player who
+// keeps a battle bot AND a soccer bot can field the right one), or a compact coded hunter if their
+// library is empty / the pick is out of range.
+void ArenaScreen::fillRoomCard(net::BotCard& mine) {
+  mine.name = _profile ? String(_profile->name.c_str()) : String("P");
+  mine.avatar = _profile ? _profile->avatar : 0;
+  mine.uuid = _profile ? String(_profile->uuid.substr(0, 16).c_str()) : String("anon");
+  int n = _profile ? (int)_profile->library.size() : 0;
+  if (n > 0 && _roomFighter >= 0 && _roomFighter < n) {
+    mine.botName = String(_profile->library[_roomFighter].name.c_str());
+    mine.progJson = programToJsonString(_profile->library[_roomFighter].program);
+  } else {
+    Program compact;
+    Node loop = Node::repeatUntil(AT_GOAL);
+    Node z = Node::ifCond(ENEMY_AHEAD); z.body.push_back(Node::command(CMD_FIRE));   loop.body.push_back(z);
+    Node rr = Node::ifCond(ENEMY_RIGHT); rr.body.push_back(Node::command(CMD_TURN_R)); loop.body.push_back(rr);
+    Node l = Node::ifCond(ENEMY_LEFT);  l.body.push_back(Node::command(CMD_TURN_L)); loop.body.push_back(l);
+    loop.body.push_back(Node::command(CMD_FWD)); compact.main.push_back(loop);
+    mine.botName = "Hunter"; mine.progJson = programToJsonString(compact);
+  }
+}
+
+// Copy every OTHER fighter in the room roster into My Bots (so after a match you can train against
+// the bots you just fought -- e.g. the loser levelling up vs the winner). Skips your own card (by
+// uuid) and any name already in the library. Returns how many were added.
+int ArenaScreen::saveRoomFoesToLibrary() {
+  if (!_profile) return 0;
+  String myUuid = String(_profile->uuid.substr(0, 16).c_str());
+  int added = 0;
+  for (const net::BotCard& c : net::tourney().roster()) {
+    if (c.uuid == myUuid) continue;                         // not me
+    std::string nm = std::string(c.botName.length() ? c.botName.c_str() : c.name.c_str());
+    bool dup = false;
+    for (auto& e : _profile->library) if (e.name == nm) { dup = true; break; }
+    if (dup || (int)_profile->library.size() >= LIBRARY_MAX) continue;
+    LibEntry lb;
+    lb.name = nm;
+    lb.program = programFromJsonString(c.progJson);
+    lb.source = LIB_RADIO;
+    lb.srcLevel = (uint16_t)_profile->level;
+    _profile->library.push_back(lb);
+    added++;
+  }
+  if (added) store::profiles.save(*_profile);
+  return added;
 }
 
 // Turn the lobby roster into the Cup field and start a networked Cup (shared seed -> every device
@@ -980,28 +1039,20 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     case Phase::NETLOBBY: {
       net::TourneyNet& tn = net::tourney();
       if (R_BACK.contains(tx, ty)) { tn.leave(); drawMenu(); break; }
-      if (tn.role() == net::TRole::NONE && (R_ROOM_HOST.contains(tx, ty) || R_ROOM_JOIN.contains(tx, ty))) {
+      int libN = _profile ? (int)_profile->library.size() : 0;
+      if (tn.role() == net::TRole::NONE && R_ROOM_FIELD.contains(tx, ty) && libN > 0) {
+        _roomFighter = (_roomFighter + 1) % libN;   // cycle which saved fighter to bring
+        hal::audio.blip(); drawNetLobby();
+      } else if (tn.role() == net::TRole::NONE && (R_ROOM_HOST.contains(tx, ty) || R_ROOM_JOIN.contains(tx, ty))) {
         net::BotCard mine;
-        mine.name = _profile ? String(_profile->name.c_str()) : String("P");
-        mine.avatar = _profile ? _profile->avatar : 0;
-        mine.uuid = _profile ? String(_profile->uuid.substr(0, 16).c_str()) : String("anon");
-        // Card chunking carries any size, so this device brings the player's REAL saved fighter
-        // (their first My-Bots entry). If they have none, field a compact coded hunter.
-        bool haveBot = _profile && !_profile->library.empty();
-        if (haveBot) {
-          mine.botName = String(_profile->library[0].name.c_str());
-          mine.progJson = programToJsonString(_profile->library[0].program);
-        } else {
-          Program compact;
-          { Node loop = Node::repeatUntil(AT_GOAL);
-            Node z = Node::ifCond(ENEMY_AHEAD); z.body.push_back(Node::command(CMD_FIRE));   loop.body.push_back(z);
-            Node r = Node::ifCond(ENEMY_RIGHT); r.body.push_back(Node::command(CMD_TURN_R)); loop.body.push_back(r);
-            Node l = Node::ifCond(ENEMY_LEFT);  l.body.push_back(Node::command(CMD_TURN_L)); loop.body.push_back(l);
-            loop.body.push_back(Node::command(CMD_FWD)); compact.main.push_back(loop); }
-          mine.botName = "Hunter"; mine.progJson = programToJsonString(compact);
-        }
+        fillRoomCard(mine);                          // the chosen library fighter (or a coded hunter)
         if (R_ROOM_HOST.contains(tx, ty)) tn.host(mine); else tn.join(mine);
         _roomN = -1; drawNetLobby();
+      } else if (tn.role() != net::TRole::NONE && tn.playerCount() >= 2 && R_ROOM_SAVE.contains(tx, ty)) {
+        int n = saveRoomFoesToLibrary();             // grab the other fighters so you can train vs them
+        hal::audio.badge();
+        char msg[28]; snprintf(msg, sizeof(msg), n ? "+%d to My Bots" : "already saved", n);
+        label(hal::display.gfx(), SCREEN_W / 2, BOTBAR_Y - 10, msg, n ? C_GO : C_DIM, textdatum_t::bottom_center);
       } else if (tn.isHost() && R_ROOM_DISC.contains(tx, ty)) {  // cycle Battle -> Soccer -> Race
         _type = _type == MatchType::SUMO ? MatchType::SOCCER
               : _type == MatchType::SOCCER ? MatchType::RACE : MatchType::SUMO;

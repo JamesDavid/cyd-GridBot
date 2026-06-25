@@ -12,6 +12,8 @@
 #include "game/Bracket.h"
 #include "game/Profile.h"
 
+namespace net { struct BotCard; }
+
 namespace screens {
 
 class ArenaScreen : public app::IScreen {
@@ -94,6 +96,9 @@ class ArenaScreen : public app::IScreen {
   // device replays the SAME matches from the shared seed (deterministic Arena -> same result).
   void drawNetLobby();           // host/join + the live roster
   void buildRosterField();       // turn the lobby roster into _cands + _cupPlayers, start the Cup
+  int  _roomFighter = 0;         // which library entry this device fields in the room (-1 => coded hunter)
+  void fillRoomCard(net::BotCard& mine);  // populate `mine` from the chosen fighter (or a coded hunter)
+  int  saveRoomFoesToLibrary();  // copy every OTHER roster fighter into My Bots; returns how many added
   bool _netCup = false;          // this Cup's match boards use the shared seed (not millis())
   uint32_t _netSeed = 0;         // the host's broadcast seed
   uint32_t _cupAutoAt = 0;       // networked Cup auto-advances at this time (every device in step)
