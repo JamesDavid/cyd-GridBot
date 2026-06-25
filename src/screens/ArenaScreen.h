@@ -22,7 +22,7 @@ class ArenaScreen : public app::IScreen {
   void debugStep();   // capture aid: advance the match one tick, paused
   // Jump straight into a battle (skip the menus): field library fighter `libIdx` vs the named
   // opponent. Used by the trainer's "Fight! >" so training flows directly into a match.
-  void beginQuickBattle(gb::Profile* profile, int libIdx, const char* oppName, bool sumo);
+  void beginQuickBattle(gb::Profile* profile, int libIdx, const char* oppName, gb::MatchType type);
 
  private:
   enum class Phase : uint8_t { MENU, GAMETYPE, PICK1, HANDOFF, PICK2, BOARD, DONE, TOURNEY,
@@ -42,7 +42,8 @@ class ArenaScreen : public app::IScreen {
   bool pickScrollTap(int x, int y);  // handle a tap in the scrollbar zone
   int houseBotIndex(const char* name) const;
   void drawHandoff();
-  void setupMatchBot(int pick, const gb::Pose& start, bool sumo);
+  void setupMatchBot(int pick, const gb::Pose& start);
+  void genMatchBoard(uint32_t seed);   // build the maze/ring/pitch for the current _type
   void startMatch();
   void drawBoard();
   void mazeGeometry(int& tile, int& ox, int& oy);
@@ -50,14 +51,15 @@ class ArenaScreen : public app::IScreen {
   void eraseBotAt(int r, int c);   // clear a vacated cell + its neighbours (the facing arrow over-
                                    // hangs into the next tile, so redrawing one cell leaves artifacts)
   void drawBot(int i, const gb::Pose& p, int avatar);
+  void drawBall();                 // Soccer: the ball at its current tile (white disc)
   void drawScore();                                  // big HP/score strip in the top bar (Battle)
   void drawHit(int i, const char* txt, uint16_t col);// burst over bot i when it's zapped/knocked
   void finishOverlay();
   void onMatchEnd();                                 // a BOARD match resolved: Cup result vs normal DONE
   // Tournament setup: pick discipline (maze race vs battle), then which fighters take part.
-  void drawTDisc();       // discipline chooser (Maze race / Battle)
+  void drawTDisc();       // discipline chooser (Maze race / Battle / Soccer)
   void drawTPick();       // participant checklist (per-bot checkbox + Select all)
-  bool _tSumo = false;    // chosen discipline: true = Battle (Sumo), false = Maze (Race)
+  // The tournament discipline is just `_type` (Race / Sumo / Soccer); set in the chooser.
   uint32_t _tSelMask = 0; // selection bitmask, bit i = candidate i is in the tournament
   int _tScroll = 0;       // first visible row in the participant checklist
   // Tournament: round-robin every fighter vs every other, tally wins, rank them (a battle ladder).
@@ -106,6 +108,8 @@ class ArenaScreen : public app::IScreen {
 
   gb::Maze _maze;
   gb::Pose _s0, _s1;
+  gb::Pose _ball, _goal0, _goal1;   // Soccer: ball + the two goal mouths (bot 0 attacks _goal0)
+  gb::Pose _ballPrev;               // last-drawn ball cell (erase it before redrawing the ball)
   gb::Arena _arena;
   Phase _phase = Phase::MENU;
   bool _running = false;

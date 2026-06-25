@@ -135,19 +135,19 @@ void ArenaScreen::enter() { drawMenu(); }
 // start-position bias cancels), wins are tallied, and the field is ranked. Headless + deterministic.
 void ArenaScreen::runTournament(const std::vector<int>& parts) {
   int N = (int)parts.size();
-  bool sumo = _tSumo;
+  bool sumo = (_type == MatchType::SUMO), soccer = (_type == MatchType::SOCCER);
   uint32_t base = _profile ? _profile->seedBase : 7u;
-  if (sumo) MazeGen::generateSumoRing(_maze, base + 1234u, _s0, _s1);
-  else      MazeGen::generateArena(_maze, base + 31u, _s0, _s1);
-  MatchType mt = sumo ? MatchType::SUMO : MatchType::RACE;
-  int cap = sumo ? 150 : 200;
+  genMatchBoard(soccer ? base + 55u : sumo ? base + 1234u : base + 31u);
+  MatchType mt = _type;
+  int cap = soccer ? 300 : sumo ? 150 : 200;
   // A race is start-dependent (a solver builds its path from where it stands), so prepare each
-  // fighter's program for BOTH start poses; sumo programs are start-agnostic (reuse one).
+  // fighter's program for BOTH start poses; sumo/soccer programs are start-agnostic (reuse one).
+  bool startAgnostic = (sumo || soccer);
   std::vector<Program> pa(N), pb(N);
   for (int k = 0; k < N; k++) {
-    setupMatchBot(parts[k], _s0, sumo); pa[k] = _cands[parts[k]].prog;
-    if (sumo) { pb[k] = pa[k]; }
-    else { setupMatchBot(parts[k], _s1, sumo); pb[k] = _cands[parts[k]].prog; }
+    setupMatchBot(parts[k], _s0); pa[k] = _cands[parts[k]].prog;
+    if (startAgnostic) { pb[k] = pa[k]; }
+    else { setupMatchBot(parts[k], _s1); pb[k] = _cands[parts[k]].prog; }
   }
   std::vector<int> w(N, 0), l(N, 0);
   _tN = N; _tOrder.assign(parts.begin(), parts.end());
@@ -156,6 +156,7 @@ void ArenaScreen::runTournament(const std::vector<int>& parts) {
     for (int j = 0; j < N; j++) {
       if (i == j) continue;
       Arena ar; ar.setup(&_maze, &pa[i], &pb[j], _s0, _s1, mt, cap);
+      if (soccer) ar.configSoccer(_ball, _goal0, _goal1);
       ArenaOutcome o = ar.run();
       // _tWin[a*N+b] accumulates how many times a beat b (each pair plays home AND away -> 0..2)
       if (o == ArenaOutcome::BOT0) { w[i]++; l[j]++; _tWin[i * N + j]++; }
@@ -244,7 +245,7 @@ void ArenaScreen::drawBreakdown() {
 void ArenaScreen::startCup(const std::vector<int>& parts) {
   _cupPlayers.clear();
   for (int p : parts) { if ((int)_cupPlayers.size() < gb::BRACKET_MAX) _cupPlayers.push_back(p); }
-  _type = _tSumo ? MatchType::SUMO : MatchType::RACE;
+  // _type (Race / Sumo / Soccer) is set by the discipline chooser (or buildRosterField for net Cups).
   _cupBracket.init((int)_cupPlayers.size());
   _cupLog.clear();
   _cup = true; _cupMatch = -1; _netCup = false; _cupAutoAt = 0;   // local by default; buildRosterField sets net
@@ -361,11 +362,11 @@ void ArenaScreen::drawTDisc() {
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Tournament", C_ACCENT, textdatum_t::top_left, 2);
-  label(g, SCREEN_W / 2, 40, "What kind of contest?", C_INK, textdatum_t::top_center);
+  label(g, SCREEN_W / 2, 36, "What kind of contest?", C_INK, textdatum_t::top_center);
   button(g, R_G1, "Maze race - first to the goal", C_GO, C_PANEL);
-  label(g, SCREEN_W / 2, 94, "bots solve the same maze; fastest wins", C_DIM, textdatum_t::top_center);
+  button(g, R_G2, "Soccer - shoot it into the goal", ui::rgb(120, 230, 245), C_PANEL);
   button(g, R_G3, "Battle - last bot standing", C_FUNC, C_PANEL);
-  label(g, SCREEN_W / 2, 170, "bots fight on a ring; survivor wins", C_DIM, textdatum_t::top_center);
+  label(g, SCREEN_W / 2, 210, "race a maze, dribble a ball, or brawl on a ring", C_DIM, textdatum_t::top_center);
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
 }
@@ -423,11 +424,11 @@ void ArenaScreen::drawTChoice() {
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
 }
 
-void ArenaScreen::beginQuickBattle(Profile* profile, int libIdx, const char* oppName, bool sumo) {
+void ArenaScreen::beginQuickBattle(Profile* profile, int libIdx, const char* oppName, MatchType type) {
   _profile = profile;
   _hotseat = false;
-  _type = sumo ? MatchType::SUMO : MatchType::RACE;
-  buildCandidates(sumo);                       // library entries lead the list, so libIdx maps directly
+  _type = type;
+  buildCandidates(type != MatchType::RACE);    // library entries lead the list, so libIdx maps directly
   int nlib = _profile ? (int)_profile->library.size() : 0;
   _pick0 = (libIdx >= 0 && libIdx < nlib) ? libIdx : 0;
   _pick1 = -1;
@@ -500,10 +501,10 @@ void ArenaScreen::buildRosterField() {
     cd.house = false; cd.smart = false; cd.neuro = false;  // a concrete program -> don't re-distill
     _cands.push_back(cd);
   }
-  _tSumo = tn.sumo();
+  _type = tn.sumo() ? MatchType::SUMO : MatchType::RACE;   // networked Cups are Race or Battle
   std::vector<int> parts;
   for (int i = 0; i < (int)_cands.size(); i++) parts.push_back(i);
-  startCup(parts);                  // sets _type, bracket, _phase=CUP, draws the card
+  startCup(parts);                  // uses _type, seeds the bracket, _phase=CUP, draws the card
   _netCup = true; _netSeed = tn.seed();
 }
 
@@ -615,9 +616,21 @@ static void adaptNeuroBot(Program& p, const Maze& m, const Pose& start) {
 // SUMO: there is no goal to race to, so bots must HUNT each other — give every bot the
 // hunter (forward + zap-when-enemy-ahead), except a kid's own saved NeuroBot fighter, whose
 // trained brain we keep so its Sumo training actually drives it.
-void ArenaScreen::setupMatchBot(int pick, const Pose& start, bool sumo) {
+void ArenaScreen::setupMatchBot(int pick, const Pose& start) {
   Candidate& c = _cands[pick];
-  if (sumo) {
+  if (_type == MatchType::SOCCER) {
+    // A kid's SAVED fighter keeps its own (trained) brain; every house/empty bot gets a distilled
+    // SOCCER brain so it actually dribbles the ball toward its goal instead of standing around.
+    if (c.prog.brains.empty()) {
+      c.prog.clear();
+      uint32_t sd = 11u + (uint32_t)c.avatar * 13u;
+      uint8_t bi = c.prog.addBrain(sd);
+      distillSoccer(c.prog.brains[bi], sd, 4000);
+      Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(bi)); c.prog.main.push_back(loop);
+    }
+    return;
+  }
+  if (_type == MatchType::SUMO) {
     // Keep each bot's OWN behaviour so matchups stay asymmetric (Rusty charges, Bolt dashes, Vex
     // hunts...). The NEURAL fighters (Neura/Cortex/Volt) get a distilled HUNTER BRAIN -- a real
     // trained net, the neural counterpart to code-Vex -- so battling them shows a learned hunter.
@@ -636,25 +649,34 @@ void ArenaScreen::setupMatchBot(int pick, const Pose& start, bool sumo) {
   else adaptNeuroBot(c.prog, _maze, start);
 }
 
+// Build the board for the current discipline: a maze (Race), an open ring (Sumo), or a walled
+// soccer pitch (Soccer, which also sets _ball + the two goal mouths).
+void ArenaScreen::genMatchBoard(uint32_t seed) {
+  if (_type == MatchType::SOCCER)     MazeGen::generateSoccerPitch(_maze, seed, _s0, _s1, _ball, _goal0, _goal1);
+  else if (_type == MatchType::SUMO)  MazeGen::generateSumoRing(_maze, seed, _s0, _s1);
+  else                                MazeGen::generateArena(_maze, seed, _s0, _s1);
+}
+
 void ArenaScreen::startMatch() {
   hal::audio.stopMusic();  // the board uses step-tick SFX; silence the battle theme
-  bool sumo = (_type == MatchType::SUMO);
+  bool sumo = (_type == MatchType::SUMO), soccer = (_type == MatchType::SOCCER);
   // Networked Cup: derive the board from the SHARED seed + match index so every device builds the
   // identical board and replays the same result. Local play mixes the clock for variety.
   uint32_t base = _netCup ? (_netSeed + 101u * (uint32_t)(_cupMatch + 1))
                           : (_profile ? _profile->seedBase : 7u) + (uint32_t)millis() + 101u * (++_sumoNonce);
-  if (sumo) MazeGen::generateSumoRing(_maze, base, _s0, _s1);
-  else      MazeGen::generateArena(_maze, _netCup ? base : (_profile ? _profile->seedBase + 7u : 7u), _s0, _s1);
-  setupMatchBot(_pick0, _s0, sumo);
-  setupMatchBot(_pick1, _s1, sumo);
+  if (sumo || soccer) genMatchBoard(base);
+  else genMatchBoard(_netCup ? base : (_profile ? _profile->seedBase + 7u : 7u));
+  setupMatchBot(_pick0, _s0);
+  setupMatchBot(_pick1, _s1);
   const Program& p0 = _cands[_pick0].prog;
   const Program& p1 = _cands[_pick1].prog;
   // Sumo has no goal, so it'd otherwise run the full 300 ticks. The seeker bots now brawl and
   // usually KO each other well before this; the cap is a safety net (then ring-control decides).
-  // Cup matches use a shorter cap so a stalemate between two weak fighters resolves quickly (by
-  // ring-control) instead of dragging a spectator bracket out -- a single battle keeps the full 150.
-  int cap = sumo ? (_cup ? 90 : 150) : gb::ARENA_STEP_CAP;
+  // Cup matches use a shorter cap so a stalemate resolves quickly (Sumo by ring-control, Soccer by
+  // ball position) instead of dragging a spectator bracket out -- a single match keeps the full run.
+  int cap = sumo ? (_cup ? 90 : 150) : soccer ? (_cup ? 200 : 300) : gb::ARENA_STEP_CAP;
   _arena.setup(&_maze, &p0, &p1, _s0, _s1, _type, cap);
+  if (soccer) { _arena.configSoccer(_ball, _goal0, _goal1); _ballPrev = _arena.ball(); }
   _phase = Phase::BOARD;
   _running = true;
   _last = 0;
@@ -683,6 +705,23 @@ void ArenaScreen::drawCell(int r, int c) {
     g.fillCircle(x + tile / 2, y + tile / 2, tile / 3, C_ACCENT);
     label(g, x + tile / 2, y + tile / 2, "G", C_BG, textdatum_t::middle_center);
   }
+  if (_type == MatchType::SOCCER) {   // tint the open goal mouths (3 tiles tall) -- yours green, foe red
+    int d0 = r - _goal0.row, d1 = r - _goal1.row;
+    bool m0 = (c == _goal0.col && d0 >= -1 && d0 <= 1);
+    bool m1 = (c == _goal1.col && d1 >= -1 && d1 <= 1);
+    if (m0 || m1) {
+      g.fillRect(x, y, tile - 1, tile - 1, m0 ? ui::rgb(20, 90, 50) : ui::rgb(110, 30, 30));
+      g.drawRect(x, y, tile - 1, tile - 1, C_INK);
+    }
+  }
+}
+
+void ArenaScreen::drawBall() {
+  auto& g = hal::display.gfx();
+  int tile, ox, oy; mazeGeometry(tile, ox, oy);
+  int cx = ox + _arena.ball().col * tile + tile / 2, cy = oy + _arena.ball().row * tile + tile / 2;
+  g.fillCircle(cx, cy, tile / 4 + 1, C_INK);
+  g.drawCircle(cx, cy, tile / 4 + 1, C_BG);
 }
 
 // Erase a bot that just left cell (r,c). The robot's facing arrow + antenna overhang into the
@@ -721,8 +760,9 @@ void ArenaScreen::drawScore() {
   auto& g = hal::display.gfx();
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   if (_type != MatchType::SUMO) {
-    char hdr[40];
-    snprintf(hdr, sizeof(hdr), "Race: %s vs %s", _cands[_pick0].name.c_str(), _cands[_pick1].name.c_str());
+    char hdr[44];
+    snprintf(hdr, sizeof(hdr), "%s: %s vs %s", _type == MatchType::SOCCER ? "Soccer" : "Race",
+             _cands[_pick0].name.c_str(), _cands[_pick1].name.c_str());
     label(g, 6, 4, hdr, C_ACCENT);
     return;
   }
@@ -770,6 +810,7 @@ void ArenaScreen::drawBoard() {
   drawBot(0, _arena.pose(0), _cands[_pick0].avatar);
   drawBot(1, _arena.pose(1), _cands[_pick1].avatar == _cands[_pick0].avatar
                                 ? (_cands[_pick1].avatar + 4) % 8 : _cands[_pick1].avatar);
+  if (_type == MatchType::SOCCER) { drawBall(); _ballPrev = _arena.ball(); }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
 }
@@ -807,8 +848,10 @@ void ArenaScreen::debugStep() {
   Pose b0 = _arena.pose(0), b1 = _arena.pose(1);
   ArenaOutcome o = _arena.tick();
   eraseBotAt(b0.row, b0.col); eraseBotAt(b1.row, b1.col);
+  if (_type == MatchType::SOCCER) eraseBotAt(_ballPrev.row, _ballPrev.col);
   if (_arena.alive(0)) drawBot(0, _arena.pose(0), _cands[_pick0].avatar);
   if (_arena.alive(1)) drawBot(1, _arena.pose(1), _cands[_pick1].avatar);
+  if (_type == MatchType::SOCCER) { drawBall(); _ballPrev = _arena.ball(); }
   if (o != ArenaOutcome::RUNNING) onMatchEnd();
 }
 
@@ -825,8 +868,10 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     bool al0 = _arena.alive(0), al1 = _arena.alive(1);
     ArenaOutcome o = _arena.tick();
     eraseBotAt(b0.row, b0.col); eraseBotAt(b1.row, b1.col);
+    if (_type == MatchType::SOCCER) eraseBotAt(_ballPrev.row, _ballPrev.col);  // wipe the ball's old tile
     if (_arena.alive(0)) drawBot(0, _arena.pose(0), _cands[_pick0].avatar);
     if (_arena.alive(1)) drawBot(1, _arena.pose(1), _cands[_pick1].avatar);
+    if (_type == MatchType::SOCCER) { drawBall(); _ballPrev = _arena.ball(); }
     if (_type == MatchType::SUMO) {
       drawScore();                                  // refresh the big HP strip (it just changed)
       // pop a burst over whoever took a hit this tick: knocked off the ring -> OUT!, else ZAP!
@@ -928,10 +973,10 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       break;
     case Phase::TDISC:
       if (R_BACK.contains(tx, ty)) { drawGameType(); }
-      else if (R_G1.contains(tx, ty) || R_G3.contains(tx, ty)) {   // Maze race (G1) / Battle (G3)
-        _tSumo = R_G3.contains(tx, ty);
-        _type = _tSumo ? MatchType::SUMO : MatchType::RACE;
-        buildCandidates(_tSumo);                       // discipline-appropriate roster
+      else if (R_G1.contains(tx, ty) || R_G2.contains(tx, ty) || R_G3.contains(tx, ty)) {   // Race / Soccer / Battle
+        _type = R_G3.contains(tx, ty) ? MatchType::SUMO
+              : R_G2.contains(tx, ty) ? MatchType::SOCCER : MatchType::RACE;
+        buildCandidates(_type != MatchType::RACE);     // race shows dashers; fights hide them
         _tSelMask = (_cands.size() >= 32) ? 0xFFFFFFFFu : ((1u << _cands.size()) - 1u);  // all selected
         _tScroll = 0; _phase = Phase::TPICK; drawTPick();
       }

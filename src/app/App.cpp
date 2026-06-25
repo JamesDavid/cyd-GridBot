@@ -701,7 +701,7 @@ void App::tick(uint32_t now) {
         _profile.achievements |= gb::evaluateAchievements(_profile);
         saveProfile();
         if (_arenaTrain.launchFight()) {   // "Fight! >": go straight into a battle vs the sparring foe
-          _arena.beginQuickBattle(&_profile, _arenaTrain.fightLibIdx(), _arenaTrain.fightOppName(), _arenaTrain.fightSumo());
+          _arena.beginQuickBattle(&_profile, _arenaTrain.fightLibIdx(), _arenaTrain.fightOppName(), _arenaTrain.fightType());
         } else {
           _arena.begin(&_profile); _arena.enter();
         }

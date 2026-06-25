@@ -206,6 +206,10 @@ Outcome Interpreter::step() {
         }
         int act = useRnn ? _prog->rbrains[n.brainIdx].argmaxStep(s)
                          : _prog->brains[n.brainIdx].argmax(s);
+        // Soccer (enemy->target = the ball) has no zap -- a battle-trained brain that fires when it
+        // faces its goal would freeze in place forever. Remap the zap action to a forward step so any
+        // brain at least plays (a true soccer brain never picks zap, so it's unaffected).
+        if (_enemy && _enemy->target && act == 4) act = 0;
         _lastCmd = kBrainAction[act];
         Outcome o = execCmd(_lastCmd);
         if (o != OUT_OK) { finish(o); return o; }

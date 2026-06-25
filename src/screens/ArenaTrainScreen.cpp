@@ -450,7 +450,7 @@ void ArenaTrainScreen::draw() {
   // brain back into the program. From the Arena menu: "Save" to library, "Fight! >" to battle.
   if (_editLink) button(g, R_SAVE, "< Editor", C_INK, C_PANEL);
   else           button(g, R_SAVE, _saved ? "saved!" : "Save", _saved ? C_DIM : C_ACCENT, C_PANEL);
-  button(g, R_BACK, _editLink ? "Use it >" : (_matchType == MatchType::SOCCER ? "Save >" : "Fight! >"), C_GO, C_PANEL);
+  button(g, R_BACK, _editLink ? "Use it >" : "Fight! >", C_GO, C_PANEL);
 }
 
 // The "watch it learn" panel: the brain's network graph (weights recolour as it trains) plus
@@ -667,12 +667,8 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       writeBackEditBrain(); hal::audio.blip();
       return app::Signal::BACK;
     }
-    // "Fight! >": stash the fighter and jump straight into a battle vs the current opponent.
-    // Soccer has no live battle arena yet -> just save it to the library and return.
-    if (_profile && saveFighterToLibrary() >= 0) {
-      if (_matchType != MatchType::SOCCER) _launchFight = true;
-      hal::audio.blip();
-    }
+    // "Fight! >": stash the fighter and jump straight into a match vs the current opponent.
+    if (_profile && saveFighterToLibrary() >= 0) { _launchFight = true; hal::audio.blip(); }
     return app::Signal::BACK;
   }
   return app::Signal::NONE;

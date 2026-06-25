@@ -504,9 +504,32 @@ void test_soccer_taught_brain_scores() {
   TEST_ASSERT_TRUE(realGoals >= 4);   // most taught brains actually dribble the ball into the net
 }
 
+// A real soccer MATCH (what the live arena's tournaments run): two distilled soccer bots play a
+// full game on the walled pitch. It must RESOLVE to a decisive winner (one bot dribbles the ball
+// into its goal -- not a hung stalemate) and be deterministic, so a Cup/Ladder produces a champion.
+void test_soccer_two_bots_match_resolves() {
+  Net a, b;
+  a.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1); distillSoccer(a, 2, 5000);
+  b.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1); distillSoccer(b, 3, 5000);
+  Maze m; Pose s0, s1, ball, g0, g1;
+  MazeGen::generateSoccerPitch(m, 1, s0, s1, ball, g0, g1);
+  Program pa = brainProgram(a), pb = brainProgram(b);
+  uint32_t h[2]; int out[2];
+  for (int run = 0; run < 2; run++) {
+    Arena ar; ar.setup(&m, &pa, &pb, s0, s1, MatchType::SOCCER, 300);
+    ar.configSoccer(ball, g0, g1);
+    out[run] = (int)ar.run();
+    h[run] = ar.logHash();
+  }
+  TEST_ASSERT_EQUAL_UINT32(h[0], h[1]);                            // deterministic replay
+  TEST_ASSERT_NOT_EQUAL((int)ArenaOutcome::RUNNING, out[0]);       // it resolves (a champion emerges)
+  TEST_ASSERT_NOT_EQUAL((int)ArenaOutcome::DRAW, out[0]);          // and decisively (someone scores / leads)
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_soccer_push_into_goal);
+  RUN_TEST(test_soccer_two_bots_match_resolves);
   RUN_TEST(test_soccer_pitch_walled_with_mouths);
   RUN_TEST(test_soccer_deterministic);
   RUN_TEST(test_soccer_taught_brain_scores);
