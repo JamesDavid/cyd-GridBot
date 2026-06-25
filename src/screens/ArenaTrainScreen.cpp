@@ -334,7 +334,10 @@ gb::RNet& ArenaTrainScreen::rbrain() {
 }
 
 void ArenaTrainScreen::inferBrain() {
-  senseEgo(_maze, _s0, nullptr, _in);
+  if (_matchType == gb::MatchType::SOCCER)
+    senseSoccer(_maze, _s0, &_ball, &_s1, &_goal0, _in);  // ball + rival(_s1) + own net(_goal0)
+  else
+    senseEgo(_maze, _s0, nullptr, _in);
   if (_rnn) {
     rbrain().resetState();
     rbrain().step(_in, _out);
@@ -458,7 +461,8 @@ void ArenaTrainScreen::draw() {
 // a small arena mini-map so the opponent (red) and your path (green) are visible alongside it.
 void ArenaTrainScreen::drawNet() {
   auto& g = hal::display.gfx();
-  drawBrainGraph(g, &_brain, &rbrain(), _rnn, _in, _hid, _out, _action, -1, 18);  // FF or RNN; shifted to centre
+  drawBrainGraph(g, &_brain, &rbrain(), _rnn, _in, _hid, _out, _action, -1, 18,  // FF or RNN; shifted to centre
+                 _matchType == gb::MatchType::SOCCER);  // soccer relabels inputs (ball/net/rival) + outputs
 
   // arena mini-map, below the view chip and left of the input labels (so nothing overlaps)
   int cols = _maze.cols(), rows = _maze.rows();

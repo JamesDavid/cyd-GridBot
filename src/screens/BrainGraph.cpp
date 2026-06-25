@@ -10,6 +10,11 @@ namespace screens {
 const char* const BRAIN_INLBL[SENSOR_COUNT_FOR_BRAIN] =
   {"wallF","wallL","wallR","pitF","goalF","goalR","goalD","foeF","foeR","foeD"};
 const char* const BRAIN_OUTLBL[5] = {"fwd","turnL","turnR","jump","zap"};
+// Soccer view: same brain, different senses (ball ego 3-5, net bearing 6-7, rival bearing 8-9);
+// the zap output is a no-op on the pitch (the interpreter remaps it to forward).
+const char* const BRAIN_INLBL_SOCCER[SENSOR_COUNT_FOR_BRAIN] =
+  {"wallF","wallL","wallR","ballF","ballR","ballD","netF","netR","rivF","rivR"};
+const char* const BRAIN_OUTLBL_SOCCER[5] = {"fwd","turnL","turnR","jump","-"};
 
 // network geometry (absolute screen coords)
 static const int IX = 92, HX = 178, OX = 252;
@@ -50,8 +55,11 @@ bool brainGraphNodeAt(int x, int y, int nHid, int& layer, int& idx) {
 }
 
 void drawBrainGraph(LGFX& g, const Net* ff, const RNet* rnn, bool useRnn,
-                    const float* in, const float* hid, const float* out, int action, int sel, int dy) {
+                    const float* in, const float* hid, const float* out, int action, int sel, int dy,
+                    bool soccer) {
   g_dy = dy;
+  const char* const* inLbl  = soccer ? BRAIN_INLBL_SOCCER  : BRAIN_INLBL;
+  const char* const* outLbl = soccer ? BRAIN_OUTLBL_SOCCER : BRAIN_OUTLBL;
   int nHid = useRnn ? rnn->nHid : ff->nHid;
   int selLayer = sel < 0 ? -1 : sel / 100, selIdx = sel < 0 ? -1 : sel % 100;
 
@@ -83,7 +91,7 @@ void drawBrainGraph(LGFX& g, const Net* ff, const RNet* rnn, bool useRnn,
 
   // nodes (fill = activation), with input + output labels
   for (int i = 0; i < SENSOR_COUNT_FOR_BRAIN; i++) {
-    label(g, IX - 8, iy(i) - 3, BRAIN_INLBL[i], C_DIM, textdatum_t::top_right);
+    label(g, IX - 8, iy(i) - 3, inLbl[i], C_DIM, textdatum_t::top_right);
     g.fillCircle(IX, iy(i), 3, actCol(in[i]));
   }
   for (int j = 0; j < nHid; j++) {
@@ -94,7 +102,7 @@ void drawBrainGraph(LGFX& g, const Net* ff, const RNet* rnn, bool useRnn,
     g.fillCircle(OX, oy(k), 7, actCol(out[k] * 2 - 1));
     if (k == action) g.drawCircle(OX, oy(k), 9, ui::rgb(120, 230, 245));
     if (selLayer == 2 && selIdx == k) g.drawCircle(OX, oy(k), 9, C_ACCENT);
-    label(g, OX + 12, oy(k) - 3, BRAIN_OUTLBL[k], k == action ? ui::rgb(120, 230, 245) : C_DIM);
+    label(g, OX + 12, oy(k) - 3, outLbl[k], k == action ? ui::rgb(120, 230, 245) : C_DIM);
   }
 }
 
