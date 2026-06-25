@@ -565,7 +565,9 @@ int ArenaScreen::saveRoomFoesToLibrary() {
   int added = 0;
   for (const net::BotCard& c : net::tourney().roster()) {
     if (c.uuid == myUuid) continue;                         // not me
-    std::string nm = std::string(c.botName.length() ? c.botName.c_str() : c.name.c_str());
+    // name the saved bot after its OWNER (the profile that fielded it), so "the winner" is an
+    // obvious sparring partner and it never collides with your own same-named fighter.
+    std::string nm = std::string(c.name.length() ? c.name.c_str() : c.botName.c_str());
     bool dup = false;
     for (auto& e : _profile->library) if (e.name == nm) { dup = true; break; }
     if (dup || (int)_profile->library.size() >= LIBRARY_MAX) continue;
