@@ -548,11 +548,59 @@ void test_soccer_two_bots_score_in_open_play() {
   TEST_ASSERT_TRUE(realGoals >= 4);   // open-play goals on most pairings (no perpetual midfield lock)
 }
 
+// SOCCER "Q-Learn" (qTrainSoccer): reward-driven, no teacher. Replicating the UI's chunked run
+// (epsilon decays globally across chunks), a feedforward brain must DISCOVER dribbling from reward
+// alone and score into the net on a spread of kickoffs -- proving RL is a viable third soccer path
+// alongside Teach (imitation) and Evolve (selection).
+void test_soccer_qlearn_ff_scores() {
+  auto inNet = [](const Pose& b, const Pose& g) { return b.col == g.col && b.row >= g.row - 1 && b.row <= g.row + 1; };
+  Net q; q.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
+  for (int c = 0; c < 8; c++) qTrainSoccer(q, 7u + 101u * (uint32_t)(8 - c), 1000, c * 1000, 8000);
+  Maze m; Pose s0, s1, ball, g0, g1;
+  MazeGen::generateSoccerPitch(m, 1, s0, s1, ball, g0, g1);
+  int scored = 0;
+  for (int k = 0; k < 5; k++) {              // a few kickoffs from offset bot rows
+    Program me = brainProgram(q), idle;
+    Pose a = s0; a.row = (int8_t)(g0.row + (k - 2));
+    if (!m.isWalkable(a.row, a.col)) a = s0;
+    Arena ar; ar.setup(&m, &me, &idle, a, s1, MatchType::SOCCER, 300);
+    ar.configSoccer(ball, g0, g1);
+    ar.run();
+    if (inNet(ar.ball(), g0)) scored++;
+  }
+  TEST_ASSERT_TRUE(scored >= 3);             // reward-trained brain dribbles the ball home on most
+}
+
+// RECURRENT soccer Q-learning (qTrainSoccerRnn): the memory-brain reward path runs end-to-end,
+// trains, and learns SOME dribbling (scores at least once vs an idle keeper). A smoke + capability
+// test -- recurrent semi-gradient TD is noisier, so we don't gate it as hard as the feedforward one.
+void test_soccer_qlearn_rnn_runs() {
+  auto inNet = [](const Pose& b, const Pose& g) { return b.col == g.col && b.row >= g.row - 1 && b.row <= g.row + 1; };
+  RNet r; r.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
+  for (int c = 0; c < 8; c++) qTrainSoccerRnn(r, 3u + 101u * (uint32_t)(8 - c), 1000, c * 1000, 8000);
+  TEST_ASSERT_TRUE(r.trained);
+  Maze m; Pose s0, s1, ball, g0, g1;
+  MazeGen::generateSoccerPitch(m, 1, s0, s1, ball, g0, g1);
+  int scored = 0;
+  for (int k = 0; k < 5; k++) {
+    Program me = rnnProgram(r), idle;
+    Pose a = s0; a.row = (int8_t)(g0.row + (k - 2));
+    if (!m.isWalkable(a.row, a.col)) a = s0;
+    Arena ar; ar.setup(&m, &me, &idle, a, s1, MatchType::SOCCER, 300);
+    ar.configSoccer(ball, g0, g1);
+    ar.run();
+    if (inNet(ar.ball(), g0)) scored++;
+  }
+  TEST_ASSERT_TRUE(scored >= 1);             // learns at least some reward-driven dribbling
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_soccer_push_into_goal);
   RUN_TEST(test_soccer_two_bots_match_resolves);
   RUN_TEST(test_soccer_two_bots_score_in_open_play);
+  RUN_TEST(test_soccer_qlearn_ff_scores);
+  RUN_TEST(test_soccer_qlearn_rnn_runs);
   RUN_TEST(test_soccer_pitch_walled_with_mouths);
   RUN_TEST(test_soccer_deterministic);
   RUN_TEST(test_soccer_taught_brain_scores);

@@ -208,7 +208,6 @@ void ArenaTrainScreen::writeBackEditBrain() {
 // Switch Race <-> Sumo: different board (Sumo has no goal), different fitness, fresh training.
 void ArenaTrainScreen::setMode(MatchType t) {
   _matchType = t;
-  if (t == MatchType::SOCCER) _rnn = false;   // soccer's teacher (distillSoccer) is feedforward-only
   _animating = false; _qLearning = false;
   setupBoard();
   buildOpponent(_oppIdx);
@@ -444,7 +443,7 @@ void ArenaTrainScreen::draw() {
   button(g, R_EVO, (_animating && !_qLearning) ? "..." : "Evolve", _rnn ? C_DIM : C_FUNC, C_PANEL);
   // Q-Learn (reward): FF hunts in Battle; RNN learns mazes in Race (memory helps) and CAN be tried
   // on Battle too (where it flounders -- a deliberate "match the method to the problem" lesson).
-  bool qOk = (sumo || _rnn) && _matchType != MatchType::SOCCER;  // FF+Race & soccer have no Q engine
+  bool qOk = sumo || _rnn || _matchType == MatchType::SOCCER;   // only FF+Race has no Q engine
   button(g, R_QLRN, (_animating && _qLearning) ? "..." : "Q-Learn", qOk ? C_MOVE : C_DIM, C_PANEL);
   // edit-link (opened from the editor): "< Editor" bails out (no change), "Use it >" writes the
   // brain back into the program. From the Arena menu: "Save" to library, "Fight! >" to battle.
@@ -496,6 +495,7 @@ void ArenaTrainScreen::drawNet() {
                                                    : (_beatsAI ? "WINS!" : "racing");
   if (_saved && _savedIdx >= 0 && _savedIdx < (int)_profile->library.size())
     snprintf(st, sizeof(st), "saved as \"%s\" -> My Bots", _profile->library[_savedIdx].name.c_str());
+  else if (_animating && _qLearning && _matchType == MatchType::SOCCER) snprintf(st, sizeof(st), "Q-learning... (reward: shove the ball into the goal)");
   else if (_animating && _qLearning) snprintf(st, sizeof(st), "Q-learning... (reward: hunt %s, then zap)", _oppName.c_str());
   else if (_animating) snprintf(st, sizeof(st), "learning... gen %d  (you green vs %s red)", _evo.gen, _oppName.c_str());
   else snprintf(st, sizeof(st), "you(green) vs %s(red): %s", _oppName.c_str(), verb);
@@ -538,7 +538,12 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         // The brain is trained directly, so keep _taught=true (don't let evaluateAndTrace overwrite).
         uint32_t base = _profile ? _profile->seedBase : 7u;
         int done = (_qChunks - _animLeft) * 1000, total = _qChunks * 1000;
-        if (_rnn && _matchType == MatchType::SUMO) {
+        if (_matchType == MatchType::SOCCER) {
+          // reward-driven dribble: get behind the ball, shove it into the goal (no teacher). FF and
+          // RNN share the same MDP -- the recurrent one is noisier (BPTT), the FF more reliable.
+          if (_rnn) qTrainSoccerRnn(rbrain(), base + 101u * (uint32_t)_animLeft, 1000, done, total, _knobs.explore);
+          else      qTrainSoccer(_brain,     base + 101u * (uint32_t)_animLeft, 1000, done, total, _knobs.explore);
+        } else if (_rnn && _matchType == MatchType::SUMO) {
           // recurrent Q on the reactive BATTLE hunt -- intentionally available so a kid can SEE it
           // flounder (memory is noise here); the contrast with FF Q-Learn is the lesson.
           qTrainHunterRnn(rbrain(), base + 101u * (uint32_t)_animLeft, 1000, done, total, _knobs.explore);
@@ -612,8 +617,8 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     _animating = false;
     uint32_t seed = _profile ? _profile->seedBase : 7u;
     if (_matchType == MatchType::SOCCER) {
-      _brain.lr = _knobs.lr;
-      distillSoccer(_brain, seed, 5000 * _knobs.rounds);          // dribble the ball into the goal (FF)
+      if (_rnn) { rbrain().lr = _knobs.lr * 0.33f; distillSoccerRnn(rbrain(), seed, 1200 * _knobs.rounds); rbrain().trained = true; }
+      else      { _brain.lr = _knobs.lr; distillSoccer(_brain, seed, 5000 * _knobs.rounds); }  // dribble into the goal
     } else if (_rnn) {
       // recurrent brain: BPTT over chase episodes (Battle) or maze runs (Race) -- a memory fighter.
       // RNN BPTT is touchier than FF, so the LR knob is damped to a third (its tuned default is 0.1).
@@ -630,7 +635,6 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     }
     _taught = true; _saved = false; _curveLen = 0; evaluateAndTrace(); pushCurve(); hal::audio.blip(); draw();
   } else if (R_BTYPE.contains(tx, ty)) {
-    if (_matchType == MatchType::SOCCER) { hal::audio.fail(); return app::Signal::NONE; }  // soccer is FF-only
     // flip feedforward <-> RNN: it's a fresh brain of the new type, so clear training state
     _rnn = !_rnn;
     _animating = false; _qLearning = false; _curveLen = 0;
@@ -646,8 +650,7 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       hal::audio.blip();
     }
   } else if (R_QLRN.contains(tx, ty)) {
-    bool noQ = (_matchType == MatchType::RACE && !_rnn)         // FF race has no Q engine...
-            || _matchType == MatchType::SOCCER;                 // ...and soccer trains via Teach/Evolve
+    bool noQ = (_matchType == MatchType::RACE && !_rnn);        // only FF race has no Q engine
     if (noQ) { hal::audio.fail(); }
     else {
       // reward-driven training, animated in chunks so the kid watches it learn without a long

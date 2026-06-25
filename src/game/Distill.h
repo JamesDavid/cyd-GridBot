@@ -42,6 +42,25 @@ bool distillHunterRnn(RNet& brain, uint32_t seed, int episodes);
 // from those two bearings. One call = a competent soccer bot; call again to refine. In place.
 bool distillSoccer(Net& brain, uint32_t seed, int epochs);
 
+// RNN imitation soccer Teach (BPTT over the expert dribble) -- the recurrent counterpart of
+// distillSoccer, so the brain-type toggle can teach a memory soccer brain.
+bool distillSoccerRnn(RNet& brain, uint32_t seed, int episodes);
+
+// SOCCER Q-LEARNING (reinforcement, no teacher): the brain's outputs are Q-values; the agent plays
+// dribble episodes on the walled pitch (no opponent) -- reward = shove the ball into the goal (+1),
+// shaped by the ball closing on the goal -- and nudges Q(s,a) toward r + gamma*max Q(s'). Discovers
+// "get behind the ball, push it home" from reward alone, the soccer counterpart of qTrainHunter/
+// qTrainMaze. `globalDone`/`globalTotal` decay exploration smoothly across a chunked UI run;
+// `epsScale` scales it (the Arena trainer's "Explore" knob). In place; call again to keep learning.
+bool qTrainSoccer(Net& brain, uint32_t seed, int episodes, int globalDone = 0, int globalTotal = 0,
+                  float epsScale = 1.0f);
+
+// RECURRENT soccer Q-learning: the same dribble MDP as qTrainSoccer, but the policy is a memory brain
+// (RNet) learned by unrolled semi-gradient TD (RNet::trainEpisodeQ) -- the recurrent reward path for
+// soccer, alongside the feedforward qTrainSoccer. In place; chunk-friendly via globalDone/globalTotal.
+bool qTrainSoccerRnn(RNet& brain, uint32_t seed, int episodes, int globalDone = 0, int globalTotal = 0,
+                     float epsScale = 1.0f);
+
 // Q-LEARNING (reinforcement, no teacher): the brain's 5 sigmoid outputs are Q-values; we play
 // simplified battle episodes (the learner moves, the foe stands) and nudge Q(s,a) toward
 // r + gamma*max Q(s'). Reward = land a zap on an adjacent foe (+1, a win); ring yourself out

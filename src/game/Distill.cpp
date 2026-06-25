@@ -330,6 +330,171 @@ bool distillSoccer(Net& brain, uint32_t seed, int epochs) {
   return true;
 }
 
+// --- SOCCER reinforcement learning (reward-driven, no teacher) -------------------------------
+// The MDP: one bot dribbles a ball into its goal on the walled pitch (no opponent). Reward = +1 for
+// shoving the ball into the goal mouth (terminal), with shaping for the ball getting NEARER the goal
+// each step. Senses match the soccer Arena: target bearing (4-6) = the ball, "enemy" bearing (7-9) =
+// the goal. The qSoccerStep transition is shared by the feedforward and recurrent learners so they
+// optimise the same problem (and the same pitch distillSoccer imitates).
+static int ballGoalDist(const Pose& ball, const Pose& goal) {
+  int dr = ball.row - goal.row, dc = ball.col - goal.col;
+  return (dr < 0 ? -dr : dr) + (dc < 0 ? -dc : dc);
+}
+static float qSoccerStep(const Maze& m, const Pose& me, const Pose& ball, const Pose& goal,
+                         int act, Pose& nm, Pose& nball, bool& terminal) {
+  int dr, dc; facingDelta(me.facing, dr, dc);
+  int ar = me.row + dr, ac = me.col + dc;
+  int oldD = ballGoalDist(ball, goal);
+  nm = me; nball = ball; terminal = false; float r = 0.0f;
+  if (act == 1)      { nm.facing = turnLeft(me.facing);  r = -0.01f; }
+  else if (act == 2) { nm.facing = turnRight(me.facing); r = -0.01f; }
+  else if (act == 3 || act == 4) { r = -0.03f; }              // jump / zap: no-op in soccer (a waste)
+  else {                                                      // FORWARD
+    if (!m.inBounds(ar, ac) || !m.isWalkable(ar, ac)) { r = -0.05f; }        // wall / edge -> bonk, stay
+    else if (ar == ball.row && ac == ball.col) {              // step onto the ball -> shove it ahead
+      int br = ball.row + dr, bc = ball.col + dc;
+      bool intoGoal = (bc == goal.col && br >= goal.row - 1 && br <= goal.row + 1);
+      if (intoGoal) { nball.row = (int8_t)br; nball.col = (int8_t)bc; nm.row = (int8_t)ar; nm.col = (int8_t)ac; r = 1.0f; terminal = true; }
+      else if (m.inBounds(br, bc) && m.isWalkable(br, bc)) { nball.row = (int8_t)br; nball.col = (int8_t)bc; nm.row = (int8_t)ar; nm.col = (int8_t)ac; }
+      else { r = -0.05f; }                                    // ball against a wall -> can't push, stay
+    } else { nm.row = (int8_t)ar; nm.col = (int8_t)ac; }      // free step
+  }
+  if (!terminal) r += 0.05f * (float)(oldD - ballGoalDist(nball, goal));     // shaping: ball nearer the goal
+  return r;
+}
+
+// Set up a soccer training scenario on pitch `m` (goal = g0). Curriculum: when `near`, the ball
+// starts near the goal with the bot right behind it, so the +1 win is reached early and propagates;
+// else both are random on interior floor. The relative senses mean a brain that learns to attack g0
+// works for either side at runtime (bot 1 just sees its own goal in the same bearing slots).
+static void soccerScenario(const Maze& m, Rng& rng, const Pose& g0, bool near, Pose& ball, Pose& me) {
+  int rows = m.rows(), cols = m.cols();
+  do {
+    if (near) { ball.row = (int8_t)(g0.row + (int)rng.below(3) - 1); ball.col = (int8_t)(cols - 2 - (int)rng.below(2)); }
+    else      { ball.row = (int8_t)rng.below(rows); ball.col = (int8_t)rng.below(cols); }
+  } while (!m.isWalkable(ball.row, ball.col) || (ball.row == g0.row && ball.col == g0.col));
+  do {
+    if (near) { me.row = ball.row; me.col = (int8_t)(ball.col - 1); }
+    else      { me.row = (int8_t)rng.below(rows); me.col = (int8_t)rng.below(cols); }
+    me.facing = (Facing)rng.below(4);
+  } while (!m.isWalkable(me.row, me.col) || (me.row == ball.row && me.col == ball.col));
+}
+
+bool qTrainSoccer(Net& brain, uint32_t seed, int episodes, int globalDone, int globalTotal, float epsScale) {
+  if (globalTotal <= 0) globalTotal = episodes;
+  if (episodes < 1) return false;
+  Rng rng(seed ^ 0x50cce700u);
+  Maze m; Pose ps0, ps1, kick, g0, g1;
+  MazeGen::generateSoccerPitch(m, seed, ps0, ps1, kick, g0, g1);
+  const int NA = 5; const float G = 0.92f;
+  float in[SENSOR_COUNT], nin[SENSOR_COUNT], out[NET_MAX_OUT], nout[NET_MAX_OUT];
+  for (int e = 0; e < episodes; e++) {
+    Pose goal = g0, ball, me;
+    soccerScenario(m, rng, g0, (rng.below(2) == 0), ball, me);
+    EnemyView ev; ev.pose = &goal;                 // goal bearing in the "enemy" slots
+    float eps = 0.05f + 0.30f * epsScale * (1.0f - (float)(globalDone + e) / (float)globalTotal);
+    for (int step = 0; step < 40; step++) {
+      senseEgoTo(m, me, &ev, ball.row, ball.col, in);
+      brain.forward(in, out);
+      int bestI = 0; for (int k = 1; k < NA; k++) if (out[k] > out[bestI]) bestI = k;
+      int act = (rng.below(1000) < (uint32_t)(eps * 1000.0f)) ? (int)rng.below(NA) : bestI;
+      Pose nm, nball; bool terminal; float r = qSoccerStep(m, me, ball, goal, act, nm, nball, terminal);
+      float target = r;
+      if (!terminal) {
+        senseEgoTo(m, nm, &ev, nball.row, nball.col, nin);
+        brain.forward(nin, nout);
+        float mx = nout[0]; for (int k = 1; k < NA; k++) if (nout[k] > mx) mx = nout[k];
+        target += G * mx;
+      }
+      if (target < 0.0f) target = 0.0f; else if (target > 1.0f) target = 1.0f;
+      float tg[NET_MAX_OUT]; for (int k = 0; k < NET_MAX_OUT; k++) tg[k] = out[k];
+      tg[act] = target;
+      brain.trainStep(in, tg);
+      me = nm; ball = nball;
+      if (terminal) break;
+    }
+  }
+  return true;
+}
+
+bool qTrainSoccerRnn(RNet& brain, uint32_t seed, int episodes, int globalDone, int globalTotal, float epsScale) {
+  if (globalTotal <= 0) globalTotal = episodes;
+  if (episodes < 1) return false;
+  Rng rng(seed ^ 0x50cce700u);
+  Maze m; Pose ps0, ps1, kick, g0, g1;
+  MazeGen::generateSoccerPitch(m, seed, ps0, ps1, kick, g0, g1);
+  const int NA = 5; const float G = 0.92f;
+  float *rew = gQrew, *qmax = gQmax, *qt = gQt;   // shared scratch (saves DRAM)
+  float out[RNET_MAX_OUT];
+  for (int e = 0; e < episodes; e++) {
+    Pose goal = g0, ball, me;
+    soccerScenario(m, rng, g0, (rng.below(2) == 0), ball, me);
+    EnemyView ev; ev.pose = &goal;
+    brain.resetState();
+    float eps = 0.05f + 0.30f * epsScale * (1.0f - (float)(globalDone + e) / (float)globalTotal);
+    int T = 0;
+    for (int step = 0; step < RNET_MAX_T && step < 40; step++) {
+      float* x = gEpiX + T * SENSOR_COUNT;
+      senseEgoTo(m, me, &ev, ball.row, ball.col, x);
+      brain.step(x, out);                          // Q(s_t); advances the recurrent memory
+      int bestI = 0; for (int k = 1; k < NA; k++) if (out[k] > out[bestI]) bestI = k;
+      int act = (rng.below(1000) < (uint32_t)(eps * 1000.0f)) ? (int)rng.below(NA) : bestI;
+      qmax[T] = out[bestI]; gEpiAct[T] = act;
+      Pose nm, nball; bool terminal; rew[T] = qSoccerStep(m, me, ball, goal, act, nm, nball, terminal);
+      T++; me = nm; ball = nball;
+      if (terminal) break;
+    }
+    if (T <= 0) continue;
+    for (int t = 0; t < T; t++) {
+      float target = rew[t] + ((t + 1 < T) ? G * qmax[t + 1] : 0.0f);
+      if (target < 0.0f) target = 0.0f; else if (target > 1.0f) target = 1.0f;
+      qt[t] = target;
+    }
+    brain.trainEpisodeQ(gEpiX, gEpiAct, qt, T);
+  }
+  brain.trained = true;
+  return true;
+}
+
+// RNN imitation soccer "Teach" -- BPTT over the expert dribble, the recurrent counterpart of
+// distillSoccer (so the brain-type toggle can teach a memory soccer brain too).
+bool distillSoccerRnn(RNet& brain, uint32_t seed, int episodes) {
+  if (episodes < 1) return false;
+  Rng rng(seed);
+  Maze m; Pose ps0, ps1, kick, g0, g1;
+  MazeGen::generateSoccerPitch(m, seed, ps0, ps1, kick, g0, g1);
+  (void)g1;
+  for (int e = 0; e < episodes; e++) {
+    Pose goal = g0, ball, me;            // attack the right mouth; relative senses generalise to either
+    soccerScenario(m, rng, g0, (rng.below(2) == 0), ball, me);
+    EnemyView ev; ev.pose = &goal;
+    int T = 0;
+    for (int step = 0; step < RNET_MAX_T && step < 36; step++) {
+      senseEgoTo(m, me, &ev, ball.row, ball.col, gEpiX + T * SENSOR_COUNT);
+      int a = idealSoccerAction(m, me, ball, goal);
+      gEpiAct[T] = a; T++;
+      if (a == 1) me.facing = turnLeft(me.facing);
+      else if (a == 2) me.facing = turnRight(me.facing);
+      else {
+        int dr, dc; facingDelta(me.facing, dr, dc);
+        int ar = me.row + dr, ac = me.col + dc;
+        if (!m.inBounds(ar, ac) || !m.isWalkable(ar, ac)) break;
+        if (ar == ball.row && ac == ball.col) {
+          int nr = ball.row + dr, nc = ball.col + dc;
+          bool intoGoal = (nc == goal.col && nr >= goal.row - 1 && nr <= goal.row + 1);
+          if (!intoGoal && !m.isWalkable(nr, nc)) break;
+          ball.row = (int8_t)nr; ball.col = (int8_t)nc;
+          if (intoGoal) break;
+        }
+        me.row = (int8_t)ar; me.col = (int8_t)ac;
+      }
+    }
+    if (T > 0) brain.trainEpisode(gEpiX, gEpiAct, T);
+  }
+  brain.trained = true;
+  return true;
+}
+
 bool distillHunterRnn(RNet& brain, uint32_t seed, int episodes) {
   Rng rng(seed);
   Maze m; Pose s0, s1;
