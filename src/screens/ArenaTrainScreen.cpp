@@ -362,7 +362,9 @@ void ArenaTrainScreen::draw() {
   auto& g = hal::display.gfx();
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
-  label(g, 6, 3, "Train a fighter", C_FUNC, textdatum_t::top_left, 2);
+  const char* title = _matchType == MatchType::SOCCER ? "Train a soccer bot"
+                    : _matchType == MatchType::RACE   ? "Train a racer" : "Train a fighter";
+  label(g, 6, 3, title, C_FUNC, textdatum_t::top_left, 2);
   char hd[28];
   if (_animating && _qLearning) snprintf(hd, sizeof(hd), "Q-learn %d/%d", _qChunks - _animLeft, _qChunks);
   else if (_taught) snprintf(hd, sizeof(hd), "taught  %s", _beatsAI ? "wins!" : "vs");

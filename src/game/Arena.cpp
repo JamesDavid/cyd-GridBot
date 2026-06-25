@@ -205,11 +205,11 @@ ArenaOutcome Arena::tick() {
       if (p.row == _ball.row && p.col == _ball.col)
         if (!pushBall(i)) _bot[i].it.setPose(before[i]);
     }
-    // Loose-ball "referee": if nobody has touched the ball for a while, it drifts toward the goal of
-    // whichever bot is better-positioned (nearer it). This un-sticks a midfield deadlock between two
-    // equally-good bots -- the ball keeps flowing and the bot winning the position battle gets the
-    // edge, instead of both freezing a tile apart forever.
-    if (_ball == ballWas) { if (++_ballStall >= 16 && !_scored[0] && !_scored[1]) { refDriftBall(); _ballStall = 0; } }
+    // Loose-ball "referee": only if nobody has touched the ball for a GOOD while does it drift toward
+    // the nearer goal -- a last-resort against a true midfield deadlock. Now that the bots sense the
+    // rival and can out-maneuver, they usually finish on their own first; the longer fuse (was 16)
+    // keeps goals bot-driven and makes the ref's nudge rare.
+    if (_ball == ballWas) { if (++_ballStall >= 28 && !_scored[0] && !_scored[1]) { refDriftBall(); _ballStall = 0; } }
     else _ballStall = 0;
   }
 
