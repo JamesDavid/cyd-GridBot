@@ -523,6 +523,14 @@ static const char* condName(Cond c) {
     case ENEMY_LEFT: return "foe <";
     case ENEMY_RIGHT: return "foe >";
     case BLOCKED_AHEAD: return "wall/pit";
+    case BALL_AHEAD: return "ball ^";
+    case BALL_LEFT: return "ball <";
+    case BALL_RIGHT: return "ball >";
+    case BALL_NEAR: return "ball near";
+    case NET_LEFT: return "net <";
+    case NET_RIGHT: return "net >";
+    case WALL_LEFT: return "wall <";
+    case WALL_RIGHT: return "wall >";
   }
   return "?";
 }
@@ -825,17 +833,10 @@ void GameScreen::handleListTap(int x, int y) {
             sn->type = (sn->type == N_REPEAT_UNTIL) ? N_IF : N_REPEAT_UNTIL;
             hal::audio.blip(); drawProgramList(); return;
           }
-          if (condRect(yy).contains(x, y)) {       // wall -> pit -> wall/pit -> goal -> [foe senses] -> wall
-            bool foes = _profile && _profile->unlocks.sense;  // enemy senses appear with Battle (Sense, L15)
-            Cond c = sn->cond;
-            if (c == WALL_AHEAD) c = PIT_AHEAD;
-            else if (c == PIT_AHEAD) c = BLOCKED_AHEAD;
-            else if (c == BLOCKED_AHEAD) c = AT_GOAL;
-            else if (c == AT_GOAL) c = foes ? ENEMY_AHEAD : WALL_AHEAD;
-            else if (c == ENEMY_AHEAD) c = ENEMY_NEAR;
-            else if (c == ENEMY_NEAR) c = ENEMY_LEFT;
-            else if (c == ENEMY_LEFT) c = ENEMY_RIGHT;
-            else c = WALL_AHEAD;
+          if (condRect(yy).contains(x, y)) {       // obstacles -> goal -> [arena senses] -> side walls
+            bool foes = _profile && _profile->unlocks.sense;  // arena senses appear with Battle (Sense, L15)
+            Cond c = nextCond(sn->cond);
+            if (!foes && c == ENEMY_AHEAD) c = WALL_LEFT;     // skip the foe/ball/net block until unlocked
             sn->cond = c;
             hal::audio.blip(); drawProgramList(); return;
           }

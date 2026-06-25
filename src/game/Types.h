@@ -18,8 +18,38 @@ enum Cmd : uint8_t { CMD_FWD, CMD_BACK, CMD_TURN_L, CMD_TURN_R, CMD_JUMP,
 // BLOCKED_AHEAD = wall OR pit (the kid's "can't go straight" — handy for wall-followers).
 // ENEMY_LEFT/RIGHT = the foe is off to that side (ego-relative) — used by the Sumo seeker so
 // a code bot can TURN toward the enemy and line up a zap. Appended to keep byte values stable.
+// SOCCER conditions (appended, byte-stable) let a kid HAND-CODE a soccer bot with the same senses
+// the brain trains on: BALL_* = where the ball is, NET_* = which way your goal is, and the RIVAL is
+// the existing ENEMY_* (in soccer the "enemy" view points at the opposing bot). WALL_LEFT/RIGHT fill
+// the old gap (the brain always sensed side walls; now the blocks can too).
 enum Cond : uint8_t { WALL_AHEAD, PIT_AHEAD, AT_GOAL, ENEMY_AHEAD, ENEMY_NEAR, BLOCKED_AHEAD,
-                      ENEMY_LEFT, ENEMY_RIGHT };
+                      ENEMY_LEFT, ENEMY_RIGHT,
+                      BALL_AHEAD, BALL_LEFT, BALL_RIGHT, BALL_NEAR, NET_LEFT, NET_RIGHT,
+                      WALL_LEFT, WALL_RIGHT };
+
+// The editor's IF/UNTIL condition cycle (tap a condition to advance to the next). Shared by both
+// editors so the order is consistent: obstacles -> goal -> foe -> SOCCER (ball, net) -> side walls.
+inline Cond nextCond(Cond c) {
+  switch (c) {
+    case WALL_AHEAD:    return PIT_AHEAD;
+    case PIT_AHEAD:     return BLOCKED_AHEAD;
+    case BLOCKED_AHEAD: return AT_GOAL;
+    case AT_GOAL:       return ENEMY_AHEAD;
+    case ENEMY_AHEAD:   return ENEMY_NEAR;
+    case ENEMY_NEAR:    return ENEMY_LEFT;
+    case ENEMY_LEFT:    return ENEMY_RIGHT;
+    case ENEMY_RIGHT:   return BALL_AHEAD;
+    case BALL_AHEAD:    return BALL_LEFT;
+    case BALL_LEFT:     return BALL_RIGHT;
+    case BALL_RIGHT:    return BALL_NEAR;
+    case BALL_NEAR:     return NET_LEFT;
+    case NET_LEFT:      return NET_RIGHT;
+    case NET_RIGHT:     return WALL_LEFT;
+    case WALL_LEFT:     return WALL_RIGHT;
+    case WALL_RIGHT:    return WALL_AHEAD;
+  }
+  return WALL_AHEAD;
+}
 
 // AST node kinds (SPEC §5.4). N_NEURO (NeuroBot) runs a trained brain: it senses, picks
 // an action via argmax, and executes it — a learned reactive policy embedded in code.

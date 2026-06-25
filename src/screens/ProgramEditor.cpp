@@ -45,6 +45,14 @@ static const char* condName(Cond c) {
     case ENEMY_LEFT: return "foe <";
     case ENEMY_RIGHT: return "foe >";
     case BLOCKED_AHEAD: return "wall/pit";
+    case BALL_AHEAD: return "ball ^";
+    case BALL_LEFT: return "ball <";
+    case BALL_RIGHT: return "ball >";
+    case BALL_NEAR: return "ball near";
+    case NET_LEFT: return "net <";
+    case NET_RIGHT: return "net >";
+    case WALL_LEFT: return "wall <";
+    case WALL_RIGHT: return "wall >";
   }
   return "?";
 }
@@ -424,16 +432,10 @@ ProgramEditor::Action ProgramEditor::handleListTap(int x, int y) {
             hal::audio.blip(); drawProgramList(); return Action::NONE;
           }
           if (condRect(yy).contains(x, y)) {
-            // wall -> pit -> wall/pit -> goal -> foe ahead -> foe near -> foe left -> foe right
-            // -> wall. The foe senses are arena conditions, exposed here too so a kid can write
-            // and test a battle-bot's hunting logic (they simply read false with no foe).
-            sn->cond = (sn->cond == WALL_AHEAD) ? PIT_AHEAD
-                     : (sn->cond == PIT_AHEAD) ? BLOCKED_AHEAD
-                     : (sn->cond == BLOCKED_AHEAD) ? AT_GOAL
-                     : (sn->cond == AT_GOAL) ? ENEMY_AHEAD
-                     : (sn->cond == ENEMY_AHEAD) ? ENEMY_NEAR
-                     : (sn->cond == ENEMY_NEAR) ? ENEMY_LEFT
-                     : (sn->cond == ENEMY_LEFT) ? ENEMY_RIGHT : WALL_AHEAD;
+            // obstacles -> goal -> foe -> SOCCER (ball, net) -> side walls (shared nextCond order).
+            // The foe/ball/net senses are arena conditions, exposed here too so a kid can write and
+            // test a battle- or soccer-bot's logic (they simply read false with no foe/ball/net).
+            sn->cond = nextCond(sn->cond);
             hal::audio.blip(); drawProgramList(); return Action::NONE;
           }
         } else if (sn->type == N_CALL) {

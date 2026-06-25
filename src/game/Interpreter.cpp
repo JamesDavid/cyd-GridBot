@@ -60,6 +60,34 @@ bool Interpreter::evalCond(Cond c) const {
       int side = er * dc - ec * dr;        // >0 => foe to the right, <0 => to the left
       return (c == ENEMY_RIGHT) ? side > 0 : side < 0;
     }
+    // ---- Soccer senses (hand-coding) -- mirror the brain's ball/net/rival inputs ----
+    case BALL_AHEAD: return _enemy && _enemy->target &&
+                            _enemy->target->row == ar && _enemy->target->col == ac;
+    case BALL_NEAR:  return _enemy && _enemy->target &&
+                            (absv(_enemy->target->row - _pose.row) +
+                             absv(_enemy->target->col - _pose.col)) <= _enemy->nearDist;
+    case BALL_LEFT:
+    case BALL_RIGHT: {
+      if (!_enemy || !_enemy->target) return false;
+      int er = _enemy->target->row - _pose.row, ec = _enemy->target->col - _pose.col;
+      int side = er * dc - ec * dr;
+      return (c == BALL_RIGHT) ? side > 0 : side < 0;
+    }
+    case NET_LEFT:
+    case NET_RIGHT: {
+      if (!_enemy || !_enemy->net) return false;
+      int er = _enemy->net->row - _pose.row, ec = _enemy->net->col - _pose.col;
+      int side = er * dc - ec * dr;
+      return (c == NET_RIGHT) ? side > 0 : side < 0;
+    }
+    case WALL_LEFT: {
+      int ldr, ldc; facingDelta(turnLeft(_pose.facing), ldr, ldc);
+      return !_maze->isWalkable(_pose.row + ldr, _pose.col + ldc);
+    }
+    case WALL_RIGHT: {
+      int rdr, rdc; facingDelta(turnRight(_pose.facing), rdr, rdc);
+      return !_maze->isWalkable(_pose.row + rdr, _pose.col + rdc);
+    }
   }
   return false;
 }
