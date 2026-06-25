@@ -279,7 +279,7 @@ What the radio sends: a whole bot — its program **and its trained brain** (inc
 **Classroom / two-player activities** (drop these in as **📡 Try together** moments):
 - **Teacher "boss bot."** The teacher trains a NeuroBot and sends it to everyone; each student must train one that beats it. Instant, self-levelling challenge — and it makes *train → save → battle* purposeful.
 - **Starter-brain handout.** Teacher sends a half-trained brain; students **fine-tune** it to their own maze. This is the *Transfer / Data* lesson made social ("you inherited the teacher's skills — now generalise").
-- **Trade & battle.** Students swap brains and race/sumo them. Comparing a friend's bot to yours is the best debugging prompt there is.
+- **Trade & battle.** Students swap brains and race, play soccer, or sumo them. Comparing a friend's bot to yours is the best debugging prompt there is.
 - **Class tournament (the Room).** **Arena → Radio → Room** gathers *every* nearby device's fighter into one shared bracket; the host picks the **discipline** (Race, Soccer, or Battle) and starts it, and each board replays the *same* matches from a shared seed — so every screen shows the identical Cup and crowns the same champion, no central scoreboard needed. Verified on two boards; bring more for a real class bracket. The natural capstone after the fighter trainer.
 - **Fleet learning (Data lesson tie-in).** Several students each contribute examples/brains → the honest, kid-scale version of "more, varied data = a smarter brain," with zero internet.
 - **Collect & assess.** The teacher pulls students' bots in to review who used what (the Stats screen tracks brains-trained / fighters-saved / win rate).

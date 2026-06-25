@@ -115,7 +115,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![Stats](docs/img/stats.png) |
 |:--|
-| **Stats.** Level reached, total stars, win rate, bonks/falls, streak, a **NeuroBot** line (brains trained / levels won with a brain / fighters saved), and a **command-usage bar chart** so you can see which powers a kid leans on — locked ones greyed with *when* they unlock. Up top: **Badges N/16** (tap to open the gallery). From here you can **Edit** name/colour, **Draw** a custom sprite, open the **Shop**, or (behind two confirmations) delete the player. |
+| **Stats.** Level reached, total stars, win rate, bonks/falls, streak, a **NeuroBot** line (brains trained / levels won with a brain / fighters saved), and a **command-usage bar chart** so you can see which powers a kid leans on — locked ones greyed with *when* they unlock. Up top: **Badges N/17** (tap to open the gallery). From here you can **Edit** name/colour, **Draw** a custom sprite, open the **Shop**, or (behind two confirmations) delete the player. |
 
 | ![Badges gallery](docs/img/badges.png) |
 |:--|
@@ -138,6 +138,11 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 | **A KidPix-style pixel editor.** Draw your own 16×16 **character** *and* **goal** with pencil / eraser / fill / **mirror**, an 8-colour palette, and a big red **BOOM** button that blows the canvas up (with a sound) when you want to start over. Your custom robot then shows up in the actual game — and can be **traded to a friend** over the radio. |
 
 ### Arena — *pit your bots against each other*
+
+Three games on one deterministic match engine: **Race** (first to the goal), **Soccer** (shove a
+ball into the net), and **Battle** (Sumo — last bot standing). Every one is playable by a bot you
+**coded** with `if`-blocks *or* one you **trained** as a neural net — and any of them can be run as
+a one-off match, a local **Tournament**, or a multi-device **Room**.
 
 | ![Arena menu](docs/img/arena-menu.png) |
 |:--|
@@ -183,7 +188,7 @@ curve is designed to lead there — and then, at the very end, to flip it: once 
 
 | ![CodeLab](docs/img/codelab.png) |
 |:--|
-| **CodeLab** has a lesson for each core block, in unlock order — **Move**, **Jump**, **Repeat**, **Sense** (`if`), and **Functions**. |
+| **CodeLab** has a runnable lesson for each core block, in unlock order — **Move**, **Jump**, **Repeat**, **Sense** (`if`), **Functions**, **Brain** (neurosymbolic: code + a trained net), and **Debug** (read the failure, change one line, re-run) — seven in all. |
 
 | ![A CodeLab lesson](docs/img/codelab-lesson.png) |
 |:--|
@@ -324,7 +329,7 @@ It is **fully offline** — no WiFi, no accounts, no data leaves the device.
 - **One shared editor, three hosts** — the campaign, Puzzle Race, and the lessons all render
   the same blocks without a second code path.
 - **A from-scratch UI on a no-PSRAM ESP32** — no framebuffer; dirty-rect tile rendering and a
-  one-tile sprite keep RAM tiny (~33% RAM, ~34% flash).
+  one-tile sprite keep RAM tiny (~38% RAM, ~38% flash).
 - **A deterministic multi-bot arena** — same inputs → byte-identical match log, proven by
   test, which hands you fair rematches and replays for free.
 - **Neural nets on a no-PSRAM ESP32** — a tiny MLP + backprop, Q-learning, evolution, and
