@@ -108,6 +108,16 @@ void ArenaScreen::buildCandidates(bool sumo) {
     for (auto& e : _profile->library)
       _cands.push_back({e.name, e.program, _profile->avatar, "your bot", false, false});
   }
+  // SOCCER house team: soccer-player-style names, each a pre-trained dribbler (setupMatchBot
+  // distills a soccer brain seeded by the avatar, so they play well out of the box and differ).
+  if (_type == MatchType::SOCCER) {
+    _cands.push_back({"Strika",  Program{}, 7, "the striker",     true, false, true});
+    _cands.push_back({"Dribbla", Program{}, 2, "tricky feet",     true, false, true});
+    _cands.push_back({"Volley",  Program{}, 4, "the big boot",    true, false, true});
+    _cands.push_back({"Nutmeg",  Program{}, 1, "skill-move star", true, false, true});
+    _cands.push_back({"Boots",   Program{}, 3, "speedy winger",   true, false, true});
+    return;
+  }
   // House bots. The pure dashers (Rusty/Bolt) are Race-only filler -- in Battle they'd just
   // lose, so they're hidden. The real FIGHTERS show in both (and one is the Battle opponent).
   if (!sumo) {
@@ -450,8 +460,9 @@ void ArenaScreen::beginQuickBattle(Profile* profile, int libIdx, const char* opp
   _pick0 = (libIdx >= 0 && libIdx < nlib) ? libIdx : 0;
   _pick1 = -1;
   for (int i = 0; i < (int)_cands.size(); i++) if (_cands[i].name == oppName) { _pick1 = i; break; }
+  if (_pick1 < 0 && type == MatchType::SOCCER) _pick1 = houseBotIndex("Strika");  // a soccer house player
   if (_pick1 < 0) _pick1 = houseBotIndex("Vex");                 // opponent not in this roster -> Vex
-  if (_pick1 < 0 || _pick1 == _pick0) _pick1 = houseBotIndex("Ace");
+  if (_pick1 < 0 || _pick1 == _pick0) _pick1 = houseBotIndex(type == MatchType::SOCCER ? "Dribbla" : "Ace");
   if (_pick1 < 0) _pick1 = (_pick0 == 0 && _cands.size() > 1) ? 1 : 0;
   startMatch();                                // sets up the board + starts animating (BOARD phase)
 }
@@ -650,7 +661,7 @@ void ArenaScreen::setupMatchBot(int pick, const Pose& start) {
       c.prog.clear();
       uint32_t sd = 11u + (uint32_t)c.avatar * 13u;
       uint8_t bi = c.prog.addBrain(sd);
-      distillSoccer(c.prog.brains[bi], sd, 4000);
+      distillSoccer(c.prog.brains[bi], sd, 8000);   // high-epoch -> the house players actually score
       Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(bi)); c.prog.main.push_back(loop);
     }
     return;
