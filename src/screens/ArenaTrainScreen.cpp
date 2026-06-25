@@ -434,7 +434,8 @@ void ArenaTrainScreen::draw() {
     if (_saved && _savedIdx >= 0 && _savedIdx < (int)_profile->library.size())
       snprintf(leg, sizeof(leg), "saved as \"%s\" -> My Bots", _profile->library[_savedIdx].name.c_str());
     else if (firstFighter() && !_animating)
-      snprintf(leg, sizeof(leg), "Tap EVOLVE to train, then SAVE to battle!");
+      snprintf(leg, sizeof(leg), "Tap EVOLVE to train, then SAVE to %s!",
+               _matchType == gb::MatchType::SOCCER ? "play" : _matchType == gb::MatchType::RACE ? "race" : "battle");
     else snprintf(leg, sizeof(leg), "you  vs  %s", _oppName.c_str());
     label(g, SCREEN_W / 2, BOTBAR_Y - 9, leg,
           _saved ? C_GO : (firstFighter() ? C_ACCENT : C_DIM), textdatum_t::bottom_center);
@@ -451,10 +452,13 @@ void ArenaTrainScreen::draw() {
   bool qOk = sumo || _rnn || _matchType == MatchType::SOCCER;   // only FF+Race has no Q engine
   button(g, R_QLRN, (_animating && _qLearning) ? "..." : "Q-Learn", qOk ? C_MOVE : C_DIM, C_PANEL);
   // edit-link (opened from the editor): "< Editor" bails out (no change), "Use it >" writes the
-  // brain back into the program. From the Arena menu: "Save" to library, "Fight! >" to battle.
+  // brain back into the program. From the Arena menu: "Save" to library, then launch a match --
+  // the launch verb matches the game (Play! soccer, Race! a race, Fight! a battle).
   if (_editLink) button(g, R_SAVE, "< Editor", C_INK, C_PANEL);
   else           button(g, R_SAVE, _saved ? "saved!" : "Save", _saved ? C_DIM : C_ACCENT, C_PANEL);
-  button(g, R_BACK, _editLink ? "Use it >" : "Fight! >", C_GO, C_PANEL);
+  const char* go = _matchType == gb::MatchType::SOCCER ? "Play! >"
+                 : _matchType == gb::MatchType::RACE   ? "Race! >" : "Fight! >";
+  button(g, R_BACK, _editLink ? "Use it >" : go, C_GO, C_PANEL);
 }
 
 // The "watch it learn" panel: the brain's network graph (weights recolour as it trains) plus

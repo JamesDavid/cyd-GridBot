@@ -69,11 +69,11 @@ void PilotLessonScreen::draw() {
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Pilot: plan + steer", C_ACCENT, textdatum_t::top_left, 2);
-  label(g, 6, TOPBAR_H + 4, STATUS[_phase], _won ? C_GO : C_INK);
+  int sy = labelWrap(g, 6, TOPBAR_H + 4, SCREEN_W - 12, STATUS[_phase], _won ? C_GO : C_INK);
 
   if (_phase == 2) {
-    // the analogy, spelled out
-    int y = BAND_Y + 26;
+    // the analogy, spelled out (flowed below the wrapped status line)
+    int y = sy + 6;
     label(g, 14, y,      "PLANNER  -  decides WHERE to go", ui::rgb(120, 230, 245)); y += 22;
     label(g, 22, y,      "route / waypoints (the dots)", C_DIM); y += 26;
     label(g, 14, y,      "BRAIN    -  decides HOW to get there", C_ACCENT); y += 22;
@@ -82,6 +82,7 @@ void PilotLessonScreen::draw() {
     label(g, 14, y,      "Together they clear the whole campaign.", C_GO);
   } else {
     int tile, ox, oy; mazeGeom(tile, ox, oy);
+    if (oy < sy + 6) oy = sy + 6;   // keep the board clear of the wrapped status line
     for (int r = 0; r < _maze.rows(); r++)
       for (int c = 0; c < _maze.cols(); c++) {
         int x = ox + c * tile, y = oy + r * tile;
