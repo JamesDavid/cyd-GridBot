@@ -50,8 +50,11 @@ void Arena::configSoccer(const Pose& ball, const Pose& goal0, const Pose& goal1)
 bool Arena::pushBall(int mover) {
   int dr, dc; facingDelta(_bot[mover].it.pose().facing, dr, dc);
   int nr = _ball.row + dr, nc = _ball.col + dc;
-  bool intoGoal0 = (nr == _goal[0].row && nc == _goal[0].col);
-  bool intoGoal1 = (nr == _goal[1].row && nc == _goal[1].col);
+  // A goal is the END column +/- one row of the mouth centre (a 3-tile-tall mouth on the pitch;
+  // a single tile elsewhere). Anything in the mouth column at those rows counts as a score.
+  auto inGoal = [&](int i) { int rr = nr - _goal[i].row; return nc == _goal[i].col && rr >= -1 && rr <= 1; };
+  bool intoGoal0 = inGoal(0);
+  bool intoGoal1 = inGoal(1);
   // A goal tile is always scorable; otherwise the ball can only roll onto walkable floor.
   if (!intoGoal0 && !intoGoal1 && (!_maze->inBounds(nr, nc) || !_maze->isWalkable(nr, nc)))
     return false;

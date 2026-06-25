@@ -307,6 +307,33 @@ void generateSumoRing(Maze& out, uint32_t seed, Pose& s0, Pose& s1) {
   out.clearGoal();   // Sumo has no goal
 }
 
+void generateSoccerPitch(Maze& out, uint32_t seed, Pose& s0, Pose& s1,
+                         Pose& ball, Pose& goal0, Pose& goal1) {
+  (void)seed;  // a fixed, fair pitch (no random pillars -- the ball needs clear lanes to the mouths)
+  out.reset(MAZE_MAX_ROWS, MAZE_MAX_COLS);   // 8x10
+  int rows = out.rows(), cols = out.cols(), rmid = rows / 2;
+  out.fill(FLOOR);
+  out.clearGoal();   // drop any stale goal FIRST (clearGoal writes its old tile back to FLOOR)
+  // solid wall around the whole outside
+  for (int c = 0; c < cols; c++) { out.set(0, c, WALL); out.set(rows - 1, c, WALL); }
+  for (int r = 0; r < rows; r++) { out.set(r, 0, WALL); out.set(r, cols - 1, WALL); }
+  // carve a 3-tile goal mouth into the centre of each end wall (rmid-1..rmid+1 stay FLOOR)
+  for (int dr = -1; dr <= 1; dr++) {
+    out.set(rmid + dr, 0, FLOOR);          // left mouth  (bot 1 / goal1)
+    out.set(rmid + dr, cols - 1, FLOOR);   // right mouth (bot 0 / goal0)
+  }
+  goal0.row = (int8_t)rmid; goal0.col = (int8_t)(cols - 1);  // brain attacks the right
+  goal1.row = (int8_t)rmid; goal1.col = 0;                   // opponent attacks the left
+  ball.row = (int8_t)rmid;  ball.col = (int8_t)(cols / 2);   // kickoff in the centre circle
+  // starts: each bot in its own half, offset to DIFFERENT rows (one above centre, one below) so
+  // neither begins parked in the other's straight scoring lane -- an idle bot on the goal row would
+  // be an immovable roadblock (soccer bots bounce off each other, they don't shove).
+  s0.row = (int8_t)(rmid - 1); s0.col = 2;                  s0.facing = EAST;  // brain: upper-left
+  s1.row = (int8_t)(rmid + 1); s1.col = (int8_t)(cols - 3); s1.facing = WEST;  // foe: lower-right
+  out.set(s0.row, s0.col, START);
+  out.set(s1.row, s1.col, START);
+}
+
 int generateBoards(Maze* out, int maxOut, uint32_t seedBase, int level) {
   if (!isMultiLevel(level)) {
     generate(out[0], seedBase, level);

@@ -241,6 +241,16 @@ static int turnToward(Facing from, Facing want) { return (turnRight(from) == wan
 // OPPOSITE side of the ball from the goal. Get there, face the push direction, step forward (which
 // lands on the ball and shoves it goalward). Actions: 0 fwd, 1 turnL, 2 turnR, 3 jump (unused), 4 n/a.
 static int idealSoccerAction(const Maze& m, const Pose& me, const Pose& ball, const Pose& goal) {
+  // Opportunistic finish: if the ball is in the tile directly ahead and shoving it would move it
+  // CLOSER to the goal, just push -- don't fuss over the perfect push-point. This makes the policy
+  // commit (so a net imitating it actually finishes the goal instead of dithering a tile short).
+  { int fdr, fdc; facingDelta(me.facing, fdr, fdc);
+    if (me.row + fdr == ball.row && me.col + fdc == ball.col) {
+      int curD = (ball.row - goal.row) * (ball.row - goal.row) + (ball.col - goal.col) * (ball.col - goal.col);
+      int br = ball.row + fdr, bc = ball.col + fdc;
+      int newD = (br - goal.row) * (br - goal.row) + (bc - goal.col) * (bc - goal.col);
+      if (newD < curD && (m.isWalkable(br, bc) || (br == goal.row && bc == goal.col))) return 0;
+    } }
   int gdr = goal.row - ball.row, gdc = goal.col - ball.col;
   int pdr, pdc;
   if ((gdr < 0 ? -gdr : gdr) >= (gdc < 0 ? -gdc : gdc) && gdr != 0) { pdr = gdr < 0 ? -1 : 1; pdc = 0; }
@@ -259,15 +269,18 @@ static int idealSoccerAction(const Maze& m, const Pose& me, const Pose& ball, co
 
 bool distillSoccer(Net& brain, uint32_t seed, int epochs) {
   Rng rng(seed);
-  Maze m; Pose s0, s1;
-  MazeGen::generateSumoRing(m, seed, s0, s1);   // an open pitch (no internal walls)
+  // Train ON the real walled pitch so the brain learns to dribble with the boundary present (an
+  // open-ring brain dithers at the walls). Senses are relative, so alternating which mouth is the
+  // target teaches a general "push toward YOUR goal" policy that works for either side at runtime.
+  Maze m; Pose ps0, ps1, kickoff, g0, g1;
+  MazeGen::generateSoccerPitch(m, seed, ps0, ps1, kickoff, g0, g1);
   int rows = m.rows(), cols = m.cols();
   float in[SENSOR_COUNT];
   int trained = 0;
   while (trained < epochs) {
-    // random ball, goal, and bot (all on walkable floor, all distinct)
+    Pose goal = (rng.below(2) ? g0 : g1);   // aim at either mouth for variety
+    // random ball + bot on interior walkable floor (all distinct)
     Pose ball; ball.row = (int8_t)rng.below(rows); ball.col = (int8_t)rng.below(cols);
-    Pose goal; goal.row = (int8_t)rng.below(rows); goal.col = (int8_t)rng.below(cols);
     Pose me;   me.row = (int8_t)rng.below(rows); me.col = (int8_t)rng.below(cols); me.facing = (Facing)rng.below(4);
     if (!m.isWalkable(ball.row, ball.col) || !m.isWalkable(me.row, me.col)) continue;
     if ((ball.row == goal.row && ball.col == goal.col) ||
@@ -277,7 +290,13 @@ bool distillSoccer(Net& brain, uint32_t seed, int epochs) {
       senseEgoTo(m, me, &ev, ball.row, ball.col, in);   // target = the ball (slots 4-6)
       int act = idealSoccerAction(m, me, ball, goal);
       float tg[NET_MAX_OUT] = {0}; tg[act] = 1.0f;
-      int reps = (act == 0 ? 1 : 1) + (dangerAhead(m, me) ? 1 : 0);  // a touch of edge-safety weight
+      // Oversample the DECISIVE move -- a forward that lands on the ball (a push). Like the hunter's
+      // rare zap, the finishing shove is a small fraction of states; without weighting the net learns
+      // to approach but never commits, so the ball stalls a tile short. Forwards count double too.
+      int fdr, fdc; facingDelta(me.facing, fdr, fdc);
+      bool pushNow = (act == 0 && me.row + fdr == ball.row && me.col + fdc == ball.col);
+      int reps = pushNow ? 5 : (act == 0 ? 2 : 1);
+      if (dangerAhead(m, me)) reps += 1;               // a touch of edge-safety weight
       for (int r = 0; r < reps; r++) brain.trainStep(in, tg);
       trained += reps;
       // advance the expert along its own trajectory; a forward that lands on the ball pushes it.

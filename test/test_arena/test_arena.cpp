@@ -464,29 +464,50 @@ void test_soccer_deterministic() {
   TEST_ASSERT_EQUAL_UINT32(h[0], h[1]);
 }
 
-// The SOCCER "Teach" (distillSoccer): a taught brain must dribble the ball toward its goal -- on a
-// spread of open rings, vs an idle opponent, it pushes the ball into (or nearest to) its own goal
-// and so WINS the match the clear majority of the time. The one-tap path to a competent soccer bot.
+// A walled SOCCER pitch must be built right: a wall around the whole outside, with a 3-tile goal
+// mouth (open floor) cut into the centre of each end, and the ball + starts on walkable floor.
+void test_soccer_pitch_walled_with_mouths() {
+  Maze m; Pose s0, s1, ball, g0, g1;
+  MazeGen::generateSoccerPitch(m, 1, s0, s1, ball, g0, g1);
+  int rows = m.rows(), cols = m.cols(), rmid = rows / 2;
+  // every border tile is a wall EXCEPT the 3-tile mouth at the centre of each end
+  for (int c = 0; c < cols; c++) { TEST_ASSERT_EQUAL((int)WALL, (int)m.at(0, c)); TEST_ASSERT_EQUAL((int)WALL, (int)m.at(rows - 1, c)); }
+  for (int r = 0; r < rows; r++) {
+    bool mouth = (r >= rmid - 1 && r <= rmid + 1);
+    TEST_ASSERT_EQUAL(mouth ? (int)FLOOR : (int)WALL, (int)m.at(r, 0));
+    TEST_ASSERT_EQUAL(mouth ? (int)FLOOR : (int)WALL, (int)m.at(r, cols - 1));
+  }
+  TEST_ASSERT_TRUE(m.isWalkable(ball.row, ball.col));
+  TEST_ASSERT_TRUE(m.isWalkable(s0.row, s0.col));
+  TEST_ASSERT_TRUE(m.isWalkable(s1.row, s1.col));
+  TEST_ASSERT_EQUAL(cols - 1, g0.col);   // brain attacks the right mouth
+  TEST_ASSERT_EQUAL(0, g1.col);          // opponent the left
+}
+
+// The SOCCER "Teach" (distillSoccer): a taught brain must actually SCORE -- on the walled pitch, vs
+// an idle opponent, it dribbles the ball into the net (the ball ends in the goal mouth, a real goal,
+// not just a timeout tie-break) the clear majority of the time. The one-tap path to a soccer bot.
 void test_soccer_taught_brain_scores() {
-  int wins = 0;
+  int realGoals = 0;
   for (uint32_t seed = 1; seed <= 6; seed++) {
     Net taught; taught.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1);
-    distillSoccer(taught, seed, 4000);
-    Maze m; Pose s0, s1; MazeGen::generateSumoRing(m, seed, s0, s1);
+    distillSoccer(taught, seed, 5000);
+    Maze m; Pose s0, s1, ball, g0, g1;
+    MazeGen::generateSoccerPitch(m, seed, s0, s1, ball, g0, g1);
     Program me = brainProgram(taught), idle;
-    Arena ar; ar.setup(&m, &me, &idle, s0, s1, MatchType::SOCCER, 250);
-    Pose ball; ball.row = (int8_t)(m.rows() / 2); ball.col = (int8_t)(m.cols() / 2);
-    Pose g0; g0.row = ball.row; g0.col = (int8_t)(m.cols() - 1);   // bot0 attacks the right rim
-    Pose g1; g1.row = ball.row; g1.col = 0;                        // bot1 (idle) the left rim
+    Arena ar; ar.setup(&m, &me, &idle, s0, s1, MatchType::SOCCER, 300);
     ar.configSoccer(ball, g0, g1);
-    if ((int)ar.run() == (int)ArenaOutcome::BOT0) wins++;
+    bool won = ((int)ar.run() == (int)ArenaOutcome::BOT0);
+    bool inNet = (ar.ball().col == g0.col && ar.ball().row >= g0.row - 1 && ar.ball().row <= g0.row + 1);
+    if (won && inNet) realGoals++;   // a genuine goal: the ball is shoved into the mouth
   }
-  TEST_ASSERT_TRUE(wins >= 4);   // dribbles goalward and wins on most rings
+  TEST_ASSERT_TRUE(realGoals >= 4);   // most taught brains actually dribble the ball into the net
 }
 
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_soccer_push_into_goal);
+  RUN_TEST(test_soccer_pitch_walled_with_mouths);
   RUN_TEST(test_soccer_deterministic);
   RUN_TEST(test_soccer_taught_brain_scores);
   RUN_TEST(test_maze_qlearn_ff_solves);

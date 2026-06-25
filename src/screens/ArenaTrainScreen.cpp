@@ -135,23 +135,17 @@ void ArenaTrainScreen::drawOppList() {
 }
 
 void ArenaTrainScreen::setupBoard() {
-  if (_matchType == MatchType::SUMO || _matchType == MatchType::SOCCER) {
-    // Practice on the SAME kind of open ring you'll play on, varied per session so the fighter
-    // generalises rather than over-fitting one board.
+  if (_matchType == MatchType::SOCCER) {
+    // A walled pitch with two goal mouths; the brain (bot 0) attacks the right mouth.
+    MazeGen::generateSoccerPitch(_maze, _profile ? _profile->seedBase : 31u, _s0, _s1, _ball, _goal0, _goal1);
+  } else if (_matchType == MatchType::SUMO) {
+    // Practice on the SAME open ring you'll battle on, varied per session so the fighter generalises.
     uint32_t seed = (_profile ? _profile->seedBase : 31u) + (uint32_t)millis();
     MazeGen::generateSumoRing(_maze, seed, _s0, _s1);
   } else {
     MazeGen::generateArena(_maze, _profile ? _profile->seedBase + 31u : 31u, _s0, _s1);
   }
   _maze.setStart(_s0);  // the brain is bot 0, starting at s0
-  if (_matchType == MatchType::SOCCER) {
-    // Ball in the middle; the brain attacks the right rim, the opponent the left. Pin them to the
-    // ball's row so a straight shove can score (the goal tile itself may sit on the rim wall).
-    int gr = _maze.rows() / 2;
-    _ball.row = (int8_t)gr;          _ball.col = (int8_t)(_maze.cols() / 2);
-    _goal0.row = (int8_t)gr;         _goal0.col = (int8_t)(_maze.cols() - 1);
-    _goal1.row = (int8_t)gr;         _goal1.col = 0;
-  }
 }
 
 void ArenaTrainScreen::begin(Profile* profile) {
@@ -402,11 +396,19 @@ void ArenaTrainScreen::draw() {
           assets::drawGoalToken(g, x + tile / 2, y + tile / 2, tile, 0);
       }
     if (_matchType == MatchType::SOCCER) {
-      // your goal (green frame), the opponent's goal (red frame), and the ball (white).
-      g.drawRect(ox + _goal0.col * tile, oy + _goal0.row * tile, tile - 1, tile - 1, C_GO);
-      g.drawRect(ox + _goal0.col * tile + 1, oy + _goal0.row * tile + 1, tile - 3, tile - 3, C_GO);
-      g.drawRect(ox + _goal1.col * tile, oy + _goal1.row * tile, tile - 1, tile - 1, C_BAD);
+      // The two goal MOUTHS (3 tiles tall): your target is green, the opponent's red. Tint the
+      // mouth tiles so the open gaps in the wall read clearly as goals; then draw the ball (white).
+      auto mouth = [&](const Pose& gp, uint16_t col) {
+        for (int dr = -1; dr <= 1; dr++) {
+          int x = ox + gp.col * tile, y = oy + (gp.row + dr) * tile;
+          g.fillRect(x, y, tile - 1, tile - 1, col);
+          g.drawRect(x, y, tile - 1, tile - 1, C_INK);
+        }
+      };
+      mouth(_goal0, ui::rgb(20, 90, 50));   // your net (green)
+      mouth(_goal1, ui::rgb(110, 30, 30));  // their net (red)
       g.fillCircle(ox + _ball.col * tile + tile / 2, oy + _ball.row * tile + tile / 2, tile / 4 + 1, C_INK);
+      g.drawCircle(ox + _ball.col * tile + tile / 2, oy + _ball.row * tile + tile / 2, tile / 4 + 1, C_BG);
     }
     // the opponent runs ITS code from its start (red route); your brain runs from its start
     // (blue/green route). While training we REVEAL the route step-by-step (a bright bot head
@@ -611,7 +613,7 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     uint32_t seed = _profile ? _profile->seedBase : 7u;
     if (_matchType == MatchType::SOCCER) {
       _brain.lr = _knobs.lr;
-      distillSoccer(_brain, seed, 4000 * _knobs.rounds);          // dribble the ball into the goal (FF)
+      distillSoccer(_brain, seed, 5000 * _knobs.rounds);          // dribble the ball into the goal (FF)
     } else if (_rnn) {
       // recurrent brain: BPTT over chase episodes (Battle) or maze runs (Race) -- a memory fighter.
       // RNN BPTT is touchier than FF, so the LR knob is damped to a third (its tuned default is 0.1).

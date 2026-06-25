@@ -54,6 +54,13 @@ void generateArena(Maze& out, uint32_t seed, Pose& s0, Pose& s1);
 // devices the same shared seed renders the identical ring. No goal, no pits (Sumo is an
 // HP / ring-out brawl); starts offset onto different rows for a diagonal approach.
 void generateSumoRing(Maze& out, uint32_t seed, Pose& s0, Pose& s1);
+
+// A SOCCER pitch (8x10): a solid wall around the whole outside, with a 3-tile goal MOUTH cut into
+// the centre of each end wall. The ball kicks off in the middle; bot 0 (the brain) attacks the
+// RIGHT mouth (goal0), bot 1 the LEFT (goal1). Deterministic from the seed. Returns the two starts,
+// the ball's kickoff tile, and the centre tile of each goal mouth via the out-params.
+void generateSoccerPitch(Maze& out, uint32_t seed, Pose& s0, Pose& s1,
+                         Pose& ball, Pose& goal0, Pose& goal1);
 }  // namespace MazeGen
 
 }  // namespace gb
