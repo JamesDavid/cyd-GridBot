@@ -1,6 +1,7 @@
 // Phase 6 tests: the Arena match engine. THE key property is determinism —
 // same seed + same two programs => byte-identical match log every run (SPEC §18.1).
 #include <unity.h>
+#include <cstdio>
 #include "game/Maze.h"
 #include "game/MazeGen.h"
 #include "game/Program.h"
@@ -597,8 +598,40 @@ void test_soccer_qlearn_rnn_runs() {
   TEST_ASSERT_TRUE(scored >= 1);             // learns at least some reward-driven dribbling
 }
 
+// "Train a set of super players and play them": train 4 strong soccer bots (high-epoch distill,
+// distinct seeds) and run a full round-robin (home + away) of timed matches, printing every
+// scoreline + a standings table. Demonstrates how good the little brains are against each OTHER.
+void test_super_players_roundrobin() {
+  const int N = 4;
+  Net bots[N];
+  for (int i = 0; i < N; i++) { bots[i].config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 1); distillSoccer(bots[i], 1u + (uint32_t)i, 12000); }
+  Maze m; Pose s0, s1, ball, g0, g1;
+  MazeGen::generateSoccerPitch(m, 1, s0, s1, ball, g0, g1);
+  int win[N] = {0}, drw[N] = {0}, gf[N] = {0}, ga[N] = {0};
+  printf("\n=== SUPER PLAYERS round-robin (timed soccer, home+away) ===\n");
+  for (int i = 0; i < N; i++)
+    for (int j = 0; j < N; j++) {
+      if (i == j) continue;
+      Program pa = brainProgram(bots[i]), pb = brainProgram(bots[j]);
+      Arena ar; ar.setup(&m, &pa, &pb, s0, s1, MatchType::SOCCER, 300);
+      ar.configSoccer(ball, g0, g1);
+      ArenaOutcome o = ar.run();
+      int ag = ar.goals(0), bg = ar.goals(1);
+      gf[i] += ag; ga[i] += bg; gf[j] += bg; ga[j] += ag;
+      const char* res = o == ArenaOutcome::BOT0 ? "W" : o == ArenaOutcome::BOT1 ? "L" : "D";
+      if (o == ArenaOutcome::BOT0) win[i]++; else if (o == ArenaOutcome::BOT1) win[j]++; else { drw[i]++; drw[j]++; }
+      printf("  P%d vs P%d :  %d-%d  (%s)\n", i, j, ag, bg, res);
+    }
+  printf("  --- standings ---\n");
+  for (int i = 0; i < N; i++) printf("  P%d:  %d wins  %d draws   goals %d-%d\n", i, win[i], drw[i], gf[i], ga[i]);
+  int totalGoals = 0; for (int i = 0; i < N; i++) totalGoals += gf[i];
+  printf("  total goals across all %d matches: %d\n", N * (N - 1), totalGoals);
+  TEST_ASSERT_TRUE(totalGoals >= 20);   // well-trained bots play HIGH-SCORING soccer, not 0-0 tiebreaks
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
+  RUN_TEST(test_super_players_roundrobin);
   RUN_TEST(test_soccer_push_into_goal);
   RUN_TEST(test_soccer_two_bots_match_resolves);
   RUN_TEST(test_soccer_two_bots_scramble_and_resolve);
