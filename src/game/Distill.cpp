@@ -365,7 +365,13 @@ static float qSoccerStep(const Maze& m, const Pose& me, const Pose& ball, const 
   nm = me; nball = ball; terminal = false; float r = 0.0f;
   if (act == 1)      { nm.facing = turnLeft(me.facing);  r = -0.01f; }
   else if (act == 2) { nm.facing = turnRight(me.facing); r = -0.01f; }
-  else if (act == 3 || act == 4) { r = -0.03f; }              // jump / zap: no-op in soccer (a waste)
+  else if (act == 3) { r = -0.03f; }                          // jump: a waste in soccer
+  else if (act == 4) {                                        // ZAP: facing the ball -> SWAP places with it
+    if (ar == ball.row && ac == ball.col) {                   // ball is the tile ahead
+      nm.row = (int8_t)ar; nm.col = (int8_t)ac;               //   me -> the ball's tile
+      nball.row = me.row; nball.col = me.col;                 //   ball -> my old tile (turns it around)
+    } else r = -0.03f;                                        // zapped at nothing -> a waste
+  }
   else {                                                      // FORWARD
     if (!m.inBounds(ar, ac) || !m.isWalkable(ar, ac) || (ar == rival.row && ac == rival.col)) { r = -0.05f; }  // wall/rival -> bonk
     else if (ar == ball.row && ac == ball.col) {              // step onto the ball -> shove it ahead

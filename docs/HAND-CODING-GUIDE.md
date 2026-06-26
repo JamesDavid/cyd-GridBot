@@ -19,7 +19,8 @@ Your robot runs its program **over and over, very fast**. Each loop it looks at 
 does **one action**. That's it. Good robots are just good rules about *"what do I see → what do I do."*
 
 **Actions** (one per step): `forward`, `turn left`, `turn right`, `jump` (hops 2 tiles, clears a
-pit), `zap` (shoves a rival — Battle only).
+pit), `zap` (Battle: shove a rival; **Soccer: swap places with the ball** when you're facing it —
+a one-move way to get on its *far* side and turn it back toward goal).
 
 **Senses** you can test in an `if` or `repeat until` block:
 
@@ -204,6 +205,13 @@ checks live *inside* the `if ball ^` block (indented one step further). In the e
 inside`** on the `if ball ^` row to put blocks inside it:
 
 ![Soccer dribbler, top](img/hc-soccer-2-1.png) ![Soccer dribbler, scrolled](img/hc-soccer-2-2.png)
+
+> **⚽ Pro move — the `zap`-swap.** Caught on the *wrong* side of the ball (it's between you and the
+> net you're attacking)? Circling around is slow and is how robots accidentally shove it into their
+> *own* net. Instead, face the ball and **`zap`** — your robot and the ball **swap places**, popping
+> the ball one tile *past* you toward goal and leaving you neatly behind it. So `if ball ^ { zap }`
+> is a one-block way to "turn the ball around." (A trained brain can learn this too — the soccer
+> trainer now rewards a zap that moves the ball goalward.)
 
 ### How it does
 

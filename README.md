@@ -162,7 +162,7 @@ a one-off match, a local **Tournament**, or a multi-device **Room**.
 
 | ![Zap in action](docs/img/zap-anim.png) |
 |:--|
-| **It animates everywhere, but only bites in the Arena.** On RUN, a zap fires a bright spark into the tile ahead. In a Sumo match that spark **shoves a rival into a pit** (or off the board) for the knockout; anywhere else it's a harmless flash — a no-op for solving mazes, so it never breaks a campaign run. |
+| **It animates everywhere, but only bites in the Arena.** On RUN, a zap fires a bright spark into the tile ahead. In a Sumo match that spark **shoves a rival into a pit** (or off the board) for the knockout; in **Soccer** it **swaps your robot with the ball** when you're facing it — a one-move way to get behind the ball and turn it back toward goal; in a maze it's a harmless flash, so it never breaks a campaign run. |
 
 | ![Battle](docs/img/battle.gif) |
 |:--|
