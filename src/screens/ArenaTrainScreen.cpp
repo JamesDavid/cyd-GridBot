@@ -671,6 +671,9 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     if (_rnn) { hal::audio.fail(); }  // Evolve is feedforward-only
     else {
       _qLearning = false; _curveLen = 0;
+      // If you just TAUGHT a brain, Evolve refines THAT (seed the population from it) instead of
+      // throwing it away and restarting from noise -- so Teach -> Evolve = competent + adapted.
+      if (_taught) _evo.seedFrom(_brain, 0.2f);
       _animating = true; _animLeft = 16 * _knobs.rounds; _animAt = now; _genAt = now; _animFrame = 0;  // watch it hunt & learn
       hal::audio.blip();
     }

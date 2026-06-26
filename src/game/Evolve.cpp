@@ -144,4 +144,13 @@ void Evolve::breed(float rate, float scale) {
   gen++;
 }
 
+void Evolve::seedFrom(const Net& brain, float jitter) {
+  nIn = brain.nIn; nHid = brain.nHid; nOut = brain.nOut; gen = 0;
+  for (int i = 0; i < EVO_POP; i++) {
+    pop[i] = brain;                                   // start everyone AT the taught brain
+    if (i > 0) mutate(pop[i], rng, 0.5f, jitter);     // keep #0 exact; jitter the rest for variety
+    fit[i] = 0;
+  }
+}
+
 }  // namespace gb

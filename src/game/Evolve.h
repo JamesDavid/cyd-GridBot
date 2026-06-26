@@ -42,6 +42,9 @@ struct Evolve {
   // "Explore" knob raises `scale` to mutate harder (more variety, less stable).
   void breed(float rate = 0.15f, float scale = 0.6f);
   void step(const Maze& m, int maxSteps = 120) { evaluate(m, nullptr, maxSteps); breed(); }
+  // Seed the whole population from an existing brain (e.g. a freshly TAUGHT one) -- #0 exact, the
+  // rest jittered -- so Evolve REFINES a competent brain instead of restarting from random noise.
+  void seedFrom(const Net& brain, float jitter = 0.2f);
 
   int   bestIdx() const;
   float bestFit() const { return fit[bestIdx()]; }
