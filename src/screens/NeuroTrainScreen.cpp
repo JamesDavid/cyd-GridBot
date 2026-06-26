@@ -58,14 +58,18 @@ int NeuroTrainScreen::nextVersion() const {
 // Load base _baseIdx into the working brain and seed evolution from it (transfer learning).
 void NeuroTrainScreen::applyBase() {
   Net base;
+  int nLib = (int)_brainLibs.size();
   if (_baseIdx == 0) {  // the brain currently in the editor's block
     _baseName = "block";
     if (_prog && _idx < (int)_prog->brains.size()) base = _prog->brains[_idx];
     else base.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 17);
-  } else {              // a saved library brain -> fine-tune on top of it
+  } else if (_baseIdx <= nLib) {  // a saved library brain -> fine-tune on top of it
     int li = _brainLibs[_baseIdx - 1];
     _baseName = _profile->library[li].name;
     base = _profile->library[li].program.brains[0];
+  } else {              // FRESH: an explicit scramble back to a random brain (start from scratch)
+    _baseName = "fresh";
+    base.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, (_profile ? _profile->seedBase : 7u) ^ 0xF8E50001u);
   }
   _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 17);
   _evo.pop[0] = base;           // evolution continues FROM the base
@@ -524,8 +528,8 @@ app::Signal NeuroTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
 
   if (R_KNOBS.contains(tx, ty) && !_brainView) {  // open the shared advanced knobs overlay
     _advanced = true; hal::audio.blip(); draw();
-  } else if (R_BASE.contains(tx, ty)) {  // cycle the transfer base: block brain -> saved brains
-    _baseIdx = (_baseIdx + 1) % (1 + (int)_brainLibs.size());
+  } else if (R_BASE.contains(tx, ty)) {  // cycle the transfer base: block -> saved brains -> fresh
+    _baseIdx = (_baseIdx + 1) % (2 + (int)_brainLibs.size());   // +1 extra slot = "fresh" (scramble)
     applyBase(); hal::audio.blip(); draw();
   } else if (R_GAUNT.contains(tx, ty)) {  // Generalist: train across the gauntlet, then test it
     gauntletTrain(_brain, 20);            // one batch (tap again to keep improving)
