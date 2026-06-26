@@ -84,6 +84,8 @@ static void handleSerialLine(const String& line) {
   } else if (c == 'D') {
     int n = 0; sscanf(line.c_str() + 1, "%d", &n);
     gApp.debugLoadProg((uint32_t)n);
+  } else if (c == 'K') {
+    gApp.debugZapDemo();
   } else if (c == 'M') {
     gApp.debugDumpMaze();
   } else if (c == '?' || c == 'h') {

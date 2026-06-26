@@ -271,6 +271,27 @@ void App::debugLoadProg(uint32_t n) {
   Serial.printf("LOADPROG %u\n", n);
 }
 
+void App::debugZapDemo() {
+  if (_profile.id.empty()) { Serial.println("NOPROFILE"); return; }
+  using namespace gb;
+  auto ifDo = [](Cond c, Cmd cmd) { Node x = Node::ifCond(c); x.body.push_back(Node::command(cmd)); return x; };
+  Program p;                                            // a hand-coded "zap to flip the ball" dribbler
+  Node loop = Node::repeatUntil(AT_GOAL);
+  loop.body.push_back(ifDo(BALL_AHEAD, CMD_FIRE));      // facing the ball -> zap-swap (turn it around)
+  loop.body.push_back(ifDo(BALL_LEFT,  CMD_TURN_L));
+  loop.body.push_back(ifDo(BALL_RIGHT, CMD_TURN_R));
+  loop.body.push_back(Node::command(CMD_FWD));
+  p.main.push_back(loop);
+  LibEntry cone; cone.name = "Cone"; cone.program = Program{}; cone.source = LIB_CODE;  // idle opponent
+  _profile.library.push_back(cone);
+  LibEntry e; e.name = "Zappy"; e.program = p; e.source = LIB_CODE;
+  int idx = (int)_profile.library.size();
+  _profile.library.push_back(e);                        // in-memory only (not saved -> gone on reboot)
+  _arena.beginQuickBattle(&_profile, idx, "Cone", MatchType::SOCCER);    // vs the idle cone -> BOARD phase
+  _state = State::ARENA;
+  Serial.println("ZAPDEMO Zappy vs Strika");
+}
+
 void App::debugNeuroLesson() {
   hal::audio.stopMusic();
   _lessonsMenu.enter();
