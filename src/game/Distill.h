@@ -52,8 +52,10 @@ bool distillSoccerRnn(RNet& brain, uint32_t seed, int episodes);
 // "get behind the ball, push it home" from reward alone, the soccer counterpart of qTrainHunter/
 // qTrainMaze. `globalDone`/`globalTotal` decay exploration smoothly across a chunked UI run;
 // `epsScale` scales it (the Arena trainer's "Explore" knob). In place; call again to keep learning.
+// `opp`, if given, is the ACTUAL opponent program -- its brain/code is run each step to move the
+// rival defender (a live foe), instead of leaving it a stationary cone.
 bool qTrainSoccer(Net& brain, uint32_t seed, int episodes, int globalDone = 0, int globalTotal = 0,
-                  float epsScale = 1.0f);
+                  float epsScale = 1.0f, const Program* opp = nullptr);
 
 // RECURRENT soccer Q-learning: the same dribble MDP as qTrainSoccer, but the policy is a memory brain
 // (RNet) learned by unrolled semi-gradient TD (RNet::trainEpisodeQ) -- the recurrent reward path for
@@ -74,8 +76,10 @@ bool qTrainSoccerRnn(RNet& brain, uint32_t seed, int episodes, int globalDone = 
 // single call self-contained (decay over its own `episodes`).
 // `epsScale` (default 1.0) multiplies the exploration rate -- the Arena trainer's "Explore" knob:
 // >1 tries more random moves (slower to converge, escapes ruts), 0 = greedy from the start.
+// `opp`, if given, is the ACTUAL opponent program -- its brain/code is run each step so the foe
+// HUNTS YOU BACK (a moving target), instead of standing still.
 bool qTrainHunter(Net& brain, uint32_t seed, int episodes, int globalDone = 0, int globalTotal = 0,
-                  float epsScale = 1.0f);
+                  float epsScale = 1.0f, const Program* opp = nullptr);
 
 // RECURRENT Q-learning: the same reward MDP as qTrainHunter, but the policy is a memory brain
 // (RNet) and each episode is learned by unrolled semi-gradient TD (RNet::trainEpisodeQ). Slower

@@ -403,7 +403,8 @@ static void soccerScenario(const Maze& m, Rng& rng, const Pose& g0, bool near, P
            (rival.row == me.row && rival.col == me.col));
 }
 
-bool qTrainSoccer(Net& brain, uint32_t seed, int episodes, int globalDone, int globalTotal, float epsScale) {
+bool qTrainSoccer(Net& brain, uint32_t seed, int episodes, int globalDone, int globalTotal,
+                  float epsScale, const Program* opp) {
   if (globalTotal <= 0) globalTotal = episodes;
   if (episodes < 1) return false;
   Rng rng(seed ^ 0x50cce700u);
@@ -411,16 +412,30 @@ bool qTrainSoccer(Net& brain, uint32_t seed, int episodes, int globalDone, int g
   MazeGen::generateSoccerPitch(m, seed, ps0, ps1, kick, g0, g1);
   const int NA = 5; const float G = 0.92f;
   float in[SENSOR_COUNT], nin[SENSOR_COUNT], out[NET_MAX_OUT], nout[NET_MAX_OUT];
+  Interpreter oppIt; EnemyView oppEv;       // a LIVE opponent (if given): its own brain/code moves it
   for (int e = 0; e < episodes; e++) {
     Pose goal = g0, ball, me, rival;
     soccerScenario(m, rng, g0, (rng.below(2) == 0), ball, me, rival);
+    if (opp) {  // wire the opponent to sense the learner (slots 8-9), the ball, and ITS goal (g1)
+      oppIt.load(opp, &m, rival, 999);
+      oppEv.pose = &me; oppEv.target = &ball; oppEv.net = &g1;
+      oppIt.setEnemy(&oppEv);
+    }
     float eps = 0.05f + 0.30f * epsScale * (1.0f - (float)(globalDone + e) / (float)globalTotal);
     for (int step = 0; step < 40; step++) {
-      senseSoccer(m, me, &ball, &rival, &goal, in);   // walls + ball + net + RIVAL
+      senseSoccer(m, me, &ball, &rival, &goal, in);   // walls + ball + net + RIVAL (its live position)
       brain.forward(in, out);
       int bestI = 0; for (int k = 1; k < NA; k++) if (out[k] > out[bestI]) bestI = k;
       int act = (rng.below(1000) < (uint32_t)(eps * 1000.0f)) ? (int)rng.below(NA) : bestI;
       Pose nm, nball; bool terminal; float r = qSoccerStep(m, me, ball, goal, rival, act, nm, nball, terminal);
+      // move the live defender by RUNNING ITS POLICY one primitive (chases the ball / blocks the
+      // attacker). It's a body, not a ball-carrier here, so it never lands on the ball or the learner.
+      if (opp) {
+        oppIt.step();
+        Pose np = oppIt.pose();
+        if (!(np.row == nball.row && np.col == nball.col) && !(np.row == nm.row && np.col == nm.col))
+          rival = np;
+      }
       float target = r;
       if (!terminal) {
         senseSoccer(m, nm, &nball, &rival, &goal, nin);
@@ -558,12 +573,14 @@ static int chebyshev(const Pose& a, const Pose& b) {
   return dr > dc ? dr : dc;
 }
 
-bool qTrainHunter(Net& brain, uint32_t seed, int episodes, int globalDone, int globalTotal, float epsScale) {
+bool qTrainHunter(Net& brain, uint32_t seed, int episodes, int globalDone, int globalTotal,
+                  float epsScale, const Program* opp) {
   if (globalTotal <= 0) globalTotal = episodes;
   Rng rng(seed);
   Maze m; Pose s0, s1;
   MazeGen::generateSumoRing(m, seed, s0, s1);
   int rows = m.rows(), cols = m.cols();
+  Interpreter oppIt; EnemyView oppEv;       // a LIVE foe (if given): its own brain/code chases you
   // Re-generate the ring every few episodes (different pillar layouts) so the fighter GENERALISES
   // to the random battle ring it'll really face, instead of overfitting one board's geometry.
   const int REROLL = 20;
@@ -593,6 +610,7 @@ bool qTrainHunter(Net& brain, uint32_t seed, int episodes, int globalDone, int g
     } while (!m.inBounds(foe.row, foe.col) || m.at(foe.row, foe.col) == WALL ||
              (foe.row == me.row && foe.col == me.col));
     EnemyView ev; ev.pose = &foe;
+    if (opp) { oppIt.load(opp, &m, foe, 999); oppEv.pose = &me; oppIt.setEnemy(&oppEv); }  // live foe senses you
     float prog = (float)(globalDone + e) / (float)globalTotal;          // 0..1 across the WHOLE run
     float eps = 0.05f + 0.30f * epsScale * (1.0f - prog);               // explore a lot early, exploit late
     for (int step = 0; step < 28; step++) {
@@ -626,6 +644,12 @@ bool qTrainHunter(Net& brain, uint32_t seed, int episodes, int globalDone, int g
       }
       if (!terminal) r += 0.03f * (float)(oldD - chebyshev(nm, foe));        // shaping: reward closing in
 
+      // move the live foe by RUNNING ITS POLICY one primitive (it hunts you back, a moving target).
+      if (opp) {
+        oppIt.step();
+        Pose np = oppIt.pose();
+        if (!(np.row == nm.row && np.col == nm.col)) foe = np;
+      }
       float target = r;
       if (!terminal) {
         senseEgo(m, nm, &ev, nin);

@@ -558,7 +558,7 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
           // reward-driven dribble: get behind the ball, shove it into the goal (no teacher). FF and
           // RNN share the same MDP -- the recurrent one is noisier (BPTT), the FF more reliable.
           if (_rnn) qTrainSoccerRnn(rbrain(), base + 101u * (uint32_t)_animLeft, 1000, done, total, _knobs.explore);
-          else      qTrainSoccer(_brain,     base + 101u * (uint32_t)_animLeft, 1000, done, total, _knobs.explore);
+          else      qTrainSoccer(_brain,     base + 101u * (uint32_t)_animLeft, 1000, done, total, _knobs.explore, &_ai);
         } else if (_rnn && _matchType == MatchType::SUMO) {
           // recurrent Q on the reactive BATTLE hunt -- intentionally available so a kid can SEE it
           // flounder (memory is noise here); the contrast with FF Q-Learn is the lesson.
@@ -568,7 +568,7 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
           // like the feedforward Teach does. Memory lets it escape dead-ends -- here it WORKS.
           qTrainMazeRnn(rbrain(), base, 1, 1000, done, total, &_maze, &_s0, _knobs.explore);
         } else {
-          qTrainHunter(_brain, base + 101u * (uint32_t)_animLeft, 1000, done, total, _knobs.explore);
+          qTrainHunter(_brain, base + 101u * (uint32_t)_animLeft, 1000, done, total, _knobs.explore, &_ai);
         }
         _taught = true;
       } else {
