@@ -132,9 +132,12 @@ constexpr int LIBRARY_MAX = 12;
 
 // Auto-name a freshly-saved bot by where it came from (+ level for code/brain), with a " vN"
 // suffix to keep it unique: "code L8", then "code L8 v2"...; "fighter"; "braincam".
-inline std::string autoLibName(const Profile& p, uint8_t source, uint16_t level) {
+inline std::string autoLibName(const Profile& p, uint8_t source, uint16_t level,
+                               const char* baseOverride = nullptr) {
   char base[24];
-  switch (source) {
+  if (baseOverride && baseOverride[0]) {   // caller-chosen noun (e.g. Arena: runner/fighter/player)
+    snprintf(base, sizeof(base), "%s", baseOverride);
+  } else switch (source) {
     case LIB_CODE:     snprintf(base, sizeof(base), "code L%u", (unsigned)level); break;
     case LIB_NEURO:    snprintf(base, sizeof(base), "brain L%u", (unsigned)level); break;
     case LIB_BRAINCAM: snprintf(base, sizeof(base), "braincam"); break;

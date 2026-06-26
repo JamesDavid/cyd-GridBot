@@ -528,15 +528,18 @@ int ArenaTrainScreen::saveFighterToLibrary() {
   if (_savedIdx >= 0 && _savedIdx < (int)_profile->library.size()) {
     _profile->library[_savedIdx].program = prog;   // update this session's fighter (no dupe)
   } else if (_profile->library.size() < (size_t)LIBRARY_MAX) {
-    LibEntry e; e.source = LIB_ARENA; e.name = autoLibName(*_profile, LIB_ARENA, 0); e.program = prog;
+    // Name the saved bot for its game: Race -> "runner", Battle -> "fighter", Soccer -> "player".
+    const char* noun = _matchType == MatchType::SOCCER ? "player"
+                     : _matchType == MatchType::SUMO   ? "fighter" : "runner";
+    LibEntry e; e.source = LIB_ARENA; e.name = autoLibName(*_profile, LIB_ARENA, 0, noun); e.program = prog;
     _profile->library.push_back(e);
     _savedIdx = (int)_profile->library.size() - 1;
   } else return -1;
   store::profiles.save(*_profile);                  // persist NOW, not just on the way out
   _saved = true;
-  applog::event("trained + saved a %s%s fighter",
+  applog::event("trained + saved a %s%s",
                 _rnn ? "memory " : "",
-                _matchType == MatchType::SOCCER ? "soccer" : _matchType == MatchType::RACE ? "racer" : "battle");
+                _matchType == MatchType::SOCCER ? "player" : _matchType == MatchType::RACE ? "runner" : "fighter");
   return _savedIdx;
 }
 
