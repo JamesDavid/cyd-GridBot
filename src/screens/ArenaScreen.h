@@ -47,7 +47,7 @@ class ArenaScreen : public app::IScreen {
   void drawHandoff();
   void setupMatchBot(int pick, const gb::Pose& start);
   void genMatchBoard(uint32_t seed);   // build the maze/ring/pitch for the current _type
-  void startMatch();
+  void startMatch(bool replay = false);  // replay=true re-runs the LAST match's exact seed (same footage)
   void drawBoard();
   void mazeGeometry(int& tile, int& ox, int& oy);
   void drawCell(int r, int c);
@@ -121,6 +121,8 @@ class ArenaScreen : public app::IScreen {
   bool _running = false;
   uint32_t _last = 0;
   uint32_t _goalHoldUntil = 0;   // soccer: keep the "GOAL!" flash up until this time, then clear it
+  uint32_t _lastMatchSeed = 0;   // the seed the last match used -> "Replay" re-runs the SAME footage
+  bool _replaying = false;       // this run is a replay: don't re-record it / re-advance the Cup
   app::TapDetector _tap;
 };
 

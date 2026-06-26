@@ -1,4 +1,5 @@
 #include "screens/ArenaTrainScreen.h"
+#include "app/Log.h"
 #include <Arduino.h>   // millis() -> vary the practice ring per session
 #include "hal/Audio.h"
 #include "assets/Assets.h"
@@ -531,6 +532,9 @@ int ArenaTrainScreen::saveFighterToLibrary() {
   } else return -1;
   store::profiles.save(*_profile);                  // persist NOW, not just on the way out
   _saved = true;
+  applog::event("trained + saved a %s%s fighter",
+                _rnn ? "memory " : "",
+                _matchType == MatchType::SOCCER ? "soccer" : _matchType == MatchType::RACE ? "racer" : "battle");
   return _savedIdx;
 }
 
@@ -571,16 +575,27 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         if (_oppIdx == OPP_SELF) setSelfOpponent(_evo.best());
         // Explore knob raises mutation scale (more variety, less stable) -- the GA's "temperature".
         _evo.breed(0.15f, 0.6f * _knobs.explore);
-        if (_matchType == MatchType::SOCCER)
+        if (_matchType == MatchType::SOCCER) {
+          // VARIED BOARDS: move the kickoff ball to a fresh interior tile every generation, so the
+          // brain is scored from the ball in many places (just like the match's random kickoffs) and
+          // generalises instead of memorising one pitch. The starts/goals stay fixed (a fair pitch).
+          _soccerGen++;
+          uint32_t h = (uint32_t)_soccerGen * 2654435761u;
+          int rows = _maze.rows(), cols = _maze.cols();
+          _ball.row = (int8_t)(1 + (int)(h % (uint32_t)(rows - 2)));
+          _ball.col = (int8_t)(2 + (int)((h >> 9) % (uint32_t)(cols - 4)));   // keep clear of the goal columns
           _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType, &_ball, &_goal0, &_goal1);
-        else
+        } else
           _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType);
         _brain = _evo.best();
         _taught = false;
       }
       _saved = false; evaluateAndTrace();        // recompute the hunt for the new brain
       pushCurve();                               // record this step's score onto the learning curve
-      if (--_animLeft <= 0) { _animating = false; _qLearning = false; _animFrame = 9999; }  // done -> full trail
+      if (--_animLeft <= 0) {
+        _animating = false; _qLearning = false; _animFrame = 9999;  // done -> full trail
+        if (_matchType == MatchType::SOCCER) { setupBoard(); evaluateAndTrace(); }  // ball back to centre kickoff
+      }
       redraw = true;
     }
     if (_animating && now - _animAt >= 38) {   // foreground: reveal one more hunt step (sped up)

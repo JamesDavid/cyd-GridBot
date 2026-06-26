@@ -74,6 +74,10 @@ static const Rect R_EXIT3  = {194, 129, 64, 26};
 // screen like the match-result overlay) -- otherwise they'd land on the champion's avatar/name.
 static const Rect R_CUP_AGAIN = {40,  (int16_t)(BOTBAR_Y + 4), 110, 28};
 static const Rect R_CUP_EXIT  = {174, (int16_t)(BOTBAR_Y + 4), 106, 28};
+// champion screen: three buttons -- Replay the final's footage / re-run the whole Cup / Exit
+static const Rect R_CHAMP_REPLAY = {12,  (int16_t)(BOTBAR_Y + 4), 96, 28};
+static const Rect R_CHAMP_AGAIN  = {112, (int16_t)(BOTBAR_Y + 4), 96, 28};
+static const Rect R_CHAMP_EXIT   = {212, (int16_t)(BOTBAR_Y + 4), 96, 28};
 // participant-picker bottom bar: Select all + Format >
 static const Rect R_TALL  = {116, (int16_t)(BOTBAR_Y + 2), 64,  26};
 static const Rect R_TNEXT = {188, (int16_t)(BOTBAR_Y + 2), 126, 26};
@@ -317,8 +321,9 @@ void ArenaScreen::drawCupCard() {
   }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   if (done) {
-    button(g, R_CUP_AGAIN, "Again", C_GO, C_PANEL);    // bottom bar, clear of the champion art
-    button(g, R_CUP_EXIT, "Exit", C_INK, C_PANEL);
+    button(g, R_CHAMP_REPLAY, "Replay", ui::rgb(120, 230, 245), C_PANEL);  // re-watch the final
+    button(g, R_CHAMP_AGAIN, "Again", C_GO, C_PANEL);    // re-run the whole Cup, same field
+    button(g, R_CHAMP_EXIT, "Exit", C_INK, C_PANEL);
   } else {  // bottom bar (clear of the bracket, which fills the band)
     button(g, R_CUP_AGAIN, _cupMatch < 0 ? "Start >" : "Next >", C_GO, C_PANEL);
     button(g, R_CUP_EXIT, "Quit", C_INK, C_PANEL);
@@ -373,6 +378,12 @@ void ArenaScreen::drawBracket() {
 }
 
 void ArenaScreen::onMatchEnd() {
+  if (_replaying) {                 // a rewind: don't re-score it, just return to the result card
+    _replaying = false;
+    if (_cup) { _phase = Phase::CUP; drawCupCard(); }
+    else      { _phase = Phase::DONE; finishOverlay(); }
+    return;
+  }
   if (_cup && _cupMatch >= 0) {
     int a, b; _cupBracket.pair(_cupMatch, a, b);
     int winner = (_arena.outcome() == ArenaOutcome::BOT1) ? b : a;   // BOT0 or DRAW -> 'a' (tiebreak)
@@ -754,15 +765,19 @@ void ArenaScreen::genMatchBoard(uint32_t seed) {
   else                                MazeGen::generateArena(_maze, seed, _s0, _s1);
 }
 
-void ArenaScreen::startMatch() {
+void ArenaScreen::startMatch(bool replay) {
   hal::audio.stopMusic();  // the board uses step-tick SFX; silence the battle theme
   bool sumo = (_type == MatchType::SUMO), soccer = (_type == MatchType::SOCCER);
+  _replaying = replay;
   // Networked Cup: derive the board from the SHARED seed + match index so every device builds the
-  // identical board and replays the same result. Local play mixes the clock for variety.
-  uint32_t base = _netCup ? (_netSeed + 101u * (uint32_t)(_cupMatch + 1))
+  // identical board and replays the same result. Local play mixes the clock for variety. A REPLAY
+  // reuses the exact seed the last match ran on, so the deterministic Arena re-shows the same footage.
+  uint32_t base = replay ? _lastMatchSeed
+                : _netCup ? (_netSeed + 101u * (uint32_t)(_cupMatch + 1))
                           : (_profile ? _profile->seedBase : 7u) + (uint32_t)millis() + 101u * (++_sumoNonce);
-  if (sumo || soccer) genMatchBoard(base);
-  else genMatchBoard(_netCup ? base : (_profile ? _profile->seedBase + 7u : 7u));
+  _lastMatchSeed = base;
+  if (sumo || soccer) genMatchBoard(base);             // sumo/soccer: replay reuses base -> same board
+  else genMatchBoard(_netCup ? base : (_profile ? _profile->seedBase + 7u : 7u));  // race board is fixed
   setupMatchBot(_pick0, _s0);
   setupMatchBot(_pick1, _s1);
   const Program& p0 = _cands[_pick0].prog;
@@ -942,14 +957,12 @@ void ArenaScreen::finishOverlay() {
   }
   // vs-Computer + NeuroBot: offer to retrain your fighter for this matchup, not just bounce out.
   bool canTrain = !_hotseat && _profile && _profile->unlocks.neuro;
-  if (canTrain) {
-    button(g, R_AGAIN3, "Again", C_GO, C_PANEL_HI);          // replay the SAME matchup
-    button(g, R_TRAIN3, "Train >", ui::rgb(120, 230, 245), C_PANEL_HI);  // go improve your fighter
-    button(g, R_EXIT3, "Exit", C_INK, C_PANEL_HI);
-  } else {
-    button(g, R_AGAIN, "Play again", C_GO, C_PANEL_HI);
-    button(g, R_RESULT_EXIT, "Exit", C_INK, C_PANEL_HI);
-  }
+  // "Replay" rewinds the exact footage (same seed); the middle button is "Train >" for a NeuroBot
+  // player or "New" (a fresh match) otherwise; then "Exit".
+  button(g, R_AGAIN3, "Replay", C_GO, C_PANEL_HI);
+  if (canTrain) button(g, R_TRAIN3, "Train >", ui::rgb(120, 230, 245), C_PANEL_HI);
+  else          button(g, R_TRAIN3, "New", C_MOVE, C_PANEL_HI);
+  button(g, R_EXIT3, "Exit", C_INK, C_PANEL_HI);
 }
 
 // ---- input ----------------------------------------------------------------
@@ -1173,8 +1186,9 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     }
     case Phase::CUP:
       if (_cupBracket.done()) {                        // champion shown (bottom-bar buttons)
-        if (R_CUP_AGAIN.contains(tx, ty)) { std::vector<int> same = _cupPlayers; startCup(same); }  // re-run, same field
-        else if (R_CUP_EXIT.contains(tx, ty) || R_BACK.contains(tx, ty)) drawGameType();
+        if (R_CHAMP_REPLAY.contains(tx, ty) && _pick0 >= 0 && _pick1 >= 0) startMatch(true);  // re-watch the final
+        else if (R_CHAMP_AGAIN.contains(tx, ty)) { std::vector<int> same = _cupPlayers; startCup(same); }  // re-run field
+        else if (R_CHAMP_EXIT.contains(tx, ty) || R_BACK.contains(tx, ty)) drawGameType();
       } else {
         if (R_CUP_AGAIN.contains(tx, ty)) cupAdvanceToNextMatch();   // Start / Next match
         else if (R_CUP_EXIT.contains(tx, ty)) { _cup = false; drawGameType(); }  // Quit
@@ -1213,13 +1227,16 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       break;
     case Phase::DONE: {
       bool canTrain = !_hotseat && _profile && _profile->unlocks.neuro;
-      if (canTrain && R_TRAIN3.contains(tx, ty)) {  // go retrain a better fighter, then come back
-        hal::led.off(); return app::Signal::GOTO_ARENA_TRAIN;
-      } else if ((canTrain ? R_AGAIN3 : R_AGAIN).contains(tx, ty)) {  // replay the SAME matchup
+      if (R_AGAIN3.contains(tx, ty)) {                 // "Replay": rewind the exact same footage
         hal::led.off();
-        if (_pick0 >= 0 && _pick1 >= 0) startMatch();
+        if (_pick0 >= 0 && _pick1 >= 0) startMatch(true);
         else { _pickScroll = 0; _phase = Phase::PICK1; drawPick(0); }
-      } else if ((canTrain ? R_EXIT3 : R_RESULT_EXIT).contains(tx, ty) || R_BACK.contains(tx, ty)) {
+      } else if (R_TRAIN3.contains(tx, ty)) {
+        hal::led.off();
+        if (canTrain) return app::Signal::GOTO_ARENA_TRAIN;   // "Train >"
+        if (_pick0 >= 0 && _pick1 >= 0) startMatch(false);    // "New": a fresh match (new board)
+        else { _pickScroll = 0; _phase = Phase::PICK1; drawPick(0); }
+      } else if (R_EXIT3.contains(tx, ty) || R_BACK.contains(tx, ty)) {
         hal::led.off(); return app::Signal::BACK;
       }
       break;

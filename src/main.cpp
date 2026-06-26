@@ -11,6 +11,7 @@
 #include "selftest/SelfTest.h"
 #else
 #include "app/App.h"
+#include "app/Log.h"
 static app::App gApp;
 
 // USB-serial screenshot for the PIO_DEBUG loop (no WiFi needed): host sends 'S',
@@ -81,6 +82,10 @@ static void handleSerialLine(const String& line) {
     Serial.println("NEURO");
   } else if (c == 'M') {
     gApp.debugDumpMaze();
+  } else if (c == '?' || c == 'h') {
+    applog::help();
+  } else if (c == 'E') {
+    applog::dump();
   }
 }
 #endif
@@ -105,7 +110,8 @@ void setup() {
   selftest::runAll();
 #else
   gApp.begin();
-  Serial.println("GridBot running.");
+  Serial.println("GridBot running.  (type ? over serial for the command list)");
+  applog::event("boot");
 #endif
 }
 

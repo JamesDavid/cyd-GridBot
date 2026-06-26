@@ -1,4 +1,5 @@
 #include "screens/GameScreen.h"
+#include "app/Log.h"
 
 #include <math.h>
 #include "hal/Display.h"
@@ -1082,6 +1083,7 @@ void GameScreen::settleOutcome(Outcome o) {
     drawChrome();   // refresh the top button label (was "< Code" during the run -> "Menu")
     _writtenCount = programWrittenCount(_prog);
     _stars = starsFor(_writtenCount, _par);
+    applog::event("WON level %u  (%d/3 stars, %d blocks)", (unsigned)(_profile ? _profile->level : 0), _stars, _writtenCount);
     hal::audio.win();
     hal::led.green();
     // gems pay out in coins; grabbing every gem on the board adds an all-clear bonus
@@ -1131,6 +1133,8 @@ void GameScreen::settleOutcome(Outcome o) {
     return;
   }
   // failure (BONK / FELL / DONE_NO_WIN)
+  applog::event("FAILED level %u  (%s)", (unsigned)(_profile ? _profile->level : 0),
+                o == OUT_BONK ? "bonked a wall" : o == OUT_FELL ? "fell in a pit" : "ran out of steps");
   if (_profile) {
     if (o == OUT_BONK) _profile->stats.bonks++;
     else if (o == OUT_FELL) _profile->stats.falls++;

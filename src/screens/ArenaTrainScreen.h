@@ -75,6 +75,7 @@ class ArenaTrainScreen : public app::IScreen {
   // Soccer: a ball the fighter shoves toward its goal. _goal0 is the brain's target, _goal1 the
   // opponent's; _ball tracks the live ball position through the traced match (for the mini-map).
   gb::Pose _ball, _goal0, _goal1;
+  uint16_t _soccerGen = 0;   // counter: varies the kickoff ball each Evolve gen (board generalization)
   int _oppIdx = 0;            // which roster opponent we spar against
   std::string _oppName;      // its display name
   bool _beatsAI = false, _taught = false, _saved = false;
@@ -101,7 +102,7 @@ class ArenaTrainScreen : public app::IScreen {
   void drawNet();             // network graph + arena mini-map + status
   // Learning curve: how good the brain is (0..1) sampled each training step, so a kid (or an ML
   // engineer over a beer) sees fitness CLIMB as it learns -- the metric overlay the Brain Cam wanted.
-  static constexpr int CURVE_N = 6;    // sparkline samples (trimmed to free static DRAM)
+  static constexpr int CURVE_N = 4;    // sparkline samples (trimmed to free static DRAM)
   float _curve[CURVE_N] = {0};
   int   _curveLen = 0;
   float _score = 0.0f;        // current brain's score vs the opponent (HP margin / goal progress)

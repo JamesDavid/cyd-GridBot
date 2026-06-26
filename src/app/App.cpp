@@ -1,4 +1,5 @@
 #include "app/App.h"
+#include "app/Log.h"
 #include <Arduino.h>   // delay() for the boot splash
 #include "hal/Display.h"
 #include "hal/Touch.h"
@@ -83,6 +84,7 @@ void App::loadProfileInto(const std::string& id) {
   }
   // Sticky unlocks: level only rises, so derive from level (SPEC §7).
   _profile.unlocks = gb::computeUnlocks(_profile.level);
+  applog::event("playing as %s (Lv %u)", _profile.name.c_str(), (unsigned)_profile.level);
 }
 
 void App::saveProfile() { store::profiles.save(_profile); }

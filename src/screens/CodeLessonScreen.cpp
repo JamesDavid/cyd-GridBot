@@ -43,10 +43,21 @@ void CodeLessonScreen::setup(int lesson) {
         _prog.main.push_back(loop); }
       break;
     default:  // Functions (case 4 — last block to unlock, L20)
-      _title = "Functions"; _concept = "A function is steps you name once and CALL many times.";
-      _maze.reset(1, 5); _maze.fill(FLOOR); _maze.setStart(pose(0, 0, EAST)); _maze.setGoal(0, 4);
-      _prog.f1.push_back(Node::command(CMD_FWD));
-      for (int i = 0; i < 4; i++) _prog.main.push_back(Node::call(1));
+      _title = "Functions"; _concept = "F1 holds your wall-follower; MAIN adds 'if pit, jump' and CALLS it.";
+      // A walled corridor with a pit then a corner: the wall-follower turns at the wall, the
+      // jump clears the pit. Same F1 you'd write for any maze, reused -- now it handles pits too.
+      _maze.reset(3, 4); _maze.fill(FLOOR);
+      for (int c = 0; c < 4; c++) { _maze.set(0, c, WALL); _maze.set(2, c, WALL); }
+      _maze.set(1, 2, PIT);
+      _maze.setStart(pose(1, 0, EAST)); _maze.setGoal(0, 3);
+      // F1: the wall-follower step -- if blocked, turn; then step forward.
+      { Node wf = Node::ifCond(WALL_AHEAD); wf.body.push_back(Node::command(CMD_TURN_L));
+        _prog.f1.push_back(wf); _prog.f1.push_back(Node::command(CMD_FWD)); }
+      // MAIN: keep going until the goal -- if a pit is ahead jump it, otherwise wall-follow (call F1).
+      { Node loop = Node::repeatUntil(AT_GOAL);
+        Node jp = Node::ifCond(PIT_AHEAD); jp.body.push_back(Node::command(CMD_JUMP));
+        loop.body.push_back(jp); loop.body.push_back(Node::call(1));
+        _prog.main.push_back(loop); }
       break;
     case 1:  // Jump (unlocks at level 6, before Repeat)
       _title = "Jump"; _concept = "Jump leaps over a single pit to the tile beyond.";
