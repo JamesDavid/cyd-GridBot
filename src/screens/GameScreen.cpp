@@ -36,7 +36,13 @@ static constexpr int ROW_Y0 = BAND_Y + 22, ROW_H = 24;
 // button cycles the count 2->3->4->5->2; the cond button cycles the sense condition.
 static inline Rect repCycleRect(int y) { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 80, (int16_t)(ROW_H - 2)}; }
 // A sense block shows two tappable chips: the keyword (if<->until) then the condition.
-static inline Rect kwRect(int y)   { return {(int16_t)(LIST_X + LIST_W - 92), (int16_t)(y + 1), 34, (int16_t)(ROW_H - 2)}; }  // 228..262
+// if/until editor, packed tight next to the glyph: [if/until][cond1][&|][cond2]. (No big gap to
+// the right edge any more.) cond2 + the combiner only matter once a compound is added.
+static inline Rect kwRect(int y)     { return {(int16_t)(LIST_X + 20),  (int16_t)(y + 1), 28, (int16_t)(ROW_H - 2)}; }  // 186..214
+static inline Rect ifC1Rect(int y)   { return {(int16_t)(LIST_X + 50),  (int16_t)(y + 1), 42, (int16_t)(ROW_H - 2)}; }  // 216..258
+static inline Rect ifCombRect(int y) { return {(int16_t)(LIST_X + 94),  (int16_t)(y + 1), 22, (int16_t)(ROW_H - 2)}; }  // 260..282
+static inline Rect ifC2Rect(int y)   { return {(int16_t)(LIST_X + 118), (int16_t)(y + 1), 36, (int16_t)(ROW_H - 2)}; }  // 284..320
+// the condition chip for CALL (F1/F2) and NEURO (brain mode), still right-aligned.
 static inline Rect condRect(int y) { return {(int16_t)(LIST_X + LIST_W - 56), (int16_t)(y + 1), 44, (int16_t)(ROW_H - 2)}; }  // 264..308
 static const Rect R_PAUSE = {238, 0, 82, 22};   // big back button in the status bar
 static const Rect R_TOGGLE = {6, (int16_t)(BOTBAR_Y + 2), 156, 26};  // right edge aligns with the RUN/pad above
@@ -674,17 +680,25 @@ void GameScreen::drawProgramList() {
     label(g, LIST_X + 2, y + 6, rownum[ri].c_str(), C_DIM);
     char lab[30]; Glyph gl = Glyph::PLAY; uint16_t col = C_INK;
     nodeLabel(*row.node, lab, sizeof(lab), gl, col);
-    drawGlyph(g, gl, gx + 7, y + ROW_H / 2 - 1, 12, col);
+    // a selected if/until shows its compact inline editor right after the line number (the kw chip
+    // says what it is), so don't also draw the glyph there -- it'd just push everything right.
+    bool selIf = (ri == _selected && row.node && (row.node->type == N_IF || row.node->type == N_REPEAT_UNTIL));
+    if (!selIf) drawGlyph(g, gl, gx + 7, y + ROW_H / 2 - 1, 12, col);
 
     // A selected block shows its editor INLINE (big, mid-pane, away from HOME):
-    //   repeat -> [-] N [+] ;  if/until -> the condition cycle button.
+    //   repeat -> [-] N [+] ;  if/until -> [if/until][cond1][&|][cond2] (compound conditions).
     Node* nd = row.node;
     if (sel && nd->type == N_REPEAT) {
       char rl[14]; snprintf(rl, sizeof(rl), "repeat %d", nd->count);
       button(g, repCycleRect(y), rl, C_LOOP, C_PANEL_HI);  // one big tap: cycles 2-5
     } else if (sel && (nd->type == N_IF || nd->type == N_REPEAT_UNTIL)) {
       button(g, kwRect(y), nd->type == N_IF ? "if" : "until", C_SENSE, C_PANEL_HI);
-      button(g, condRect(y), condName(nd->cond), C_SENSE, C_PANEL_HI);
+      button(g, ifC1Rect(y), condName(nd->cond), C_SENSE, C_PANEL_HI);
+      // the combiner chip: "+" to add a 2nd condition, then it shows "&"/"|"; a 2nd condition chip
+      // appears once it's set -> "if A and B" / "if A or B" is reachable right here.
+      button(g, ifCombRect(y), nd->combine == CB_AND ? "&" : nd->combine == CB_OR ? "|" : "+",
+             nd->combine == CB_NONE ? C_DIM : C_SENSE, C_PANEL_HI);
+      if (nd->combine != CB_NONE) button(g, ifC2Rect(y), condName(nd->cond2), C_SENSE, C_PANEL_HI);
     } else if (sel && nd->type == N_CALL) {
       char cl[6]; snprintf(cl, sizeof(cl), "F%d", nd->func);
       label(g, gx + 18, y + 6, "call", C_FUNC);
@@ -836,16 +850,22 @@ void GameScreen::handleListTap(int x, int y) {
             hal::audio.blip(); drawProgramList(); return;
           }
         } else if (sn->type == N_IF || sn->type == N_REPEAT_UNTIL) {
+          bool foes = _profile && _profile->unlocks.sense;   // arena senses appear with Battle (Sense, L15)
+          auto cycle = [&](Cond c0) { Cond c = nextCond(c0); if (!foes && c == ENEMY_AHEAD) c = WALL_LEFT; return c; };
           if (kwRect(yy).contains(x, y)) {         // toggle keyword: until (loop) <-> if (once)
             sn->type = (sn->type == N_REPEAT_UNTIL) ? N_IF : N_REPEAT_UNTIL;
             hal::audio.blip(); drawProgramList(); return;
           }
-          if (condRect(yy).contains(x, y)) {       // obstacles -> goal -> [arena senses] -> side walls
-            bool foes = _profile && _profile->unlocks.sense;  // arena senses appear with Battle (Sense, L15)
-            Cond c = nextCond(sn->cond);
-            if (!foes && c == ENEMY_AHEAD) c = WALL_LEFT;     // skip the foe/ball/net block until unlocked
-            sn->cond = c;
+          if (ifC1Rect(yy).contains(x, y)) {       // cycle the first condition
+            sn->cond = cycle(sn->cond); hal::audio.blip(); drawProgramList(); return;
+          }
+          if (ifCombRect(yy).contains(x, y)) {     // none -> AND -> OR -> none (the compound combiner)
+            sn->combine = (sn->combine == CB_NONE) ? CB_AND : (sn->combine == CB_AND) ? CB_OR : CB_NONE;
+            if (sn->combine == CB_AND && sn->cond2 == sn->cond) sn->cond2 = cycle(sn->cond2);  // a distinct default
             hal::audio.blip(); drawProgramList(); return;
+          }
+          if (sn->combine != CB_NONE && ifC2Rect(yy).contains(x, y)) {   // cycle the second condition
+            sn->cond2 = cycle(sn->cond2); hal::audio.blip(); drawProgramList(); return;
           }
         } else if (sn->type == N_CALL) {
           if (condRect(yy).contains(x, y)) {       // switch which function this call runs
