@@ -62,6 +62,11 @@ Look for the **📡 Try together** boxes — optional two-player / whole-class a
 
 A fully-worked example of the complete teacher format is in **§5 (Sample lesson)**.
 
+> **📅 Want a ready-made plan?** The **[5-Day Curriculum](CURRICULUM.md)** distils this handbook into
+> five **1–2 hour sessions** that take a kid from zero to a **soccer-player bot they trained
+> themselves** — *Drive → Think → Compete → Learn → Champion*, each day with objectives, the device
+> path, the "aha," and a checkpoint. Use it as the spine and dip into the lesson pages here for depth.
+
 ---
 
 ## 3. Quick start

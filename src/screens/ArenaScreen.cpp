@@ -795,6 +795,7 @@ void ArenaScreen::startMatch(bool replay) {
   _phase = Phase::BOARD;
   _running = true;
   _last = 0;
+  _goalHoldUntil = 0;   // never inherit a pending GOAL! flash from the previous match
   drawBoard();
 }
 
@@ -972,12 +973,17 @@ void ArenaScreen::finishOverlay() {
 void ArenaScreen::debugStep() {
   if (_phase != Phase::BOARD) return;
   _running = false;  // pause auto so frames can be captured one tick at a time
+  bool clearGoal = _goalHoldUntil != 0;   // a "GOAL!" flash from the previous step is still on screen
+  _goalHoldUntil = 0;
   Pose b0 = _arena.pose(0), b1 = _arena.pose(1);
   ArenaOutcome o = _arena.tick();
   if (_type == MatchType::SOCCER && _arena.justScored()) {
     // mirror the live tick: a goal kicked off -> full redraw + scoreline + a "GOAL!" flash
     drawBoard(); _ballPrev = _arena.ball();
     label(hal::display.gfx(), SCREEN_W / 2, SCREEN_H / 2 - 4, "GOAL!", C_GO, textdatum_t::middle_center, 3);
+    _goalHoldUntil = 1;   // mark it shown so the NEXT step wipes it with a clean board
+  } else if (clearGoal) {
+    drawBoard(); _ballPrev = _arena.ball();   // wipe the lingering GOAL! before showing the new frame
   } else {
     eraseBotAt(b0.row, b0.col); eraseBotAt(b1.row, b1.col);
     if (_type == MatchType::SOCCER) eraseBotAt(_ballPrev.row, _ballPrev.col);
