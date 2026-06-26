@@ -108,6 +108,11 @@ static void profileToJson(const gb::Profile& p, JsonObject o) {
   o["shopEmoji"] = p.shopEmoji;
   o["ownedColors"] = p.ownedColors;
   o["ownedEmojis"] = p.ownedEmojis;
+  if (!p.levelRecs.empty()) {   // per-level best: 3 bytes each (stars, blocks, par), hex-packed
+    std::vector<uint8_t> b; b.reserve(p.levelRecs.size() * 3);
+    for (const auto& r : p.levelRecs) { b.push_back(r.stars); b.push_back(r.bestBlocks); b.push_back(r.par); }
+    o["levels"] = toHex(b);
+  }
 }
 
 static void profileFromJson(JsonObjectConst o, gb::Profile& p) {
@@ -173,6 +178,14 @@ static void profileFromJson(JsonObjectConst o, gb::Profile& p) {
   p.shopEmoji = o["shopEmoji"] | 0;
   p.ownedColors = o["ownedColors"] | 0;
   p.ownedEmojis = o["ownedEmojis"] | 0;
+  p.levelRecs.clear();
+  if (o["levels"].is<const char*>()) {
+    std::vector<uint8_t> b; fromHex(o["levels"], b);
+    for (size_t i = 0; i + 3 <= b.size(); i += 3) {
+      gb::LevelRec r; r.stars = b[i]; r.bestBlocks = b[i + 1]; r.par = b[i + 2];
+      p.levelRecs.push_back(r);
+    }
+  }
 }
 
 // ---- store ops ------------------------------------------------------------
@@ -200,6 +213,37 @@ bool ProfileStore::save(const gb::Profile& p) {
   serializeJson(doc, f);
   f.close();
   rebuildIndex();
+  return true;
+}
+
+// Per-level best programs live in their OWN directory, away from /profiles, so rebuildIndex() (which
+// scans /profiles and treats every file there as a profile) never mistakes them for one.
+static const char* LVLDIR = "/levels";
+static std::string pathForLevel(const std::string& id, uint32_t level) {
+  char b[48];
+  snprintf(b, sizeof(b), "%s/%s_%u.json", LVLDIR, id.c_str(), (unsigned)level);
+  return std::string(b);
+}
+
+bool ProfileStore::saveLevelProgram(const std::string& id, uint32_t level, const gb::Program& prog) {
+  LittleFS.mkdir(LVLDIR);   // idempotent
+  File f = LittleFS.open(pathForLevel(id, level).c_str(), "w");
+  if (!f) return false;
+  JsonDocument doc;
+  gb::programToJson(prog, doc.to<JsonObject>());
+  serializeJson(doc, f);
+  f.close();
+  return true;
+}
+
+bool ProfileStore::loadLevelProgram(const std::string& id, uint32_t level, gb::Program& out) {
+  File f = LittleFS.open(pathForLevel(id, level).c_str(), "r");
+  if (!f) return false;
+  JsonDocument doc;
+  DeserializationError err = deserializeJson(doc, f);
+  f.close();
+  if (err) return false;
+  gb::programFromJson(doc.as<JsonObjectConst>(), out);
   return true;
 }
 

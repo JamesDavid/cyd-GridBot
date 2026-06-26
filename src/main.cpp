@@ -21,7 +21,7 @@ static void serialShot() {
   auto& g = hal::display.gfx();
   int w = g.width(), h = g.height();
   Serial.printf("GBSHOT %d %d\n", w, h);
-  static uint16_t row[320];
+  uint16_t row[320];   // on the stack, not static DRAM (bss is at its hard limit)
   for (int y = 0; y < h; y++) {
     g.readRect(0, y, w, 1, row);
     Serial.write((const uint8_t*)row, w * 2);

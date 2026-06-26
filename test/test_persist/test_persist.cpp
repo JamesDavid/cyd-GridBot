@@ -4,6 +4,7 @@
 #include <ArduinoJson.h>
 #include "game/Program.h"
 #include "game/ProgramJson.h"
+#include "game/Profile.h"
 
 using namespace gb;
 
@@ -137,6 +138,30 @@ void test_pilot_waypoints_roundtrip() {
   for (int i = 0; i < 5; i++) TEST_ASSERT_EQUAL(p.waypoints[i], q.waypoints[i]);
 }
 
+// The level-select "go for gold" record: keep the most stars and the fewest blocks per level,
+// and report when a run is a new best (so the caller overwrites that level's saved program).
+void test_level_record_keeps_best() {
+  gb::Profile p;
+  TEST_ASSERT_NULL(p.levelRec(5));                       // nothing recorded yet
+
+  TEST_ASSERT_TRUE(p.recordLevelResult(5, 1, 12, 8));    // first win -> new best
+  const gb::LevelRec* r = p.levelRec(5);
+  TEST_ASSERT_NOT_NULL(r);
+  TEST_ASSERT_EQUAL(1, r->stars);
+  TEST_ASSERT_EQUAL(12, r->bestBlocks);
+  TEST_ASSERT_EQUAL(8, r->par);
+  TEST_ASSERT_EQUAL(5, (int)p.levelRecs.size());         // vector grew to cover level 5
+
+  TEST_ASSERT_FALSE(p.recordLevelResult(5, 1, 15, 8));   // worse (more blocks) -> not a new best
+  TEST_ASSERT_EQUAL(12, p.levelRec(5)->bestBlocks);      // best block count is unchanged
+
+  TEST_ASSERT_TRUE(p.recordLevelResult(5, 3, 9, 8));     // fewer blocks + more stars -> new best
+  TEST_ASSERT_EQUAL(3, p.levelRec(5)->stars);
+  TEST_ASSERT_EQUAL(9, p.levelRec(5)->bestBlocks);
+
+  TEST_ASSERT_FALSE(p.recordLevelResult(0, 3, 1, 1));    // level 0 is invalid -> ignored
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_program_roundtrip);
@@ -144,5 +169,6 @@ int main(int, char**) {
   RUN_TEST(test_neuro_program_roundtrip);
   RUN_TEST(test_rnn_program_roundtrip);
   RUN_TEST(test_pilot_waypoints_roundtrip);
+  RUN_TEST(test_level_record_keeps_best);
   return UNITY_END();
 }

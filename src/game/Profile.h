@@ -64,6 +64,15 @@ struct LibEntry {
   uint16_t srcLevel = 0;         // campaign level it was saved from (code editor); 0 = n/a
 };
 
+// Per-level best result, for the level-select "go for gold" browser. Tiny on purpose: the best
+// PROGRAM is kept in a separate flash file (ProfileStore::saveLevelProgram), loaded only when a kid
+// reopens that level to revise -- so a profile holds these 3 bytes/level, not 40+ programs in RAM.
+struct LevelRec {
+  uint8_t stars = 0;       // best stars earned (0-3)
+  uint8_t bestBlocks = 0;  // fewest blocks used to win (0 = not completed yet)
+  uint8_t par = 0;         // the maze's shortest-solution length (for the "best N / par M" display)
+};
+
 struct Profile {
   std::string id;          // "u01" (device-local filename id)
   std::string uuid;        // stable global id for friend sync across devices
@@ -81,6 +90,25 @@ struct Profile {
 
   // Named, reusable solutions (SPEC §11.1). Bounded ~8-12.
   std::vector<LibEntry> library;
+
+  // Per-level best result, index = level-1 (grows as you climb). Drives the level-select browser.
+  std::vector<LevelRec> levelRecs;
+
+  const LevelRec* levelRec(uint32_t level) const {
+    return (level >= 1 && (size_t)level <= levelRecs.size()) ? &levelRecs[level - 1] : nullptr;
+  }
+  // Fold a win into the per-level record. Returns true if this run is a NEW best by block count
+  // (so the caller should overwrite that level's saved best-program file).
+  bool recordLevelResult(uint32_t level, uint8_t stars, uint8_t blocks, uint8_t par) {
+    if (level < 1) return false;
+    if (levelRecs.size() < (size_t)level) levelRecs.resize(level);
+    LevelRec& r = levelRecs[level - 1];
+    if (par) r.par = par;
+    bool newBest = blocks > 0 && (r.bestBlocks == 0 || blocks < r.bestBlocks);
+    if (stars > r.stars) r.stars = stars;
+    if (newBest) r.bestBlocks = blocks;
+    return newBest;
+  }
 
   // Optional custom 16x16 sprites drawn in the pixel editor (palette indices,
   // 0 = empty). Empty vector = use the roster art for this avatar. Shareable.

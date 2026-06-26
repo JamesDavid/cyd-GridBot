@@ -27,6 +27,11 @@ class ProfileStore {
   std::string createProfile(const std::string& name, uint8_t avatar);
   bool remove(const std::string& id);
 
+  // Per-level best PROGRAM, kept in its own flash file so it's not held in RAM with the profile.
+  // Written when a level is beaten with a new fewest-blocks best; loaded when reopening to revise.
+  bool saveLevelProgram(const std::string& id, uint32_t level, const gb::Program& prog);
+  bool loadLevelProgram(const std::string& id, uint32_t level, gb::Program& out);
+
  private:
   void rebuildIndex();
 };
