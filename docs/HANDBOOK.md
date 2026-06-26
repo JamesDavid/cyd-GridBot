@@ -172,6 +172,15 @@ Condensed pages. Same shape as the sample: **Big idea · On screen · Ask · Wat
 - **Ask:** "Before you tap Fix it — what's your guess for the bug? How could you test your guess?" **Watch for:** change *one* thing at a time. **Words:** *bug, debug, hypothesis.*
 > **For the classroom:** model "computational thinking" out loud — narrate the read→hypothesise→test loop. Best paired with any campaign level the kid is stuck on.
 
+> **📘 Deep dive — the [Hand-Coding Guide](HAND-CODING-GUIDE.md).** *The* bridge from CodeLab to
+> NeuroLab. Have students hand-code a bot for each Arena game and play it against a trained brain —
+> the measured punchline *is* the "match the method" lesson (NeuroLab 17): **Maze & Battle → hand-coding
+> wins** (a 3-rule wall-follower solves **8× more unseen mazes** than a one-maze brain; the priority-rule
+> hunter goes **9-5-2** vs trained fighters), **Soccer → learning wins** (the best hand-coded dribbler
+> only *draws* the trained striker; finishing finesse needs practice). Kids earn NeuroLab by feeling
+> exactly where rules run out — then open it knowing *what* the brain is trying to learn. Every number
+> is reproducible from `tools/bot_eval.cpp`.
+
 ### NeuroLab (train the rules)
 
 **1 · One neuron** — *watch it learn.* Fully worked in **§5**.

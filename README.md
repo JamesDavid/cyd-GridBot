@@ -198,6 +198,15 @@ a one-off match, a local **Tournament**, or a multi-device **Room**.
 |:--|
 | **Each lesson is a tiny *runnable* demo.** A one-line explanation, a small maze, and a pre-built program — rendered in the **same block style as the real editor** (matching glyphs, colours, nested brackets, so there's no "different look" to relearn). Tap **Run** and watch the robot solve it, with a friendly **"solved it!"** at the end. |
 
+> **📘 Bridge: the [Hand-Coding Guide](docs/HAND-CODING-GUIDE.md).** Before training brains, write
+> them by hand. This walkthrough builds a competitive bot *with blocks* for all three Arena games —
+> the maze **wall-follower**, the battle **hunter**, the soccer **dribbler** — then plays each against
+> a trained neural bot and shows, with measured results, **which jobs hand-coding wins and which need
+> AI**: Maze & Battle reward a clear rule (a 3-rule wall-follower solves **8× more unseen mazes**; the
+> hunter goes **9-5-2** vs trained fighters), while Soccer is where *learning* pulls ahead (the best
+> hand-coded dribbler only **draws** the trained striker). It's the hands-on on-ramp from *"I write
+> the rules"* to *"I train the rules"* — kids earn NeuroLab by feeling exactly where rules run out.
+
 ### NeuroBot — *stop writing the rules, start training them*
 
 > A late-game **graduation** (unlocks at **level 28**, a few levels after Sensing — you learn
