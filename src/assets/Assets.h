@@ -20,8 +20,9 @@ struct RosterEntry {
 const RosterEntry& roster(int avatar);
 
 // Draw the character upright, centred in the tile, with a small nose/arrow cue for
-// `facing` (SPEC §4.1 — never rotate the whole sprite).
-void drawCharacter(LGFX& g, int cx, int cy, int tile, int avatar, gb::Facing facing);
+// `facing` (SPEC §4.1 — never rotate the whole sprite). `noseColor` overrides the arrow
+// colour (0 = default yellow) — the Arena uses it to tint P1's arrow green / P2's red.
+void drawCharacter(LGFX& g, int cx, int cy, int tile, int avatar, gb::Facing facing, uint16_t noseColor = 0);
 
 // Draw the themed goal token (cheese/carrot/egg…) centred in the tile.
 void drawGoalToken(LGFX& g, int cx, int cy, int tile, int avatar);

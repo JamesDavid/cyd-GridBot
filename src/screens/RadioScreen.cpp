@@ -189,7 +189,7 @@ void RadioScreen::drawBot(int i, const Pose& p, int avatar) {
   auto& g = hal::display.gfx();
   int tile, ox, oy; mazeGeometry(tile, ox, oy);
   assets::drawCharacter(g, ox + p.col * tile + tile / 2, oy + p.row * tile + tile / 2,
-                        tile, avatar, p.facing);
+                        tile, avatar, p.facing, i == 0 ? C_GO : C_BAD);  // bot 0 green / bot 1 red
 }
 void RadioScreen::drawBoard() {
   auto& g = hal::display.gfx();

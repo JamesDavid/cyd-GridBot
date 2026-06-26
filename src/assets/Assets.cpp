@@ -104,7 +104,8 @@ void drawCustomSprite(LGFX& g, int cx, int cy, int tile, const uint8_t* pix) {
   }
 }
 
-static void drawRobot(LGFX& g, int cx, int cy, int tile, uint16_t bodyColor, gb::Facing facing) {
+static void drawRobot(LGFX& g, int cx, int cy, int tile, uint16_t bodyColor, gb::Facing facing,
+                      uint16_t noseColor = 0) {
   int s = tile * 0.66f; if (s < 10) s = 10;
   int half = s / 2;
   int ax = cx - half, ay = cy - half;
@@ -128,13 +129,13 @@ static void drawRobot(LGFX& g, int cx, int cy, int tile, uint16_t bodyColor, gb:
   // facing arrow cue (which way is "forward")
   int dr, dc; gb::facingDelta(facing, dr, dc);
   int nx = cx + dc * (half + 3), ny = cy + dr * (half + 3);
-  uint16_t nose = ui::C_ACCENT;
+  uint16_t nose = noseColor ? noseColor : ui::C_ACCENT;
   if (dc != 0) g.fillTriangle(nx, ny - 4, nx, ny + 4, nx + dc * 5, ny, nose);
   else         g.fillTriangle(nx - 4, ny, nx + 4, ny, nx, ny + dr * 5, nose);
 }
 
-void drawCharacter(LGFX& g, int cx, int cy, int tile, int avatar, gb::Facing facing) {
-  drawRobot(g, cx, cy, tile, roster(avatar).bodyColor, facing);
+void drawCharacter(LGFX& g, int cx, int cy, int tile, int avatar, gb::Facing facing, uint16_t noseColor) {
+  drawRobot(g, cx, cy, tile, roster(avatar).bodyColor, facing, noseColor);
 }
 
 void drawCharacterTinted(LGFX& g, int cx, int cy, int tile, uint16_t bodyColor, gb::Facing facing) {

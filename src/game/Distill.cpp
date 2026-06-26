@@ -376,7 +376,10 @@ static float qSoccerStep(const Maze& m, const Pose& me, const Pose& ball, const 
       else { r = -0.05f; }                                    // ball against a wall -> can't push, stay
     } else { nm.row = (int8_t)ar; nm.col = (int8_t)ac; }      // free step
   }
-  if (!terminal) r += 0.05f * (float)(oldD - ballGoalDist(nball, goal));     // shaping: ball nearer the goal
+  if (!terminal) {
+    int dd = oldD - ballGoalDist(nball, goal);            // + = ball moved toward the goal we attack
+    r += 0.05f * (float)(dd >= 0 ? dd : 2 * dd);          // 2x penalty for shoving it the WRONG way (own-goal-ward)
+  }
   return r;
 }
 
