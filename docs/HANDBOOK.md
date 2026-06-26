@@ -66,6 +66,10 @@ A fully-worked example of the complete teacher format is in **§5 (Sample lesson
 > five **1–2 hour sessions** that take a kid from zero to a **soccer-player bot they trained
 > themselves** — *Drive → Think → Compete → Learn → Champion*, each day with objectives, the device
 > path, the "aha," and a checkpoint. Use it as the spine and dip into the lesson pages here for depth.
+>
+> Prefer **one self-contained document** you can teach straight from — the plan *plus* this handbook's
+> depth *plus* every hand-coding program, inline, with nothing to flip between? That's
+> **[COURSE.md — The Complete Course](COURSE.md)**.
 
 ---
 

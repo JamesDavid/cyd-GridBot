@@ -216,10 +216,12 @@ a one-off match, a local **Tournament**, or a multi-device **Room**.
 > it 80–352). It's the hands-on on-ramp from *"I write
 > the rules"* to *"I train the rules"* — kids earn NeuroLab by feeling exactly where rules run out.
 
-> **📅 Teaching it? The [5-Day Curriculum](docs/CURRICULUM.md)** turns all of this into five 1–2 hour
+> **📅 Teaching it?** The **[5-Day Curriculum](docs/CURRICULUM.md)** turns all of this into five 1–2 hour
 > sessions — *Drive → Think → Compete → Learn → Champion* — taking a kid from zero to a soccer-player
 > bot they **trained themselves**, with day-by-day objectives, checkpoints, and a class tournament to
-> finish. (Companion to the full teacher [HANDBOOK](docs/HANDBOOK.md).)
+> finish. For the **all-in-one** version — that plan plus the full teaching background plus every
+> hand-coding program in a single self-contained doc — see **[The Complete Course](docs/COURSE.md)**.
+> (Companions: the full teacher [HANDBOOK](docs/HANDBOOK.md) and the [Hand-Coding Guide](docs/HAND-CODING-GUIDE.md).)
 
 ### NeuroBot — *stop writing the rules, start training them*
 

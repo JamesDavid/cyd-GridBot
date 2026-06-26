@@ -8,9 +8,11 @@ the rules and when to let the robot learn them*.
 - **Time:** **5 days, 1–2 hours each** (≈ 7–10 hours total).
 - **Setup:** none — it's all on the device. No internet, no accounts. For two-device days you just
   need two CYDs in the same room.
-- **This plan distills three companion docs** — read them for depth:
-  the [README](../README.md) (the what), the [HANDBOOK](HANDBOOK.md) (the full teacher guide, with a
-  page per lesson), and the [Hand-Coding Guide](HAND-CODING-GUIDE.md) (writing bots by hand).
+- **This is the one-page plan.** Want everything in a single self-contained guide you can teach
+  straight from — every program, question, and checkpoint inline, no flipping between docs? Use
+  **[COURSE.md — The Complete Course](COURSE.md)**. The other companion docs go deeper on specifics:
+  the [README](../README.md) (the what), the [HANDBOOK](HANDBOOK.md) (the full teacher guide, a page
+  per lesson), and the [Hand-Coding Guide](HAND-CODING-GUIDE.md) (writing bots by hand).
 
 > **How features unlock.** Powers arrive as you climb campaign levels — **jump (Lv 6) · loops (Lv 10)
 > · sensing `if`/`until` + the Arena (Lv 15) · functions (Lv 20) · NeuroBot training (Lv 28)**. So the

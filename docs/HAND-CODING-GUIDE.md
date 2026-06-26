@@ -7,6 +7,11 @@ robot needs to think about *before* you ask the AI to learn it for you.
 The big idea at the end is the best part: **some jobs are easy to hand-code and some are not** — and
 that's exactly *why* machine learning exists. You'll feel it in your hands.
 
+> **Teaching a full course?** These programs are folded — with a day-by-day plan and the AI lessons
+> that follow — into **[COURSE.md, the all-in-one Complete Course](COURSE.md)** (Day 3 covers the bots
+> below). Use that if you'd rather not flip between docs; use this guide for the deepest dive on the
+> hand-coding itself.
+
 > Everything below is a real program you can build in the editor, and every result was measured by
 > playing these exact bots against trained neural bots on the device's match engine. The numbers are
 > at the bottom of each section.
