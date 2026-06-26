@@ -1,0 +1,92 @@
+/* GridBot classroom slides — shared styling. Kid-facing, projector-friendly. */
+:root{
+  --bg:#0e1726; --panel:#17243c; --panel2:#22335a;
+  --ink:#eef4ff; --dim:#9db1d4;
+  --accent:#ffd54a; --go:#46d17a; --bad:#ef5d5d; --blue:#4aa3ff; --purple:#bb8cff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);overflow:hidden;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+#deck{position:fixed;inset:0}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;
+  padding:6vh 7vw 11vh;opacity:0;transition:opacity .25s ease;overflow:auto}
+.slide.active{display:flex;opacity:1}
+
+.kicker{color:var(--accent);font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+  font-size:clamp(13px,1.5vw,20px);margin:0 0 1.4vh}
+.slide h1{font-size:clamp(30px,5.4vw,70px);line-height:1.03;margin:0 0 2vh;font-weight:900}
+.slide h2{font-size:clamp(23px,3.7vw,46px);line-height:1.1;margin:0 0 2.4vh;font-weight:800}
+.slide h3{font-size:clamp(18px,2.4vw,30px);margin:0 0 1vh;font-weight:800;color:var(--accent)}
+.slide p,.slide li{font-size:clamp(17px,2.15vw,28px);line-height:1.42}
+.lead{color:var(--dim)}
+ul{margin:.4em 0;padding-left:1.1em} li{margin:.55em 0}
+.sub{color:var(--dim);font-size:clamp(16px,1.9vw,24px)}
+
+.cols{display:flex;gap:4vw;align-items:center}
+.cols.top{align-items:flex-start}
+.cols .t{flex:1;min-width:0} .cols .v{flex:0 0 auto}
+
+.shot{margin:0;background:#05080f;border:3px solid #2c3f63;border-radius:14px;padding:10px;
+  box-shadow:0 14px 34px rgba(0,0,0,.55)}
+.shot img{display:block;width:min(42vw,520px);height:auto;border-radius:6px;image-rendering:pixelated}
+.shot.sm img{width:min(26vw,320px)}
+.shot.lg img{width:min(54vw,680px)}
+.shot figcaption{color:var(--dim);font-size:clamp(12px,1.3vw,16px);text-align:center;margin-top:8px}
+.shots{display:flex;gap:1.6vw;flex-wrap:wrap;align-items:center;justify-content:center}
+
+.code{background:#0a1120;border-left:6px solid var(--go);border-radius:10px;padding:1.05em 1.25em;
+  font-family:"SF Mono",ui-monospace,Consolas,monospace;font-size:clamp(15px,1.95vw,25px);
+  line-height:1.5;color:#dfeaff;white-space:pre;overflow:auto;box-shadow:inset 0 0 0 1px #1c2c4a}
+.code .k{color:var(--purple);font-weight:700}
+.code .c{color:var(--dim)}
+.code .g{color:var(--go)}
+
+.pill{display:inline-block;background:var(--panel2);border-radius:999px;padding:.28em .85em;
+  margin:.25em .3em;font-size:clamp(14px,1.6vw,21px);font-weight:700}
+.pill.go{background:#11331f;color:var(--go)} .pill.bad{background:#3a1717;color:var(--bad)}
+.pill.blue{background:#11243d;color:var(--blue)} .pill.pur{background:#241a3d;color:var(--purple)}
+
+table{border-collapse:collapse;width:100%;font-size:clamp(14px,1.7vw,22px);margin:.6vh 0}
+th,td{border:1px solid #2c3f63;padding:.5em .7em;text-align:left;vertical-align:top}
+th{background:var(--panel);color:var(--accent);font-weight:800}
+td b{color:var(--ink)}
+
+.big{font-size:clamp(40px,9vw,130px);font-weight:900;color:var(--go);line-height:1}
+.callout{background:var(--panel);border:1px solid #2c3f63;border-left:6px solid var(--accent);
+  border-radius:12px;padding:1em 1.2em;font-size:clamp(16px,2vw,26px)}
+.check li{list-style:none;position:relative;padding-left:1.6em}
+.check li::before{content:"✓";position:absolute;left:0;color:var(--go);font-weight:900}
+
+/* title slides */
+.title{justify-content:center}
+.title .emoji{font-size:clamp(64px,13vw,170px);line-height:1;margin-bottom:1vh}
+.title h1{font-size:clamp(38px,7vw,92px)}
+.title .day{color:var(--accent);font-weight:900;letter-spacing:.1em;text-transform:uppercase;
+  font-size:clamp(16px,2.4vw,30px);margin-bottom:1vh}
+
+/* chrome */
+#prog{position:fixed;top:0;left:0;height:5px;background:var(--accent);width:0;z-index:60;transition:width .25s}
+.home{position:fixed;left:16px;bottom:12px;color:var(--dim);font-weight:800;font-size:15px;z-index:40;
+  text-decoration:none}
+.home:hover{color:var(--accent)}
+#counter{position:fixed;right:18px;bottom:12px;color:var(--dim);font-size:15px;z-index:40}
+.ctrls{position:fixed;right:14px;bottom:40px;display:flex;gap:8px;z-index:40}
+.ctrls button{background:var(--panel);color:var(--ink);border:1px solid #2c3f63;border-radius:10px;
+  width:44px;height:44px;font-size:22px;cursor:pointer;line-height:1}
+.ctrls button:hover{background:var(--panel2)}
+#note{position:fixed;left:0;right:0;bottom:0;background:rgba(7,11,20,.96);border-top:2px solid var(--accent);
+  padding:11px 20px 13px;font-size:clamp(13px,1.55vw,19px);color:#d3deef;z-index:45;display:none}
+#note b{color:var(--accent)}
+
+/* index landing */
+.wrap{position:fixed;inset:0;overflow:auto;display:flex;flex-direction:column;
+  align-items:center;padding:6vh 6vw}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:22px;width:100%;max-width:1100px}
+.card{display:block;text-decoration:none;color:var(--ink);background:var(--panel);
+  border:1px solid #2c3f63;border-radius:16px;padding:22px;transition:transform .12s,border-color .12s}
+.card:hover{transform:translateY(-4px);border-color:var(--accent)}
+.card .e{font-size:54px;line-height:1}
+.card .d{color:var(--accent);font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  font-size:14px;margin:.6em 0 .2em}
+.card .ti{font-size:24px;font-weight:850;margin-bottom:.3em}
+.card .ds{color:var(--dim);font-size:16px;line-height:1.35}

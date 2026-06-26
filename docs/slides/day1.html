@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GridBot · Day 1 — Drive</title>
+<link rel="stylesheet" href="slides.css">
+</head>
+<body>
+<div id="prog"></div>
+<div id="deck">
+
+  <section class="slide title" data-note="Set the week up: by Friday every kid will have a soccer robot they TRAINED themselves. Today is just step one — make a robot obey you.">
+    <div class="emoji">🚗</div>
+    <div class="day">Day 1 of 5</div>
+    <h1>Drive</h1>
+    <p class="sub">Make the robot move — and learn that <b>a program is just a list of steps</b>.</p>
+  </section>
+
+  <section class="slide" data-note="Read these three out loud. Keep it concrete — today is hands-on-the-robot, not theory.">
+    <p class="kicker">Today you will</p>
+    <h2>Three missions</h2>
+    <ul>
+      <li>🎮 <b>Make a player</b> — your robot, your name.</li>
+      <li>📝 <b>Write your first program</b> — forward, turn, forward.</li>
+      <li>🧩 <b>Solve a maze by hand</b> — and learn to fix a mistake.</li>
+    </ul>
+    <p class="sub">Everything is on the little screen. No internet, no typing — you just drag blocks.</p>
+  </section>
+
+  <section class="slide" data-note="Each kid taps New Player so their stars and progress save. Profiles are local to the device; up to 6 per device.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">Step 1</p>
+        <h2>Make a player</h2>
+        <p>Tap <span class="pill go">New Player</span>, pick an avatar and a name. This saves <b>your</b> stars and levels.</p>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/profile-create.png" alt="Create a player"><figcaption>Home → New Player</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="Go Learn → CodeLab → '1 · Move'. The lesson is a guaranteed win — let them tap Run and see the robot obey before the campaign.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">Step 2</p>
+        <h2>Open the code lab</h2>
+        <p><b>Home → Learn → CodeLab → “1 · Move.”</b></p>
+        <p>You get two blocks today: <span class="pill blue">forward</span> <span class="pill blue">turn</span></p>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/codelab-lesson.png" alt="CodeLab Move lesson"><figcaption>CodeLab · “1 · Move”</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="THE big idea of Day 1. Steps run top-to-bottom, in order. Point at each block as the robot does it.">
+    <div class="cols top">
+      <div class="t">
+        <p class="kicker">The big idea</p>
+        <h2>A program is a <span style="color:var(--accent)">sequence</span></h2>
+        <p>The robot does your blocks <b>one at a time, from top to bottom</b>.</p>
+        <div class="code">forward
+forward
+<span class="k">turn</span> right
+forward</div>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/code-program.png" alt="A block program"><figcaption>Your program, in blocks</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="Tap Run together and cheer the win. The robot following your exact steps is the magic moment of Day 1.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">Step 3</p>
+        <h2>Tap <span style="color:var(--go)">Run</span> ▶</h2>
+        <p>Watch the robot follow your steps to the battery. <b>You</b> told it how to get there!</p>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/win.png" alt="Level complete"><figcaption>You reached the goal 🔋</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="This is the real skill: don't rewrite everything — read where it went wrong, change ONE block, run again. Model it out loud.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">Play levels 1–9</p>
+        <h2>When it fails, fix <span style="color:var(--accent)">one</span> thing</h2>
+        <ul>
+          <li>👀 <b>Read</b> where it went wrong.</li>
+          <li>🤔 <b>Guess</b> which block is the problem.</li>
+          <li>🔧 <b>Change one block</b> and Run again.</li>
+        </ul>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/fail.png" alt="A failed run"><figcaption>A miss is just data 🙂</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="Jump unlocks at Level 6 with its own easy intro level. It's a command for a special situation — using it at the wrong time is itself a bug.">
+    <div class="cols top">
+      <div class="t">
+        <p class="kicker">New power · Level 6</p>
+        <h2>Jump 🦘</h2>
+        <p>A <b>pit</b> blocks the way. <span class="pill pur">jump</span> hops <b>two tiles</b> and clears it.</p>
+        <div class="code"><span class="k">if</span> pit { <span class="k">jump</span> }
+forward</div>
+        <p class="sub">A special command for a special situation.</p>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/maze-view.png" alt="Maze with a pit"><figcaption>Mind the pit!</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="Have them physically act it out: two kids, 'forward then turn' vs 'turn then forward' — they end up facing different ways. Order is the whole lesson.">
+    <p class="kicker">Why programmers are careful</p>
+    <h2>Order matters</h2>
+    <div class="cols">
+      <div class="t"><div class="code">forward
+<span class="k">turn</span> right</div><p class="sub">…ends up <b>here</b>.</p></div>
+      <div class="t"><div class="code"><span class="k">turn</span> right
+forward</div><p class="sub">…ends up <b>somewhere else!</b></p></div>
+    </div>
+    <p class="callout">Same two blocks — <b>different order, different robot.</b></p>
+  </section>
+
+  <section class="slide" data-note="Stars reward a cleaner solution, not just any solution. Coming back to win with fewer blocks is early code-golf — and great computational thinking.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">Going for gold</p>
+        <h2>Beat it again — with fewer blocks ⭐⭐⭐</h2>
+        <p>Won a level? Try to win it again using <b>fewer blocks</b> for 3 stars. Shorter is smarter.</p>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/badges.png" alt="Badges and stars"><figcaption>Earn stars and badges</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="Checkpoint: can the kid plan a turn-by-turn path AND fix a wrong turn by changing one block? That read→change→test habit is what the whole course is built on.">
+    <p class="kicker">You did it 🎉</p>
+    <h2>Day 1 checkpoint</h2>
+    <ul class="check">
+      <li>I made a player and wrote a program.</li>
+      <li>I planned a path through a maze.</li>
+      <li>I fixed a wrong turn by changing <b>one</b> block.</li>
+    </ul>
+    <p class="callout">Next time → <b>🧠 Day 2: Think.</b> One program that solves mazes it has <b>never seen</b>.</p>
+  </section>
+
+</div>
+
+<a class="home" href="index.html">‹ All days</a>
+<div id="counter"></div>
+<div class="ctrls">
+  <button id="prev" aria-label="Previous">‹</button>
+  <button id="next" aria-label="Next">›</button>
+  <button id="fs" aria-label="Full screen">⛶</button>
+</div>
+<div id="note"></div>
+<script src="slides.js"></script>
+</body>
+</html>

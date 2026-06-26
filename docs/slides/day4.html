@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GridBot · Day 4 — Learn</title>
+<link rel="stylesheet" href="slides.css">
+</head>
+<body>
+<div id="prog"></div>
+<div id="deck">
+
+  <section class="slide title" data-note="Yesterday they hit the wall: soccer is hard to write as rules. Today they stop WRITING the rules and start TRAINING them. NeuroBot unlocked at Level 28.">
+    <div class="emoji">🤖</div>
+    <div class="day">Day 4 of 5</div>
+    <h1>Learn</h1>
+    <p class="sub">Stop <b>writing</b> the rules. Start <b>training</b> them — and beat your hand-coded bot.</p>
+  </section>
+
+  <section class="slide" data-note="The core mental model. Same little brain for every game — 10 senses in, 8 hidden, 5 actions out. Only the objective and reward change.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">Meet the brain</p>
+        <h2>One tiny brain, many jobs</h2>
+        <p><span class="big" style="font-size:clamp(28px,5vw,64px)">10 → 8 → 5</span></p>
+        <p>10 <b>senses</b> in → 8 <b>hidden</b> thinkers → 5 <b>actions</b> out. The <b>same</b> brain solves mazes, fights, and plays soccer.</p>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/robot-brain.png" alt="The robot brain"><figcaption>10 → 8 → 5</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="Run the One-neuron lesson together. The punchline: nobody TOLD it the rule. It figured it out from examples by nudging its weights until the loss hit zero.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">Watch it learn</p>
+        <h2>Nobody told it the rule</h2>
+        <p>In <b>NeuroLab → One neuron</b>: it guesses, sees how wrong it is (the <b>loss</b>), and nudges its <b>weights</b> — over and over — until it says <b>“learned!”</b></p>
+        <p class="sub">It learned from <b>examples</b>, not from a rule someone wrote.</p>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/neuron-lesson.png" alt="One neuron lesson"><figcaption>NeuroLab · One neuron</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="Perception: the honest catch. We HAND the brain clean numbers. A real robot needs a camera to produce 'wall ahead = 1' — that's the hard 90% of a self-driving car.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">Where senses come from</p>
+        <h2>Perception 👀</h2>
+        <p>The tiles next to the robot become the numbers the brain reads.</p>
+        <p class="callout">In real life, <b>who tells the robot “wall ahead”?</b> A camera does — and that's the hardest part of a real robot.</p>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/soccer-brain.png" alt="Senses into the brain"><figcaption>senses → input layer</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="THE meaty slide. Three ways to train the same brain. Teach them this table before anyone touches a knob — Day 5 is all about combining them well.">
+    <p class="kicker">Three ways to train one brain</p>
+    <h2>Know your trainers</h2>
+    <table>
+      <tr><th>Trainer</th><th>What it is</th><th>Watch out</th></tr>
+      <tr><td><b style="color:var(--go)">Teach</b></td><td>copy an <b>expert</b> (imitation)</td><td>sharp in seconds; can't out-think a foe</td></tr>
+      <tr><td><b style="color:var(--blue)">Q-Learn</b></td><td><b>reward</b> what works (“did it score?”)</td><td>no teacher; but a bad reward misleads it</td></tr>
+      <tr><td><b style="color:var(--purple)">Evolve</b></td><td>best brains <b>breed + mutate</b></td><td>adapts to a foe; slow + overfits from scratch</td></tr>
+    </table>
+    <p class="sub">All three <b>build on the brain you already have</b> — Teach first, then sharpen. Only <b>“Fresh”</b> wipes it.</p>
+  </section>
+
+  <section class="slide" data-note="Lab time. Teach is instant gratification — a couple seconds and it dribbles. Spar it up the ladder Bolt→Coil→Spin→Vex→Ace and SAVE it.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">Lab · train your first fighter</p>
+        <h2>Teach a striker ⚽</h2>
+        <ol>
+          <li><b>Arena → Train a fighter → Soccer.</b></li>
+          <li>Tap <span class="pill go">Teach</span> — watch the learning curve jump.</li>
+          <li>Spar up the ladder, then <b>Save</b> it.</li>
+        </ol>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/neuro-arena-train.png" alt="Train a fighter"><figcaption>the trainer + learning curve</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="A real measured result. Copying an expert (Teach) reached a one-goal game in seconds; evolving from random noise lost 1-7 in the same time. If a good expert exists, imitate it FIRST.">
+    <p class="kicker">We measured it on real devices</p>
+    <h2>A head start beats a blank page</h2>
+    <div class="cols">
+      <div class="t"><div class="callout"><b style="color:var(--go)">Teach</b> (copy the expert)<br>→ competent in <b>seconds</b> 👍</div></div>
+      <div class="t"><div class="callout"><b style="color:var(--purple)">Evolve from noise</b><br>→ lost <b style="color:var(--bad)">1–7</b> in the same time 👎</div></div>
+    </div>
+    <p class="sub">If a good <b>expert</b> exists, copy it first — <i>then</i> sharpen. Don't evolve from nothing.</p>
+  </section>
+
+  <section class="slide" data-note="The payoff moment: field the trained brain against yesterday's hand-coded dribbler. The brain's finishing finesse is the thing blocks couldn't write down.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">Code vs brain</p>
+        <h2>Rematch your hand-coded bot</h2>
+        <p>Field your <b>trained</b> striker against <b>yesterday's hand-coded</b> one. The brain aims at the open corner and finds the exact spot to stand — finesse you couldn't write as blocks.</p>
+        <p class="callout">That gap is the whole reason <b>machine learning exists</b>.</p>
+      </div>
+      <div class="v"><figure class="shot"><img src="../soccer.gif" alt="Soccer match"><figcaption>trained vs hand-coded</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="The 'one brain, many jobs' point. Brain Cam shows the identical 10-8-5 network — only the senses are relabelled for soccer. The zap output even greys out.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">Same brain, re-sensed</p>
+        <h2>Maze → fight → soccer</h2>
+        <p>It's the <b>identical</b> network shape. Only what it <b>senses as the goal</b> and how it's <b>rewarded</b> changes.</p>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/brain-cam.png" alt="Brain Cam"><figcaption>watch a live brain think</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="Checkpoint: a trained brain that out-plays the hand-coded bot, SAVED — and the kid can name the three trainers and what each is good at.">
+    <p class="kicker">You did it 🎉</p>
+    <h2>Day 4 checkpoint</h2>
+    <ul class="check">
+      <li>I watched a neuron learn from examples.</li>
+      <li>I trained and <b>saved</b> a soccer brain.</li>
+      <li>I can name <b>Teach, Q-Learn, Evolve</b> and what each is for.</li>
+    </ul>
+    <p class="callout">Next time → <b>🏆 Day 5: Champion.</b> Sharpen a real striker and run a tournament.</p>
+  </section>
+
+</div>
+
+<a class="home" href="index.html">‹ All days</a>
+<div id="counter"></div>
+<div class="ctrls">
+  <button id="prev" aria-label="Previous">‹</button>
+  <button id="next" aria-label="Next">›</button>
+  <button id="fs" aria-label="Full screen">⛶</button>
+</div>
+<div id="note"></div>
+<script src="slides.js"></script>
+</body>
+</html>

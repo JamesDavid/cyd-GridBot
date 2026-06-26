@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GridBot · Day 5 — Champion</title>
+<link rel="stylesheet" href="slides.css">
+</head>
+<body>
+<div id="prog"></div>
+<div id="deck">
+
+  <section class="slide title" data-note="The finish line. Today they refine a real striker with a recipe they can justify, then crown a champion. The meaty AI lessons (what refinement helps, what hurts) live here.">
+    <div class="emoji">🏆</div>
+    <div class="day">Day 5 of 5</div>
+    <h1>Champion</h1>
+    <p class="sub">Sharpen a soccer <b>striker</b> with evidence — then run a <b>tournament</b>.</p>
+  </section>
+
+  <section class="slide" data-note="The superpower that makes today science: the Arena is deterministic. Same start → same result. So a rematch is an EXACT test of whether your change helped — not luck.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">Today's superpower</p>
+        <h2>Rematches are <span style="color:var(--accent)">science</span></h2>
+        <p>The Arena is <b>deterministic</b>: same start → same result, every time. So when you change your brain and <b>rematch</b>, any improvement is <b>real, not luck</b>.</p>
+        <p class="sub">Train → save → rematch → keep what helped. That's the loop.</p>
+      </div>
+      <div class="v"><figure class="shot"><img src="../soccer.gif" alt="A deterministic match"><figcaption>replay it — identical</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="The winning recipe from our real device tests. Teach to get competent, THEN evolve that brain against the actual opponent you must beat. It was the only model that won — 5-2.">
+    <p class="kicker">The recipe that won 🏆</p>
+    <h2>Teach → Evolve <span style="color:var(--accent)">vs the real opponent</span></h2>
+    <p><span class="pill go">Teach</span> get competent fast → <span class="pill pur">Evolve that brain</span> against <b>the exact bot you must beat</b>.</p>
+    <p class="callout">Of every combo we tried on real devices, this was the <b>only one that won — 5–2</b>. Each generation pushes your good brain toward <b>the actual goal</b>.</p>
+  </section>
+
+  <section class="slide" data-note="The trap right next to it — and the most valuable lesson of the week. Same distilled brain, but Q-Learned against a STILL cone (a simpler game than the real match) got WORSE — 0-7. A wrong-target refinement destroys a good brain.">
+    <p class="kicker">⚠️ The trap next to it</p>
+    <h2>Training <span style="color:var(--bad)">more</span> can make it <span style="color:var(--bad)">worse</span></h2>
+    <table>
+      <tr><th>Take a good distilled striker, then…</th><th>Result</th></tr>
+      <tr><td>nothing (Teach only)</td><td>competent — a one-goal game</td></tr>
+      <tr><td><b>Evolve</b> vs the real opponent</td><td><b style="color:var(--go)">wins 5–2</b> ✅</td></tr>
+      <tr><td>Q-Learn vs a <b>still cone</b></td><td><b style="color:var(--bad)">regresses to 0–7</b> ⚠️</td></tr>
+    </table>
+    <p class="sub">The cone is a <b>simpler game than the real match</b> — its reward overwrote the good habits.</p>
+  </section>
+
+  <section class="slide" data-note="The fix wasn't a new algorithm — it was REALISM. The same Q-Learn recipe, run against the real moving opponent, recovered to 3-3. And you must let the reward run FINISH — a half-done pass is mid-regression.">
+    <p class="kicker">🔧 The fix is realism, not a new trick</p>
+    <h2>Train against what you'll <span style="color:var(--accent)">actually face</span></h2>
+    <ul>
+      <li>Q-Learn vs the <b>real moving</b> opponent → recovered <b>0–7 → 3–3</b>.</li>
+      <li><b>Let the reward run finish</b> — a half-done pass is stuck mid-regression. Finished, it flipped a draw into a <b>win</b>.</li>
+    </ul>
+    <p class="sub">Episode count is not a footnote.</p>
+  </section>
+
+  <section class="slide" data-note="You can WATCH over-fitting. Evolve too long on one fixed pitch and the bot literally 'just stays there' in a real match — it memorised that one board. Fix: vary the board. This is the Day-2 maze lesson again.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">You can watch it happen</p>
+        <h2>Over-fitting 🥶</h2>
+        <p>Evolve too long on <b>one fixed pitch</b> and the bot <b>“just stays there”</b> in a real match — it memorised that board.</p>
+        <p class="callout">Fix: <b>vary the board</b> while training. (Sound familiar? It's the Day-2 maze lesson again — a memoriser fails on the unseen.)</p>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/neuro-evolution.png" alt="Evolution"><figcaption>the population evolving</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="The loser-levels-up loop. Save the bot that beat you (it lands in your library as 'owner fighter'), train against THAT exact bot, rematch. Honest caveat: one pass isn't always enough — Battle flipped, Soccer didn't.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">The loop that levels you up</p>
+        <h2>Lost? Train against the winner</h2>
+        <ol>
+          <li><b>Save the foe</b> — it copies the winner into your library.</li>
+          <li><b>Train</b> against that exact bot.</li>
+          <li><b>Rematch</b> (it's deterministic — a fair test).</li>
+        </ol>
+        <p class="sub">Caveat: a big gap can need more than one pass.</p>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/neuro-arena-train.png" alt="Train against a saved foe"><figcaption>train · save · rematch</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="The troubleshooting box — the most valuable moment of the week, not a failure. Walk through each cause when a kid's bot got worse.">
+    <p class="kicker">🩺 “My bot got worse!”</p>
+    <h2>That's the best lesson, not a fail</h2>
+    <ul>
+      <li>Refined vs a <b>too-easy</b> partner (a still cone)? → use a <b>real moving</b> foe.</li>
+      <li>Stopped the reward run <b>early</b>? → <b>let it finish</b>.</li>
+      <li>Evolved long on <b>one board</b>? → <b>vary the board</b>.</li>
+      <li>Still stuck? → <b>re-Teach</b> a fresh base, then refine.</li>
+    </ul>
+  </section>
+
+  <section class="slide" data-note="The capstone. One device: vs Computer → Tournament (Cup or Ladder). The class: Arena → Radio → Room — every board replays the identical bracket from a shared seed and crowns the same champion. No internet.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">The capstone</p>
+        <h2>Tournament 🏆</h2>
+        <ul>
+          <li><b>One device:</b> vs Computer → <b>Tournament</b> (Cup or Ladder).</li>
+          <li><b>The class:</b> Arena → Radio → <b>Room</b> — every board runs the <b>same</b> bracket and crowns the <b>same</b> champion.</li>
+        </ul>
+        <p class="sub">No internet, no scoreboard — nothing leaves the room.</p>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/radio.png" alt="The Room"><figcaption>Arena → Radio → Room</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="The big question that ties the week together — and the whole point: there's no single best method, there's a best method for THIS problem.">
+    <p class="kicker">The whole week in one question 💭</p>
+    <h2>“Hand-coded bot or trained bot — which do you bring, and <span style="color:var(--accent)">why</span>?”</h2>
+    <table>
+      <tr><th>Game</th><th>Who wins</th></tr>
+      <tr><td>🧩 Maze</td><td>✍️ <b>Hand-coding</b> — a correct rule generalises</td></tr>
+      <tr><td>🤖 Battle</td><td>✍️ <b>Hand-coding</b> — clear priorities win</td></tr>
+      <tr><td>⚽ Soccer</td><td>🧠 <b>Learning</b> — finesse needs practice</td></tr>
+    </table>
+    <p class="sub"><b>Match the method to the problem.</b></p>
+  </section>
+
+  <section class="slide" data-note="The finish line. A soccer bot the kid trained themselves, refined with a recipe they can justify, fielded in a real bracket — and they can say when to write rules and when to train them. That's the whole course.">
+    <p class="kicker">🏁 You did it — all five days</p>
+    <h2>Champion 🏆</h2>
+    <ul class="check">
+      <li>I trained a soccer striker <b>myself</b>.</li>
+      <li>I sharpened it with a recipe I can <b>explain</b>.</li>
+      <li>I know <b>when to write rules</b> and <b>when to train them</b>.</li>
+    </ul>
+    <p class="callout">From “I write the rules” → “I train the rules.” <b>You built and trained a robot.</b> 🤖⚽</p>
+  </section>
+
+</div>
+
+<a class="home" href="index.html">‹ All days</a>
+<div id="counter"></div>
+<div class="ctrls">
+  <button id="prev" aria-label="Previous">‹</button>
+  <button id="next" aria-label="Next">›</button>
+  <button id="fs" aria-label="Full screen">⛶</button>
+</div>
+<div id="note"></div>
+<script src="slides.js"></script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GridBot · Day 2 — Think</title>
+<link rel="stylesheet" href="slides.css">
+</head>
+<body>
+<div id="prog"></div>
+<div id="deck">
+
+  <section class="slide title" data-note="This is the most important day of the course. The leap from 'a memorised list of moves' to 'a rule that works on the unknown' is the heart of computer science. Don't rush it.">
+    <div class="emoji">🧠</div>
+    <div class="day">Day 2 of 5</div>
+    <h1>Think</h1>
+    <p class="sub">Write <b>one</b> program that can solve a maze it has <b>never seen before</b>.</p>
+  </section>
+
+  <section class="slide" data-note="Two new tools today — loops and sensing — combine into the magic: an algorithm.">
+    <p class="kicker">Today you will</p>
+    <h2>Level up your brain</h2>
+    <ul>
+      <li>🔁 <b>Loops</b> — do steps again and again without copy-paste.</li>
+      <li>👀 <b>Sensing</b> — the robot reacts to what it sees.</li>
+      <li>✨ Build a <b>wall-follower</b> that solves <b>any</b> maze.</li>
+    </ul>
+  </section>
+
+  <section class="slide" data-note="Loops unlock at Level 10. Ask 'how many forwards is this without the loop?' The win is efficiency AND readability, not just less typing.">
+    <div class="cols top">
+      <div class="t">
+        <p class="kicker">New power · Level 10</p>
+        <h2>Repeat 🔁</h2>
+        <p>Instead of five blocks…</p>
+        <div class="code">forward
+forward
+forward
+forward
+forward</div>
+        <p>…use <b>one</b> loop:</p>
+        <div class="code"><span class="k">repeat</span> 5 { forward }</div>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/codelab-lesson.png" alt="Repeat lesson"><figcaption>CodeLab · “3 · Repeat”</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="Sensing unlocks at Level 15 — and opens the Arena (Day 3). 'if' reacts once; 'until' keeps going until true. Tap the keyword chip to switch.">
+    <p class="kicker">New power · Level 15</p>
+    <h2>Sense — the robot <span style="color:var(--accent)">reacts</span></h2>
+    <div class="cols">
+      <div class="t">
+        <p>Now the robot can make a decision from what it senses:</p>
+        <p><span class="pill">if wall</span> <span class="pill">if pit</span> <span class="pill">until goal</span></p>
+        <p class="sub"><b>if</b> = react once. <b>until</b> = keep going until it's true.</p>
+      </div>
+      <div class="v"><figure class="shot sm"><img src="../img/code-view.png" alt="Sensing blocks"><figcaption>if / until blocks</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="The trick every maze-solver knows: keep one hand on a wall and walk — you always find the exit. Always turn the SAME way.">
+    <div class="cols top">
+      <div class="t">
+        <p class="kicker">Build this</p>
+        <h2>The wall-follower</h2>
+        <div class="code"><span class="k">repeat until</span> goal {
+    <span class="k">if</span> wall { <span class="k">turn</span> left }
+    forward
+}</div>
+        <p class="sub">“If there's a wall ahead, turn the same way; otherwise step forward.”</p>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/hc-maze-2.png" alt="Wall-follower in the editor"><figcaption>In the real editor</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="THE aha moment. Run the SAME program on three different mazes without changing a block. It solves all three. Let the kids be amazed before you explain why.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">The magic ✨</p>
+        <h2>Same program. Mazes it's never seen.</h2>
+        <p>Don't change a single block — run it on a <b>brand-new maze</b>. It still solves it!</p>
+        <p class="callout">Why? Because it's a <b>rule</b>, not a memorised path.</p>
+      </div>
+      <div class="v"><figure class="shot"><img src="../img/multi-maze.png" alt="One program, many mazes"><figcaption>One rule → many mazes</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="Add one rule and it becomes a complete general maze robot in 3 rules. The program is now taller than the pane — show them the scrollbar.">
+    <div class="cols top">
+      <div class="t">
+        <p class="kicker">Add one rule</p>
+        <h2>Handle pits too</h2>
+        <div class="code"><span class="k">repeat until</span> goal {
+    <span class="k">if</span> wall { <span class="k">turn</span> left }
+    <span class="k">if</span> pit  { <span class="k">jump</span> }
+    forward
+}</div>
+        <p class="sub">A complete, general maze robot in <b>3 rules</b>.</p>
+      </div>
+      <div class="v"><figure class="shots">
+        <figure class="shot sm"><img src="../img/hc-maze-3-1.png" alt="top"><figcaption>top</figcaption></figure>
+        <figure class="shot sm"><img src="../img/hc-maze-3-2.png" alt="scrolled"><figcaption>scroll ↓</figcaption></figure>
+      </figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="The receipts — measured on the real engine. The 3-rule RULE solves 8x more unseen mazes than a brain that memorised one maze. This is the #1 thing to feel before doing AI.">
+    <p class="kicker">We measured it — 16 mazes it had never seen</p>
+    <h2>A rule beats a memoriser</h2>
+    <table>
+      <tr><th>Robot</th><th>Solved (unseen mazes)</th></tr>
+      <tr><td>Wall-follower <b>+ jump</b> (3 rules)</td><td><b style="color:var(--go)">8 / 16</b></td></tr>
+      <tr><td>Plain wall-follower (no pit rule)</td><td>5 / 16</td></tr>
+      <tr><td>A brain trained on <b>one</b> maze</td><td><b style="color:var(--bad)">1 / 16</b></td></tr>
+    </table>
+    <p class="sub">The brain <b>memorised</b> its one maze and gets lost everywhere else. <i>(We'll fix that on Day 4 — train it on lots of mazes.)</i></p>
+  </section>
+
+  <section class="slide" data-note="Functions unlock at Level 20 — abstraction. Name a group of steps, reuse it; the program gets shorter AND clearer. Light touch is fine today.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">New power · Level 20</p>
+        <h2>Functions — name &amp; reuse</h2>
+        <p>Bundle steps under a name and call it whenever you need it. Your program gets <b>shorter and clearer</b>.</p>
+      </div>
+      <div class="v"><figure class="shot sm"><img src="../img/codelab.png" alt="CodeLab menu"><figcaption>CodeLab · “5 · Functions”</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="The exit-ticket question. If they can explain WHY the wall-follower generalises, they got the most important idea in the course.">
+    <p class="kicker">Big question 💭</p>
+    <h2>“Could this program solve a maze you've <span style="color:var(--accent)">never opened</span>? Why?”</h2>
+    <p class="sub">Say it back in your own words. That “why” is the whole idea of an <b>algorithm</b>.</p>
+  </section>
+
+  <section class="slide" data-note="Checkpoint: the kid can explain why the wall-follower generalises. This is the curriculum's hinge — if they get this, the rest clicks.">
+    <p class="kicker">You did it 🎉</p>
+    <h2>Day 2 checkpoint</h2>
+    <ul class="check">
+      <li>I replaced copy-paste with a loop.</li>
+      <li>I built a wall-follower with sensing.</li>
+      <li>I can explain <b>why</b> it solves mazes it's never seen.</li>
+    </ul>
+    <p class="callout">Next time → <b>⚔️ Day 3: Compete.</b> Hand-code a fighter and a striker in the Arena.</p>
+  </section>
+
+</div>
+
+<a class="home" href="index.html">‹ All days</a>
+<div id="counter"></div>
+<div class="ctrls">
+  <button id="prev" aria-label="Previous">‹</button>
+  <button id="next" aria-label="Next">›</button>
+  <button id="fs" aria-label="Full screen">⛶</button>
+</div>
+<div id="note"></div>
+<script src="slides.js"></script>
+</body>
+</html>
