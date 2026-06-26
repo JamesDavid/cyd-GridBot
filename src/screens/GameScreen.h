@@ -26,6 +26,7 @@ class GameScreen : public app::IScreen {
   void beginEditLibrary(gb::Profile* profile, const gb::Program& prog, uint32_t level);
   void enter() override;
   void resumeCode();   // re-show the Code view WITHOUT the level preview (e.g. back from train-brain)
+  void showCodeTop();  // Code view scrolled to the TOP (clean program screenshots / debug load)
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
 
   int lastStars() const { return _stars; }

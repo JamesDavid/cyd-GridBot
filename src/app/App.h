@@ -53,6 +53,7 @@ class App {
   void debugStep();                       // advance the current run/match one tick ('N')
   void debugNeuroLesson();                // open the single-neuron lesson ('B')
   void debugDumpMaze();                   // GAME: print the exact maze grid over serial ('M')
+  void debugLoadProg(uint32_t n);         // GAME: load a hand-coding-guide program into the editor ('D <n>')
 
  private:
   enum class State : uint8_t { SELECT, CREATE, HOME, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE,

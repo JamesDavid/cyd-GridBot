@@ -43,6 +43,12 @@ Two blocks do the looping and thinking:
 > "goal is that way" sense for the Maze — only `goal` (are you on it). That one missing sense is a
 > big part of why the three games feel so different to hand-code.
 
+Here's the editor: the **block palette** is on the left (tap an arrow to drop that block into your
+program), and your **program** grows on the right. The screenshots in this guide show that right-hand
+program pane.
+
+![The block editor](img/hc-editor.png)
+
 ---
 
 ## 2. Maze — *the wall-follower* 🧩 (hand-coding's home turf)
@@ -62,6 +68,14 @@ repeat until goal {
 That's the whole thing. "If there's a wall in front of me, turn; otherwise step forward." Because you
 always turn the *same* way, you trace along the wall and sweep the maze until you hit the goal.
 
+*Here it is in the real editor (tap the arrows on the left to add each block):*
+
+![Wall-follower in the editor](img/hc-maze-2.png)
+
+> Tip: start even simpler — a program that's **just `forward`** ( ![just forward](img/hc-maze-1.png) )
+> drives straight until it bonks a wall. Then add the `if wall { turn left }` rule and watch it start
+> to *follow* the wall. Building up one rule at a time is the whole game.
+
 ### Make it handle pits (use a function or just add a line)
 
 Real mazes have **pits**. Walking into one = you fall. Add one rule:
@@ -75,6 +89,9 @@ repeat until goal {
 ```
 
 Now you **jump pits** and **turn at walls**. This is a complete, general maze robot in *3 rules*.
+The program is now longer than the code pane, so **scroll** it (tap the scrollbar on the right edge):
+
+![Wall-follower + jump, top](img/hc-maze-3-1.png) ![Wall-follower + jump, scrolled](img/hc-maze-3-2.png)
 
 ### Why this is the magic lesson
 
@@ -119,6 +136,10 @@ Read it as a sentence: *"Zap if you can; never suicide into a pit; turn toward t
 stuck on a wall; otherwise close the distance."* It **hunts** — it always turns to face the enemy and
 shoves when close.
 
+*This one is six rules long, so the code pane scrolls — top → middle → bottom:*
+
+![Hunter, top](img/hc-battle-1.png) ![Hunter, middle](img/hc-battle-2.png) ![Hunter, bottom](img/hc-battle-3.png)
+
 ### How it does
 
 We played this hand-coded hunter against trained neural fighters over 16 matches:
@@ -158,6 +179,8 @@ repeat until goal {
 It scores sometimes… but it shoves the ball **whatever way it's facing**, including into its *own*
 goal. Against a real opponent it **loses every time**.
 
+![Soccer chaser, top](img/hc-soccer-1-1.png) ![Soccer chaser, scrolled](img/hc-soccer-1-2.png)
+
 ### The good version — *get behind the ball*
 
 The fix uses the **net** sense. When you're right on the ball, if the net is off to one side you're
@@ -176,7 +199,11 @@ repeat until goal {
 }
 ```
 
-This "circle behind, then push" robot is **much** stronger.
+This "circle behind, then push" robot is **much** stronger. Notice the **nested `if`** — the net
+checks live *inside* the `if ball ^` block (indented one step further). In the editor, tap **`+ add
+inside`** on the `if ball ^` row to put blocks inside it:
+
+![Soccer dribbler, top](img/hc-soccer-2-1.png) ![Soccer dribbler, scrolled](img/hc-soccer-2-2.png)
 
 ### How it does
 
@@ -230,6 +257,48 @@ robot practise** until it learns what you couldn't easily say.
 
 You'll have *earned* the AI — you know exactly what it's learning, because you tried to write it down
 yourself first.
+
+---
+
+## 6. Exercises — *level up your bot (and break the tie)*
+
+**Why this matters for multiplayer:** GridBot's Arena is perfectly fair, so if you and a friend field
+the **identical** bot, the match is a mirror and ends in a **tie** every time. The way to *win* a
+classroom match is to make **your** bot a little smarter than everyone else's. Each exercise below is
+a tweak that can break the tie — try it, save it, then challenge a friend in the Arena (or the
+networked **Room**).
+
+### 🧩 Maze
+1. **Right-hand rule.** Change `turn left` to `turn right`. Does it still solve the maze? Now race a
+   left-follower against a right-follower on the same board — one hand is often the *much* shorter way
+   out.
+2. **Spend fewer moves.** Your bot jumps at every pit. Can you turn around some pits instead, and only
+   `jump` when you must? Fewer steps = a better **star score** — and a faster bot wins a race.
+3. **Predict before you Run.** On a brand-new maze, point to where you think it'll go *first*. If you
+   were wrong, ask *why* — what did your rule actually say to do?
+
+### 🤖 Battle
+1. **Beat the basic hunter.** The plain hunter is strong — can you build one that beats *it*? Try
+   adding `if foe near { zap }` (hit a foe that's close, not only dead-ahead). Save both fighters and
+   pit them against each other.
+2. **Order is everything.** Move `forward` to the **top** of the list and watch your fighter turn dumb
+   (it charges before it aims). Put it back. Explain *why* the order changed the whole bot.
+3. **Pull a rule out.** Delete the `if pit { turn right }` line and fight near a pit. What goes wrong?
+   That tells you exactly which job that one rule was doing.
+
+### ⚽ Soccer
+1. **Win the tie.** Two "get behind the ball" bots will draw. Find **one** change that wins — maybe an
+   extra `forward` to commit the shot, or a `wall` rule so you don't get stuck. *(Fair warning: in our
+   tests both of those made it **worse** — this is a real, open puzzle. Beat it and you've out-coded
+   the grown-ups.)*
+2. **Use the foe.** Add a `foe <` / `foe >` rule to aim away from the keeper. We couldn't make this
+   help with simple blocks — can you?
+3. **Know when to switch.** If your best blocks still lose to the trained striker, that's not failing —
+   that's the lesson landing. Open **NeuroLab** and *train* one. You now know exactly what it's learning.
+
+> **Classroom tournament.** Everyone hand-codes the *same* starting bot, then gets 10 minutes to "level
+> it up" with one or two changes. Run a round-robin in the Arena. The **ties** show who just copied;
+> the **wins** show who actually *improved* — and every win is a tiny idea the kid can explain.
 
 ---
 

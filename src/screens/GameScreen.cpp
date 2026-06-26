@@ -179,6 +179,14 @@ void GameScreen::resumeCode() {
   drawCodeView();
 }
 
+void GameScreen::showCodeTop() {
+  _previewing = false;
+  _mode = M_EDIT;
+  _view = V_CODE;
+  _followTail = false; _scroll = 0; _selected = -1;   // pin to the top so the whole program shows
+  drawCodeView();
+}
+
 bool GameScreen::cornerUnlocked(int slot) const {
   if (!_profile) return false;
   switch (slot) {

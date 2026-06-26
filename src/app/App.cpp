@@ -216,6 +216,61 @@ void App::debugDumpMaze() {
   Serial.printf("GOAL %d %d\n", m.goalRow(), m.goalCol());
 }
 
+// Build a hand-coding-guide program (and its earlier build stages) so they can be screenshotted in
+// the real editor for docs/HAND-CODING-GUIDE.md. Stages mirror the guide's step-by-step examples.
+static gb::Program guideProgram(uint32_t n) {
+  using namespace gb;
+  auto ifDo = [](Cond c, Cmd cmd) { Node x = Node::ifCond(c); x.body.push_back(Node::command(cmd)); return x; };
+  Program p;
+  Node loop = Node::repeatUntil(AT_GOAL);
+  switch (n) {
+    case 0:  // MAZE step 1: just drive
+      loop.body.push_back(Node::command(CMD_FWD));
+      break;
+    case 1:  // MAZE step 2: wall-follower
+      loop.body.push_back(ifDo(WALL_AHEAD, CMD_TURN_L));
+      loop.body.push_back(Node::command(CMD_FWD));
+      break;
+    case 2:  // MAZE step 3: wall-follower + jump pits (final)
+      loop.body.push_back(ifDo(WALL_AHEAD, CMD_TURN_L));
+      loop.body.push_back(ifDo(PIT_AHEAD,  CMD_JUMP));
+      loop.body.push_back(Node::command(CMD_FWD));
+      break;
+    case 3:  // BATTLE: the hunter (priority rules)
+      loop.body.push_back(ifDo(ENEMY_AHEAD, CMD_FIRE));
+      loop.body.push_back(ifDo(PIT_AHEAD,   CMD_TURN_R));
+      loop.body.push_back(ifDo(ENEMY_RIGHT, CMD_TURN_R));
+      loop.body.push_back(ifDo(ENEMY_LEFT,  CMD_TURN_L));
+      loop.body.push_back(ifDo(WALL_AHEAD,  CMD_TURN_R));
+      loop.body.push_back(Node::command(CMD_FWD));
+      break;
+    case 4:  // SOCCER step 1: the naive chaser (first try)
+      loop.body.push_back(ifDo(BALL_LEFT,  CMD_TURN_L));
+      loop.body.push_back(ifDo(BALL_RIGHT, CMD_TURN_R));
+      loop.body.push_back(Node::command(CMD_FWD));
+      break;
+    default: {  // SOCCER step 2: get behind the ball, then push (final)
+      Node onBall = Node::ifCond(BALL_AHEAD);
+      onBall.body.push_back(ifDo(NET_LEFT,  CMD_TURN_R));
+      onBall.body.push_back(ifDo(NET_RIGHT, CMD_TURN_L));
+      loop.body.push_back(onBall);
+      loop.body.push_back(ifDo(BALL_LEFT,  CMD_TURN_L));
+      loop.body.push_back(ifDo(BALL_RIGHT, CMD_TURN_R));
+      loop.body.push_back(Node::command(CMD_FWD));
+      break;
+    }
+  }
+  p.main.push_back(loop);
+  return p;
+}
+
+void App::debugLoadProg(uint32_t n) {
+  if (_state != State::GAME) { Serial.println("NOEDIT"); return; }  // open a level's editor first
+  _game.program() = guideProgram(n);
+  _game.showCodeTop();   // show the Code view (scrolled to the top) with the loaded program
+  Serial.printf("LOADPROG %u\n", n);
+}
+
 void App::debugNeuroLesson() {
   hal::audio.stopMusic();
   _lessonsMenu.enter();
