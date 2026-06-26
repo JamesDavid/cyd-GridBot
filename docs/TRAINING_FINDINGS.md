@@ -34,7 +34,8 @@ AA models at it in the deterministic Room. Same pitch, same opponent, same seed 
 | Over-Evolved (gen **256**, **fixed** board) | Evolve from scratch, one pitch, many generations | **broken** — *"just stays there"* | **Overfitting.** More generations on one board made it memorise that board and freeze elsewhere. |
 | Varied-board Evolve (gen **128**) | Evolve from scratch, **ball moved every generation** | lost **1 – 7** | Generalises (it plays everywhere now, doesn't freeze) — but from-scratch evolution is still **weak**. |
 | Teach (distill) | Imitate the expert dribbler | lost **4 – 5** | **Competent out of the box.** A one-goal game — distillation alone is already close. |
-| Teach → **Q-Learn** | Distill the expert, **then reward-refine** it (score = reward) | lost **0 – 7** | **Regressed — refinement can HURT.** The opponent-agnostic reward signal overwrote the clean distilled policy and made it *worse than Teach alone*. |
+| Teach → **Q-Learn** *(stationary defender)* | Distill, then reward-refine vs a **cone** | lost **0 – 7** | **Regressed — refinement can HURT.** Trained against a static defender + a "score the ball" proxy, it overwrote the distilled policy and got *worse than Teach alone*. |
+| Teach → **Q-Learn** *(LIVE opponent)* | Distill, then reward-refine while **running BB's actual brain** as a moving defender | **3 – 3** (lost on the tiebreak) | **Fixed by realism.** The same combo, against the *real* moving opponent, went from a 0–7 blowout to a dead heat — the refinement is competitive once it trains against what it'll actually face. |
 | **Teach → Evolve vs BB** | Distill the expert, **then evolve *that* to beat BB** | **won 5 – 2** ✅ | **The winner.** Competent **+** adapted-to-the-opponent. |
 
 Then we ran the **loser-levels-up loop**: BB saved AA's champion and trained the *same*
@@ -90,6 +91,10 @@ levelling-up pass was enough. **Different disciplines, different losers, differe
      a simpler objective than your real one can *destroy* a good brain. The combo only compounds
      when the second stage pulls in the same direction as the first (Evolve-vs-the-actual-opponent
      does; score-the-ball-vs-a-cone doesn't).
+   - **The fix was *realism*, not a different technique.** We made Q-Learn **run the real
+     opponent's brain** as a moving defender (instead of a static cone). The *identical* Teach →
+     Q-Learn recipe then went from **0–7 to 3–3** — a dead heat. **Training against what you'll
+     actually face matters as much as which algorithm you pick.**
    (The enabler for *any* of this was making the trainer **seed from the current brain** by default
    instead of restarting from noise — so Teach → anything actually builds on the Teach.)
 
