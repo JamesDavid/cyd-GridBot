@@ -51,7 +51,7 @@ void MethodLessonScreen::draw() {
 
   const Q& q = QUESTIONS[_q];
   char hd[16]; snprintf(hd, sizeof(hd), "%d / %d", _q + 1, N_Q);
-  label(g, SCREEN_W - 6, 6, hd, C_DIM, textdatum_t::top_right);
+  label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, C_DIM, textdatum_t::top_right);
   label(g, SCREEN_W / 2, 50, q.prompt, C_INK, textdatum_t::middle_center);
 
   for (int i = 0; i < q.nOpt; i++) {

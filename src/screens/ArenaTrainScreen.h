@@ -22,6 +22,7 @@ class ArenaTrainScreen : public app::IScreen {
   void enter() override;
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
   bool savedFighter() const { return _saved; }  // tapped "Save fighter"
+  bool trainedBrain() const { return _didTrain; }  // ran any Teach/Evolve/Q-Learn pass this visit
   // "Fight! >" was tapped: the fighter is saved and the app should jump straight into a battle of
   // this fighter vs the current sparring opponent (instead of returning to the Arena menu).
   bool launchFight() const { return _launchFight; }
@@ -79,6 +80,7 @@ class ArenaTrainScreen : public app::IScreen {
   int _oppIdx = 0;            // which roster opponent we spar against
   std::string _oppName;      // its display name
   bool _beatsAI = false, _taught = false, _saved = false;
+  bool _didTrain = false;       // a Teach/Evolve/Q-Learn pass actually ran this visit (-> brainsTrained)
   int _savedIdx = -1;         // library slot this session's fighter went to (-1 = not saved yet)
   std::string nextFighterName() const;  // smallest free "Fighter vN" so each is distinct
   // first-ever battle bot (empty library, nothing saved this session) -> show the onboarding hint

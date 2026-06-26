@@ -35,7 +35,11 @@ static const Rect R_BACK = {6,   (int16_t)(BOTBAR_Y + 2), 96, 26};
 static const Rect R_PREV = {150, (int16_t)(BOTBAR_Y + 2), 78, 26};
 static const Rect R_NEXT = {234, (int16_t)(BOTBAR_Y + 2), 80, 26};
 
-void LessonHubScreen::enter() { _pick = -1; _page = 0; draw(); }
+void LessonHubScreen::enter() {
+  _pick = -1;
+  if (_page < 0 || _page >= N_PAGES) _page = 0;  // keep the page you were on (so exiting a lesson
+  draw();                                        // returns you to the same page), just clamp it valid
+}
 
 void LessonHubScreen::draw() {
   auto& g = hal::display.gfx();
@@ -43,7 +47,7 @@ void LessonHubScreen::draw() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "NeuroLab", C_ACCENT, textdatum_t::top_left, 2);
   char hdr[28]; snprintf(hdr, sizeof(hdr), "how machines learn  (%d/%d)", _page + 1, N_PAGES);
-  label(g, SCREEN_W - 6, 6, hdr, C_DIM, textdatum_t::top_right);
+  label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hdr, C_DIM, textdatum_t::top_right);
 
   int start = _page * PER_PAGE;
   for (int r = 0; r < PER_PAGE; r++) {

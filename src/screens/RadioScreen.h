@@ -18,8 +18,10 @@ class RadioScreen : public app::IScreen {
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
 
  private:
-  enum class Phase : uint8_t { CHOICE, LINKING, TRADED, BATTLE, DONE };
+  enum class Phase : uint8_t { CHOICE, PICK, LINKING, TRADED, BATTLE, DONE };
   void drawChoice();
+  void drawPick();
+  ui::Rect pickRowRect(int i, int n) const;  // same geometry for draw + hit-test
   void drawLinking();
   void startLink(bool trade);
   void onReady();
@@ -33,6 +35,7 @@ class RadioScreen : public app::IScreen {
   Phase _phase = Phase::CHOICE;
 
   gb::Program _mine, _theirs;
+  int8_t _pickIdx = -1;         // library slot the picker chose (-1 = default: most recent). 1 byte, DRAM is tight.
   gb::Maze _maze;
   gb::Pose _s0, _s1;
   gb::Arena _arena;

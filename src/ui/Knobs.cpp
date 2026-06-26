@@ -17,7 +17,7 @@ void Knobs::draw() const {
   g.fillScreen(C_BG);
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Training knobs", C_ACCENT, textdatum_t::top_left, 2);
-  label(g, SCREEN_W - 6, 6, "(advanced)", C_DIM, textdatum_t::top_right);
+  label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, "(advanced)", C_DIM, textdatum_t::top_right);
 
   auto row = [&](int y, const char* name, const char* val, const char* hint,
                  const Rect& dn, const Rect& up, uint16_t vcol) {

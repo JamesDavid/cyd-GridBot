@@ -39,7 +39,7 @@ void BackpropLessonScreen::draw() {
 
   // ---------- intro slide: the LOOK/SCORE/BLAME/NUDGE loop ----------
   if (_ex < 0) {
-    label(g, SCREEN_W - 6, 6, "how a neuron learns", C_DIM, textdatum_t::top_right);
+    label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, "how a neuron learns", C_DIM, textdatum_t::top_right);
     g.fillRoundRect(20, 36, SCREEN_W - 40, 138, 8, C_PANEL);
     label(g, SCREEN_W / 2, 46, "4 moves, on repeat:", C_INK, textdatum_t::top_center);
     label(g, 44, 70,  "1. LOOK", C_GO);     label(g, 130, 70,  "make a guess", C_DIM);
@@ -54,7 +54,7 @@ void BackpropLessonScreen::draw() {
   }
 
   char hd[24]; snprintf(hd, sizeof(hd), "ex %d/4  -  %s", _ex + 1, STEPN[_step]);
-  label(g, SCREEN_W - 6, 6, hd, C_DIM, textdatum_t::top_right);
+  label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, C_DIM, textdatum_t::top_right);
 
   int x0 = EX[_ex][0], x1 = EX[_ex][1], t = EX[_ex][2];
   float xin[2] = {(float)x0, (float)x1};

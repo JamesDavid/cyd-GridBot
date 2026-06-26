@@ -37,9 +37,7 @@ void RadioScreen::begin(Profile* profile) {
   _profile = profile;
   _phase = Phase::CHOICE;
   _myAvatar = profile ? profile->avatar : 0;
-  // My bot: latest library entry, else the wall-follower.
-  if (profile && !profile->library.empty()) _mine = profile->library.back().program;
-  else _mine = wallFollowerProgram();
+  _pickIdx = -1;   // default to the most recent fighter until the picker chooses
 }
 
 void RadioScreen::enter() { drawChoice(); }
@@ -58,15 +56,54 @@ void RadioScreen::drawChoice() {
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
 }
 
+// One library row's rect -- identical maths in draw and hit-test so taps land where they look.
+ui::Rect RadioScreen::pickRowRect(int i, int n) const {
+  int top = TOPBAR_H + 24, bottom = BOTBAR_Y - 4;
+  int rowh = (bottom - top) / (n < 1 ? 1 : n);
+  if (rowh > 30) rowh = 30; if (rowh < 14) rowh = 14;
+  return ui::Rect{12, (int16_t)(top + i * rowh), (int16_t)(SCREEN_W - 24), (int16_t)(rowh - 3)};
+}
+
+void RadioScreen::drawPick() {
+  _phase = Phase::PICK;
+  auto& g = hal::display.gfx();
+  g.fillScreen(C_BG);
+  g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
+  label(g, 6, 3, _trade ? "Share which bot?" : "Pick your fighter", C_ACCENT, textdatum_t::top_left, 2);
+  int n = _profile ? (int)_profile->library.size() : 0;
+  if (n == 0) {
+    label(g, SCREEN_W / 2, 100, "No saved bots - using default", C_DIM, textdatum_t::middle_center);
+  } else {
+    label(g, SCREEN_W / 2, TOPBAR_H + 8, _trade ? "tap a bot to send it" : "tap a bot to send into battle",
+          C_DIM, textdatum_t::top_center);
+    for (int i = 0; i < n; i++) {
+      const auto& e = _profile->library[i];
+      bool isLast = (i == n - 1);   // the default (most recently saved)
+      button(g, pickRowRect(i, n), e.name.c_str(), isLast ? C_GO : C_INK, C_PANEL);
+    }
+  }
+  g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
+  button(g, R_BACK, "< Back", C_INK, C_PANEL);
+}
+
 void RadioScreen::startLink(bool trade) {
   _trade = trade;
   _phase = Phase::LINKING;
+  // Resolve the chosen fighter (picker index, else most-recent, else the wall-follower default).
+  String botName;
+  if (_profile && !_profile->library.empty()) {
+    int n = (int)_profile->library.size();
+    int idx = (_pickIdx >= 0 && _pickIdx < n) ? _pickIdx : n - 1;
+    _mine = _profile->library[idx].program;
+    botName = String(_profile->library[idx].name.c_str());
+  } else {
+    _mine = wallFollowerProgram();
+  }
   net::BotCard mine;
   mine.name = _profile ? String(_profile->name.c_str()) : String("Player");
   mine.avatar = _myAvatar;
   mine.uuid = _profile ? String(_profile->uuid.c_str()) : String("");
-  mine.botName = (_profile && !_profile->library.empty())   // send the bot's own name along
-                   ? String(_profile->library.back().name.c_str()) : String("");
+  mine.botName = botName;   // the fighter the picker chose (sent to my friend)
   mine.progJson = programToJsonString(_mine);
   net::radio.begin();
   net::radio.startSession(mine);
@@ -124,7 +161,7 @@ void RadioScreen::onReady() {
   MazeGen::generateArena(_maze, net::radio.sharedSeed(), _s0, _s1);
   const Program* p0 = net::radio.iAmBot0() ? &_mine : &_theirs;
   const Program* p1 = net::radio.iAmBot0() ? &_theirs : &_mine;
-  _arena.setup(&_maze, p0, p1, _s0, _s1, MatchType::RACE);
+  _arena.setup(&_maze, p0, p1, _s0, _s1, MatchType::SUMO);   // "Battle a friend" = a real sumo fight
   _phase = Phase::BATTLE;
   _last = 0;
   drawBoard();
@@ -207,13 +244,24 @@ app::Signal RadioScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   }
 
   if (tap && R_BACK.contains(tx, ty)) {
+    if (_phase == Phase::PICK) { drawChoice(); return app::Signal::NONE; }  // back to Battle/Trade/Room
     net::radio.stop(); hal::led.off();
     return app::Signal::BACK;
   }
   if (tap && _phase == Phase::CHOICE) {
     if (R_ROOM.contains(tx, ty)) return app::Signal::GOTO_ROOM;   // hand off to the Arena's Room lobby
-    if (R_BATTLE.contains(tx, ty)) startLink(false);
-    else if (R_TRADE.contains(tx, ty)) startLink(true);
+    if (R_BATTLE.contains(tx, ty)) { _trade = false; drawPick(); }   // pick a fighter, then link
+    else if (R_TRADE.contains(tx, ty)) { _trade = true; drawPick(); }
+  } else if (tap && _phase == Phase::PICK) {
+    int n = _profile ? (int)_profile->library.size() : 0;
+    if (n == 0) { startLink(_trade); }                           // no library -> default bot
+    else for (int i = 0; i < n; i++)
+      if (pickRowRect(i, n).contains(tx, ty)) {
+        _pickIdx = (int8_t)i;
+        hal::audio.blip();
+        startLink(_trade);
+        break;
+      }
   }
   return app::Signal::NONE;
 }

@@ -34,7 +34,7 @@ void CodeLabScreen::draw() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "CodeLab", C_ACCENT, textdatum_t::top_left, 2);
   char hdr[28]; snprintf(hdr, sizeof(hdr), "the programming blocks  (%d/%d)", _page + 1, N_PAGES);
-  label(g, SCREEN_W - 6, 6, hdr, C_DIM, textdatum_t::top_right);
+  label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hdr, C_DIM, textdatum_t::top_right);
 
   int start = _page * PER_PAGE;
   for (int r = 0; r < PER_PAGE; r++) {

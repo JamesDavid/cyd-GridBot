@@ -56,7 +56,7 @@ void LibraryScreen::draw() {
   label(g, 6, 3, "My Bots", C_ACCENT, textdatum_t::top_left, 2);
   int n = _p ? (int)_p->library.size() : 0;
   char hd[16]; snprintf(hd, sizeof(hd), "%d / %d", n, LIBRARY_MAX);
-  label(g, SCREEN_W - 6, 6, hd, n >= LIBRARY_MAX ? C_BAD : C_DIM, textdatum_t::top_right);
+  label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, n >= LIBRARY_MAX ? C_BAD : C_DIM, textdatum_t::top_right);
 
   if (n == 0) {
     label(g, SCREEN_W / 2, 100, "No saved bots yet.", C_DIM, textdatum_t::middle_center);

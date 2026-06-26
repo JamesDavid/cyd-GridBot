@@ -709,7 +709,8 @@ void App::tick(uint32_t now) {
           _game.resumeCode(); _state = State::GAME;
           break;
         }
-        if (_arenaTrain.savedFighter()) { _profile.stats.fightersSaved++; _profile.stats.brainsTrained++; }
+        if (_arenaTrain.savedFighter()) _profile.stats.fightersSaved++;
+        if (_arenaTrain.trainedBrain()) _profile.stats.brainsTrained++;  // training counts even without a save
         _profile.achievements |= gb::evaluateAchievements(_profile);
         saveProfile();
         if (_arenaTrain.launchFight()) {   // "Fight! >": go straight into a battle vs the sparring foe
@@ -755,7 +756,7 @@ void App::tick(uint32_t now) {
 }
 
 // ----- always-accessible sound control ------------------------------------------------------
-static const ui::Rect SND_ICON  = {(int16_t)(SCREEN_W - 24), 2, 22, 18};
+static const ui::Rect SND_ICON  = {(int16_t)(SCREEN_W - SOUND_ICON_W), 2, (int16_t)(SOUND_ICON_W - 2), 18};
 static const ui::Rect SND_VOL_DN = {52, 78, 40, 32}, SND_VOL_UP = {228, 78, 40, 32};
 static const ui::Rect SND_MUSIC = {52, 120, 216, 28};
 static const ui::Rect SND_SFX   = {52, 154, 216, 28};

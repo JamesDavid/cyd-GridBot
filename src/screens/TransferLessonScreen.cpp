@@ -137,7 +137,7 @@ void TransferLessonScreen::draw() {
         ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
   if (_mode == 1) {
     char ex[20]; snprintf(ex, sizeof(ex), "examples: %d", _examples);
-    label(g, SCREEN_W - 6, 6, ex, _examples > 0 ? C_GO : C_DIM, textdatum_t::top_right);
+    label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, ex, _examples > 0 ? C_GO : C_DIM, textdatum_t::top_right);
   }
   label(g, 6, TOPBAR_H + 4, STATUS[_mode][_phase], _won ? C_GO : C_INK);
 

@@ -24,7 +24,7 @@ void ShopScreen::draw() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Shop", C_ACCENT, textdatum_t::top_left, 2);
   char bal[20]; snprintf(bal, sizeof(bal), "Coins: %u", _p ? (unsigned)_p->coins : 0);
-  label(g, SCREEN_W - 6, 6, bal, ui::rgb(255, 210, 60), textdatum_t::top_right);
+  label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, bal, ui::rgb(255, 210, 60), textdatum_t::top_right);
 
   // live preview of the equipped look
   uint16_t tint = (_p && _p->shopColor > 0) ? assets::SHOP_COLORS[_p->shopColor - 1].color : 0;

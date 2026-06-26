@@ -41,6 +41,11 @@ constexpr int BAND_Y = TOPBAR_H;
 constexpr int BAND_H = SCREEN_H - TOPBAR_H - BOTBAR_H;  // ~182
 constexpr int BOTBAR_Y = SCREEN_H - BOTBAR_H;
 
+// The always-on sound icon (App::drawSoundIcon) owns this many px of the top-right corner.
+// Any screen that draws live content to the right edge of the top bar must reserve it so the
+// icon's panel block doesn't erase that content (e.g. the Arena live scoreline).
+constexpr int SOUND_ICON_W = 24;
+
 // Level biomes — the floor/wall palette shifts as you climb so progress feels
 // visual. Walls keep the brick texture, just tinted; pits stay the background void.
 struct Biome {

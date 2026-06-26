@@ -177,14 +177,14 @@ void NeuroTrainScreen::draw() {
 
   if (_drawMode) {
     label(g, 6, 3, "Draw the path", C_ACCENT, textdatum_t::top_left, 2);
-    label(g, SCREEN_W - 6, 6, "tap start->goal", C_DIM, textdatum_t::top_right);
+    label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, "tap start->goal", C_DIM, textdatum_t::top_right);
     label(g, 6, BAND_Y + 4, "tap tiles to walk/jump; tap last to undo", C_DIM);
   } else if (_rnnMode) {
     label(g, 6, 3, "Memory brain", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
     char hd[36];
     snprintf(hd, sizeof(hd), "%s%s", _pilotMode ? "rnn+pilot " : "rnn ",
              _won ? "solves!" : (_taught ? "trained" : "untrained"));
-    label(g, SCREEN_W - 6, 6, hd, _won ? C_GO : ui::rgb(255, 170, 60), textdatum_t::top_right);
+    label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, _won ? C_GO : ui::rgb(255, 170, 60), textdatum_t::top_right);
   } else {
     label(g, 6, 3, "Train brain", ui::rgb(120, 230, 245), textdatum_t::top_left, 2);
     char hd[36];
@@ -192,14 +192,14 @@ void NeuroTrainScreen::draw() {
       bool won = _gauntletScore >= GAUNTLET_MAZES;
       snprintf(hd, sizeof(hd), "%s %d/%d", won ? "GENERALIST!" : "gauntlet",
                _gauntletScore, GAUNTLET_MAZES);
-      label(g, SCREEN_W - 6, 6, hd, won ? C_GO : C_ACCENT, textdatum_t::top_right);
+      label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, won ? C_GO : C_ACCENT, textdatum_t::top_right);
     } else if (_pilotMode) {
       snprintf(hd, sizeof(hd), "pilot  %s", _won ? "solves!" : "...");
-      label(g, SCREEN_W - 6, 6, hd, _won ? C_GO : ui::rgb(255, 170, 60), textdatum_t::top_right);
+      label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, _won ? C_GO : ui::rgb(255, 170, 60), textdatum_t::top_right);
     } else {
       if (_taught) snprintf(hd, sizeof(hd), "taught  %s", _won ? "solves!" : "...");
       else snprintf(hd, sizeof(hd), "gen %d  %s", _evo.gen, _won ? "solves!" : "...");
-      label(g, SCREEN_W - 6, 6, hd, _won ? C_GO : C_DIM, textdatum_t::top_right);
+      label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, _won ? C_GO : C_DIM, textdatum_t::top_right);
     }
 
     // transfer-learning chips (hidden in the brain-graph view, where they'd overlap)

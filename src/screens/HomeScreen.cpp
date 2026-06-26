@@ -28,7 +28,7 @@ void HomeScreen::draw() {
     int badges = achievementCount(_p->achievements);
     snprintf(hdr, sizeof(hdr), "%s  Lv %u  *%u  %d/%d", _p->name.c_str(),
              (unsigned)_p->level, (unsigned)_p->stats.starsTotal, badges, ACH_COUNT);
-    label(g, SCREEN_W - 6, 6, hdr, C_DIM, textdatum_t::top_right);
+    label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hdr, C_DIM, textdatum_t::top_right);
   }
 
   const bool arenaOpen = _p && _p->unlocks.sense;   // Arena unlocks with sensing (Lv 15)

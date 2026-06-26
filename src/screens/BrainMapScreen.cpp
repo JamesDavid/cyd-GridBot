@@ -44,7 +44,7 @@ void BrainMapScreen::draw() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Robot Brain", CYAN, textdatum_t::top_left, 2);
   char pg[8]; snprintf(pg, sizeof(pg), "%d/%d", _page + 1, N_PAGE);
-  label(g, SCREEN_W - 6, 6, pg, C_DIM, textdatum_t::top_right);
+  label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, pg, C_DIM, textdatum_t::top_right);
 
   drawSchematic(_page);  // page 0 lights inputs, 1 lights outputs, 2 the whole net
 
@@ -60,8 +60,8 @@ void BrainMapScreen::draw() {
     label(g, X, 146, "battery: ahead, right, far", C_DIM);
     label(g, X, 164, "Enemy (3)", C_BAD);
     label(g, X, 176, "a rival: ahead, right, far", C_DIM);
-    label(g, 6, 190, "all relative to the robot's heading", C_DIM);
-    label(g, 6, 201, "ahead/right are signed: minus = behind/left", C_DIM);
+    label(g, 6, 184, "all relative to the robot's heading", C_DIM);
+    label(g, 6, 194, "ahead/right are signed: minus = behind/left", C_DIM);  // keep clear of BOTBAR_Y
   } else if (_page == 1) {
     label(g, X, 40, "WHAT IT DOES", CYAN);
     label(g, X, 54, "it picks the strongest one", C_DIM);

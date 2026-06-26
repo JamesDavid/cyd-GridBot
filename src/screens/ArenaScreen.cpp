@@ -208,7 +208,7 @@ void ArenaScreen::drawTourney() {
   int npages = (n + TPER_PAGE - 1) / TPER_PAGE; if (npages < 1) npages = 1;
   if (_standPage >= npages) _standPage = npages - 1;
   char hd[28]; snprintf(hd, sizeof(hd), "wins-losses  (%d/%d)", _standPage + 1, npages);
-  label(g, SCREEN_W - 6, 6, hd, C_DIM, textdatum_t::top_right);
+  label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, C_DIM, textdatum_t::top_right);
   int rowh = 30, top = BAND_Y + 6;
   for (int r = 0; r < TPER_PAGE; r++) {
     int i = _standPage * TPER_PAGE + r;
@@ -244,7 +244,7 @@ void ArenaScreen::drawBreakdown() {
   int w = 0, l = 0;
   for (int j : opp) { w += _tWin[mi * _tN + j]; l += _tWin[j * _tN + mi]; }
   char hd[20]; snprintf(hd, sizeof(hd), "%d - %d", w, l);
-  label(g, SCREEN_W - 6, 6, hd, C_GO, textdatum_t::top_right);
+  label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, C_GO, textdatum_t::top_right);
   int n = (int)opp.size();
   int npages = (n + TPER_PAGE - 1) / TPER_PAGE; if (npages < 1) npages = 1;
   if (_bdPage >= npages) _bdPage = npages - 1;
@@ -316,7 +316,7 @@ void ArenaScreen::drawCupCard() {
     }
   } else {
     char hd[24]; snprintf(hd, sizeof(hd), "Round %d", _cupBracket.round + 1);
-    label(g, SCREEN_W - 6, 6, hd, C_DIM, textdatum_t::top_right);
+    label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, C_DIM, textdatum_t::top_right);
     drawBracket();   // the whole bracket as round-columns (history + the current round)
   }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
@@ -421,7 +421,7 @@ void ArenaScreen::drawTPick() {
   label(g, 6, 3, "Pick fighters", C_ACCENT, textdatum_t::top_left, 2);
   int sel = 0; for (int i = 0; i < (int)_cands.size(); i++) if ((_tSelMask >> i) & 1u) sel++;
   char hd[20]; snprintf(hd, sizeof(hd), "%d in", sel);
-  label(g, SCREEN_W - 6, 6, hd, sel >= 2 ? C_GO : C_BAD, textdatum_t::top_right);
+  label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, sel >= 2 ? C_GO : C_BAD, textdatum_t::top_right);
   int n = (int)_cands.size(), vis = pickVisible();
   if (_tScroll > n - vis) _tScroll = (n > vis) ? n - vis : 0;
   if (_tScroll < 0) _tScroll = 0;
@@ -520,7 +520,7 @@ void ArenaScreen::drawNetLobby() {
     button(g, R_ROOM_FIELD, fb, ui::rgb(120, 230, 245), C_PANEL);
   } else {
     char hd[24]; snprintf(hd, sizeof(hd), "%s  %d in", tn.isHost() ? "hosting" : "joined", tn.playerCount());
-    label(g, SCREEN_W - 6, 6, hd, C_GO, textdatum_t::top_right);
+    label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, C_GO, textdatum_t::top_right);
     label(g, 10, 28, "Players in the room:", C_DIM);
     const std::vector<net::BotCard>& r = tn.roster();
     for (int i = 0; i < (int)r.size() && i < 6; i++) {
@@ -669,7 +669,7 @@ void ArenaScreen::drawPick(int player) {
   else if (player == 1) snprintf(t, sizeof(t), "Pick your FOE");
   else                  snprintf(t, sizeof(t), "Pick YOUR bot");
   label(g, 6, 3, t, C_ACCENT, textdatum_t::top_left, 2);
-  if (!_hotseat) label(g, SCREEN_W - 6, 6, "vs Computer", C_DIM, textdatum_t::top_right);
+  if (!_hotseat) label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, "vs Computer", C_DIM, textdatum_t::top_right);
   int n = (int)_cands.size(), vis = pickVisible();
   if (_pickScroll > n - vis) _pickScroll = (n > vis) ? n - vis : 0;
   if (_pickScroll < 0) _pickScroll = 0;
@@ -881,7 +881,7 @@ void ArenaScreen::drawScore() {
     label(g, 6, 6, nm0, C_GO);
     char sc[12]; snprintf(sc, sizeof(sc), "%d - %d", _arena.goals(0), _arena.goals(1));
     label(g, SCREEN_W / 2, 6, sc, C_ACCENT, textdatum_t::top_center);
-    label(g, SCREEN_W - 6, 6, nm1, C_BAD, textdatum_t::top_right);
+    label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, nm1, C_BAD, textdatum_t::top_right);  // clear the sound icon corner
     return;
   }
   if (_type != MatchType::SUMO) {
@@ -903,10 +903,10 @@ void ArenaScreen::drawScore() {
   for (int k = 0; k < SUMO_HP; k++)
     g.fillRoundRect(lx + k * (pw + gap), py, pw, ph, 2, k < _arena.hp(0) ? C_GO : C_LOCK);
   int rw = SUMO_HP * (pw + gap) - gap;
-  int rx = SCREEN_W - 4 - 36 - rw;
+  int rx = SCREEN_W - 4 - 36 - rw - SOUND_ICON_W;   // shift the whole right cluster clear of the sound icon
   for (int k = 0; k < SUMO_HP; k++)
     g.fillRoundRect(rx + k * (pw + gap), py, pw, ph, 2, k < _arena.hp(1) ? C_BAD : C_LOCK);
-  label(g, SCREEN_W - 4, 6, n1, C_BAD, textdatum_t::top_right);
+  label(g, SCREEN_W - 4 - SOUND_ICON_W, 6, n1, C_BAD, textdatum_t::top_right);
 }
 
 // A short burst (expanding ring + word) over a bot that just took a hit, so a 6yo sees WHO got

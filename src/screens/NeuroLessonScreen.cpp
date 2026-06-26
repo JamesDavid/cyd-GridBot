@@ -9,7 +9,9 @@ namespace screens {
 // 4 situations (the truth table of 2 yes/no sensors: wall, pit).
 static const float DX[8] = {0,0, 0,1, 1,0, 1,1};
 static const float DY0[4] = {0, 1, 1, 1};                      // mode 0: turn if wall OR pit
-static const float DY1[12] = {1,0,0,  0,0,1,  0,1,0,  0,0,1};  // mode 1: go/turn/jump (one-hot)
+// mode 1: go/turn/jump (one-hot). A WALL ahead blocks everything, so wall wins: you can only
+// JUMP a pit when the way ahead is wall-free. (0,0)->GO (0,1)->JUMP (1,0)->TURN (1,1)->TURN.
+static const float DY1[12] = {1,0,0,  0,0,1,  0,1,0,  0,1,0};
 static const float DY2[4] = {0, 1, 1, 0};                      // mode 2: XOR (needs a hidden layer)
 
 static const int N_EX = 4;
@@ -19,7 +21,7 @@ static const Rect R_RST  = {174, (int16_t)(BOTBAR_Y + 2), 64, 26};
 static const Rect R_BACK = {242, (int16_t)(BOTBAR_Y + 2), 72, 26};
 
 static const char* TITLES[3] = {"Neuron: watch it learn", "Multi-class: 3 actions", "Hidden layer: corners"};
-static const char* RULES[3]  = {"turn if WALL or PIT", "jump if pit, turn if wall, else go", "turn if EXACTLY ONE side is open"};
+static const char* RULES[3]  = {"turn if WALL or PIT", "turn if wall, else jump if pit, else go", "turn if EXACTLY ONE side is open"};
 
 void NeuroLessonScreen::begin(int mode) {
   _mode = mode;
@@ -81,7 +83,7 @@ void NeuroLessonScreen::draw() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, TITLES[_mode], C_ACCENT, textdatum_t::top_left, 2);
   char hd[20]; snprintf(hd, sizeof(hd), "epoch %d", _epochs);
-  label(g, SCREEN_W - 6, 6, hd, C_DIM, textdatum_t::top_right);
+  label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, C_DIM, textdatum_t::top_right);  // clear the sound icon
   label(g, 6, TOPBAR_H + 2, RULES[_mode], C_INK);  // rule spans the top line (the column
   // headers below — "what it sees / it does" — already label the situations table)
 

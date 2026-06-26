@@ -48,6 +48,23 @@ Then we ran the **loser-levels-up loop**: BB saved AA's champion and trained the
 So the recipe is strong, but **the first competent model held its ground** — BB couldn't overturn
 it with the same approach. A bigger initial gap needs more than a like-for-like retrain.
 
+### Follow-up: does *finishing* the Q-Learn matter? (more episodes)
+The live-opponent Teach → Q-Learn run above was originally **saved mid-training** (~18 of 32
+reward chunks). We re-ran it cleanly against a freshly-distilled striker and let **all 32 chunks
+complete**, comparing it to a Teach-only brain on the identical pitch + opponent:
+
+| AA model vs a distilled BB striker | Head-to-head |
+|---|---|
+| **Teach only** | **does not win** (a draw — "taught vs") |
+| **Teach → Q-Learn, full 32 chunks vs the live striker** | **wins** ("taught wins!") |
+
+**Letting the reward stage run to completion is what tipped it.** A half-finished Q-Learn pass
+(the 18/32 save) is the worst of both worlds — it has perturbed the distilled policy without
+finishing the refinement. The same recipe, **run to the end against the real moving opponent**,
+turned a non-winning brain into a winner. *Episode count is not a footnote — a truncated reward
+run can leave you mid-regression.* (Caveat: this is a clean re-creation with a new striker + seed,
+so it complements rather than directly extends the **3–3** number above.)
+
 ---
 
 ## Battle (Sumo) arc — same loop, different outcome

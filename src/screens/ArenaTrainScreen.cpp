@@ -163,7 +163,7 @@ void ArenaTrainScreen::begin(Profile* profile) {
   buildOpponent(_oppIdx);
   _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
   _rnn = false; _qLearning = false;   // RNN brain (rbrain()) is allocated lazily on first toggle
-  _taught = false; _saved = false; _savedIdx = -1; _curveLen = 0;
+  _taught = false; _saved = false; _savedIdx = -1; _curveLen = 0; _didTrain = false;
   evaluateAndTrace();
 }
 
@@ -189,7 +189,7 @@ void ArenaTrainScreen::beginEditBrain(Profile* profile, Program* prog, int brain
   buildOpponent(_oppIdx);
   _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
   _rnn = isRnn; _qLearning = false; _animating = false;
-  _saved = false; _savedIdx = -1; _curveLen = 0;
+  _saved = false; _savedIdx = -1; _curveLen = 0; _didTrain = false;
   if (isRnn) {
     if (brainIdx < (int)prog->rbrains.size()) { rbrain() = prog->rbrains[brainIdx]; rbrain().trained = true; }
     _taught = false;                // rnn path trains rbrain(); evaluateAndTrace won't touch _brain
@@ -215,7 +215,7 @@ void ArenaTrainScreen::setMode(MatchType t) {
   buildOpponent(_oppIdx);
   _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
   if (_rnn) rbrain().config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);  // fresh brain of the current type
-  _taught = false; _saved = false; _savedIdx = -1; _curveLen = 0;
+  _taught = false; _saved = false; _savedIdx = -1; _curveLen = 0; _didTrain = false;
   evaluateAndTrace();
 }
 
@@ -374,7 +374,7 @@ void ArenaTrainScreen::draw() {
   if (_animating && _qLearning) snprintf(hd, sizeof(hd), "Q-learn %d/%d", _qChunks - _animLeft, _qChunks);
   else if (_taught) snprintf(hd, sizeof(hd), "taught  %s", _beatsAI ? "wins!" : "vs");
   else              snprintf(hd, sizeof(hd), "gen %d  %s", _evo.gen, _beatsAI ? "wins!" : "vs");
-  label(g, SCREEN_W - 6, 6, hd, (_animating && _qLearning) ? C_MOVE : (_beatsAI ? C_GO : C_DIM), textdatum_t::top_right);
+  label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, (_animating && _qLearning) ? C_MOVE : (_beatsAI ? C_GO : C_DIM), textdatum_t::top_right);  // clear the sound icon
 
   // tappable sparring-partner chip, shown in BOTH views (the mini-map sits in the row below it):
   // switching opponents keeps the same brain, so you can transfer-learn against foe after foe.
@@ -548,6 +548,7 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     bool redraw = false;
     if (now - _genAt >= 110) {                 // background: one learning step
       _genAt = now;
+      _didTrain = true;                        // Evolve/Q-Learn is actively training -> counts as a trained brain
       if (_qLearning) {
         // one chunk of Q-learning; exploration decays GLOBALLY across all chunks so it converges.
         // FF: feedforward hunt (Battle). RNN: recurrent maze Q (Race) -- memory escapes dead-ends.
@@ -668,7 +669,7 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       _brain.lr = _knobs.lr;
       distillSolver(_brain, _maze, true, 700 * _knobs.rounds);    // a strong racer beats most AIs
     }
-    _taught = true; _saved = false; _curveLen = 0; evaluateAndTrace(); pushCurve(); hal::audio.blip(); draw();
+    _taught = true; _didTrain = true; _saved = false; _curveLen = 0; evaluateAndTrace(); pushCurve(); hal::audio.blip(); draw();
   } else if (R_BTYPE.contains(tx, ty)) {
     // flip feedforward <-> RNN: it's a fresh brain of the new type, so clear training state
     _rnn = !_rnn;

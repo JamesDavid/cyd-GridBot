@@ -70,7 +70,7 @@ void TuneLessonScreen::draw() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Tuning the grid", C_ACCENT, textdatum_t::top_left, 2);
   char hd[20]; snprintf(hd, sizeof(hd), "tries %d", _q.episodes);
-  label(g, SCREEN_W - 6, 6, hd, C_DIM, textdatum_t::top_right);
+  label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, C_DIM, textdatum_t::top_right);
 
   knob(g, 24, "explore", _eps, R_EPS_DN, R_EPS_UP, C_MOVE);
   knob(g, 48, "step",    _alpha, R_ALP_DN, R_ALP_UP, C_LOOP);

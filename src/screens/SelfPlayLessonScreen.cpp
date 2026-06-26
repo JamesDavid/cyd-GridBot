@@ -51,7 +51,7 @@ void SelfPlayLessonScreen::draw() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Self-play: beat yourself", C_ACCENT, textdatum_t::top_left, 2);
   char hd[20]; snprintf(hd, sizeof(hd), "round %d", _round);
-  label(g, SCREEN_W - 6, 6, hd, C_DIM, textdatum_t::top_right);
+  label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, C_DIM, textdatum_t::top_right);
 
   assets::drawCharacter(g, 96, 70, 40, 1, gb::EAST);     // champ
   assets::drawCharacter(g, 224, 70, 40, 4, gb::WEST);    // challengers (a population vs the champ)

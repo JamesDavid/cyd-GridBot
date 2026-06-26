@@ -59,7 +59,7 @@ void EvoLessonScreen::draw() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, 6, 3, "Evolution", C_ACCENT, textdatum_t::top_left, 2);
   char hd[28]; snprintf(hd, sizeof(hd), "gen %d  fit %.0f", _evo.gen, _evo.bestFit());
-  label(g, SCREEN_W - 6, 6, hd, C_DIM, textdatum_t::top_right);
+  label(g, SCREEN_W - 6 - SOUND_ICON_W, 6, hd, C_DIM, textdatum_t::top_right);
 
   int tile, ox, oy; mazeGeom(tile, ox, oy);
   for (int r = 0; r < _maze.rows(); r++)

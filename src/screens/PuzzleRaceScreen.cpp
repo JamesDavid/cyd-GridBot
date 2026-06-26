@@ -162,7 +162,7 @@ app::Signal PuzzleRaceScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       auto& g = hal::display.gfx();
       g.fillRect(250, 2, 66, 18, C_PANEL);
       char tm[12]; snprintf(tm, sizeof(tm), "0:%02d", rem);
-      label(g, SCREEN_W - 6, 4, tm, rem <= 10 ? C_BAD : C_INK, textdatum_t::top_right);
+      label(g, SCREEN_W - 6 - SOUND_ICON_W, 4, tm, rem <= 10 ? C_BAD : C_INK, textdatum_t::top_right);
     }
     if (now >= _deadline) { lockIn(now); return app::Signal::NONE; }
 
