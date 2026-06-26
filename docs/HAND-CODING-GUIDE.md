@@ -138,7 +138,7 @@ repeat until goal {
 }
 ```
 
-Read it as a sentence: *"Zap if you can; never suicide into a pit; turn toward the foe; don't get
+Read it as a sentence: *"Zap if you can; never fall into a pit; turn toward the foe; don't get
 stuck on a wall; otherwise close the distance."* It **hunts** — it always turns to face the enemy and
 shoves when close.
 

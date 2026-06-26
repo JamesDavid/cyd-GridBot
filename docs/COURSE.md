@@ -256,7 +256,7 @@ repeat until goal {
 }
 ```
 
-Read it as a sentence: *"Zap if you can; never suicide into a pit; turn toward the foe; don't get
+Read it as a sentence: *"Zap if you can; never fall into a pit; turn toward the foe; don't get
 stuck on a wall; otherwise close the distance."* It **hunts.** Six rules, so the code pane scrolls:
 ![top](img/hc-battle-1.png) ![middle](img/hc-battle-2.png) ![bottom](img/hc-battle-3.png)
 
@@ -396,19 +396,56 @@ Transfer · Brain Cam (watch a live brain think) · Pilot · Memory (RNN) · Sel
 Each is a 5–15-minute watch-and-poke; you do **not** need all of them for the course — the four in
 step 1 plus the trainer in step 2 are the spine.
 
+### Know your three trainers (this is the meat of NeuroLab)
+
+The Arena trainer (**Arena → Train a fighter**) gives you three ways to shape the *same* `10→8→5`
+brain. They are **not** interchangeable — each is strong somewhere and weak somewhere, and most of Day 5
+is about combining them well. Teach this table before anyone touches a knob:
+
+| Trainer | What it does | Strong because… | Weak because… |
+|---|---|---|---|
+| **Teach** *(imitation / distillation)* | backprop the brain to **copy a scripted expert** (a perfect dribbler / hunter) | **sharp in seconds** — competent almost immediately | capped at the expert; it *imitates*, it doesn't out-think a specific opponent |
+| **Evolve** *(neuroevolution)* | a **population** of brains plays; the best **breed + mutate**; repeat — no teacher | can discover moves no expert was scripted for; **adapts to a specific opponent** | **slow from scratch**, and on a *fixed* board it happily **overfits** |
+| **Q-Learn** *(reinforcement)* | one brain tries over and over; a **reward** (a goal) reinforces good moves | no teacher and no labels — just *"did it score?"* | **noisy**; needs many episodes; a bad reward can *mislead* it |
+
+![Q-learning spreads value back from the goal](img/neuro-qlearning.png) ![Evolve: the best brains breed](img/neuro-evolution.png)
+
+> **The one rule that makes them combine: transfer learning is the default.** In GridBot's trainer,
+> **Teach, Evolve, and Q-Learn all build on the brain you already have** — they never silently throw it
+> away. So the natural recipe is **Teach first to get competent, then Evolve or Q-Learn to sharpen.**
+> The *only* way to wipe a brain back to random noise is the explicit **"Fresh"** (scramble) button.
+> *(That single design choice — seed from the current brain, not from noise — is what makes "Teach →
+> anything" actually build on the Teach. It matters more than it sounds; see Day 5.)*
+
+### Lab 4 — train your first fighter (≈ 20 min)
+
+1. **Arena → Train a fighter → Soccer.** Tap **Teach** and watch the **learning-curve** sparkline jump:
+   in a couple of seconds you have a brain that dribbles. ![Train a fighter](img/neuro-arena-train.png)
+2. **Spar it up the ladder** — **Bolt → Coil → Spin → Vex → Ace** — and watch where it starts to win.
+3. **Save** it as your fighter (give it a name like *v1*).
+4. **Code vs brain:** field this trained brain against **yesterday's hand-coded** dribbler. The brain's
+   finishing finesse — aiming at the open corner, standing in the exact spot — is the thing your blocks
+   couldn't write down. **That gap is the whole reason machine learning exists.**
+
+> **A result worth showing (measured on real devices):** a **Teach**-distilled striker reached a
+> *one-goal* game against a strong opponent in seconds. An **Evolve-from-scratch** brain — same brain,
+> same seconds, but starting from random noise — lost **1–7**. **If a good expert exists, imitate it
+> first; don't evolve from nothing.** (Full head-to-head numbers are in
+> [TRAINING_FINDINGS.md](TRAINING_FINDINGS.md).)
+
 **Questions to ask:**
 - "Did anyone *tell* the neuron the rule, or did it figure it out from the examples?" *(examples, not a
   rule — that distinction is the whole of machine learning.)*
 - "It learned mazes, then fighting, now soccer — what stays the **same** about its brain, and what
   **changes**?" *(the network is identical, 10→8→5; only the objective and reward change.)*
-- "In real life, how would a robot *know* there's a wall ahead — who tells it?" *(in a self-driving car
-  this is the hard 90%: a camera + perception net has to produce "wall ahead = 1.")*
+- "Teach was great in seconds; Evolve-from-scratch was terrible in the same time. **Why copy an expert
+  instead of discovering from zero?**" *(a head start beats a blank page when a good example exists.)*
 
-**Checkpoint:** a **trained brain that out-plays the hand-coded bot at soccer** — and the kid can say,
-in their own words, the difference between **programming a rule** and **training one**.
+**Checkpoint:** a **trained brain that out-plays the hand-coded bot at soccer**, *saved* to the library —
+and the kid can name the three trainers and say what each is good at.
 
 > **For the classroom.** *Objective:* explain that an ML model learns parameters from examples/reward to
-> minimise error; pick imitation vs reward vs evolution. *Time:* 90–120 min. *Standards:* AI4K12
+> minimise error; contrast imitation vs reward vs evolution. *Time:* 90–120 min. *Standards:* AI4K12
 > *Learning*; CSTA 3A-AP-15 (models). *Discussion (Societal Impact):* "If the examples were unfair,
 > would the brain be unfair? Who picks the examples?" *Unplugged:* "Guess the rule" — you secretly pick
 > a rule ("clap if it's a fruit"), call out items, students correct their guess each round. They *are*
@@ -427,35 +464,101 @@ in their own words, the difference between **programming a rule** and **training
 > your own net) 2×** and **rewards a goalward `zap`**, so the brain learns to **avoid own-goals** and
 > use the **swap**.
 
+### The championship recipe (and the trap next to it)
+
+Everything below is from **real matches between two devices**, replayed byte-for-byte on both — so
+these are findings, not opinions. They are the most useful 10 minutes of AI you can teach a kid,
+because they show that *which* refinement you pick matters more than *how hard* you train.
+
+**✅ The recipe that won — Teach → Evolve against the actual opponent.** Distill a competent striker,
+then **Evolve *that* brain specifically against the bot you have to beat.** Of every combination tried,
+this was the **only** one that beat the strong opponent — **5–2.** Why it compounds: evolution selects
+directly for *"did you beat *that* bot?"*, so every generation pushes your already-competent brain
+toward the real goal.
+
+**⚠️ The trap right next to it — Teach → Q-Learn against a *cone*.** Take the *same* distilled striker
+and Q-Learn it to "score the ball" against a **stationary** defender, and it gets **worse than Teach
+alone — 0–7.** The reward was aimed at a *simpler world than the real match* (a still cone, not a moving
+rival), and its pull **overwrote** the good distilled habits. **A refinement aimed at the wrong target
+can destroy a good brain.**
+
+**🔧 The fix was *realism*, not a new algorithm.** Run the **real opponent's brain as a moving
+defender** during Q-Learn and the *identical* recipe went from **0–7 to 3–3** — a dead heat. *Train
+against what you'll actually face.* And **let the reward stage finish**: a half-done Q-Learn (saved
+~18 of 32 rounds) was the worst of both worlds — perturbed but not refined — and didn't win; the *same*
+run taken to **all 32 rounds** turned a draw into a **win.** Episode count is not a footnote.
+
+| Take the same distilled striker, then… | Result vs the strong opponent |
+|---|---|
+| nothing (Teach only) | competent — a one-goal game / draw |
+| **Evolve** against the actual opponent | **wins 5–2** ✅ |
+| Q-Learn against a *stationary cone* | **regresses to 0–7** ⚠️ |
+| Q-Learn against the *real moving* opponent | recovers to **3–3** 🔧 |
+| Q-Learn, but *finished* (all rounds) vs a live striker | **flips a draw into a win** |
+
+> **Watch over-fitting happen.** Evolve a brain on **one fixed pitch** for too long (we ran 256
+> generations) and in a real match it literally **"just stays there"** — it memorised that one board so
+> hard it's useless anywhere else. The fix: **move the kickoff ball every generation** so it has to play
+> from *anywhere*. (Generalising isn't the same as winning — the varied-board brain stopped freezing but
+> was still weak until it was Teach-seeded.) This is the Day-2 maze lesson again: a memoriser fails on
+> the unseen; vary the training so a *rule* forms.
+
 **Do this on the device:**
-1. **Train a striker properly:** **Teach** a dribbler first (fast, from the expert), then **Q-Learn** to
-   sharpen it against a real opponent. **Save** it as your fighter. Optionally open the **Knobs** panel
-   and tune **learning rate / rounds / explore** — watch the loss fall smoothly, crawl, or thrash. (This
-   is *hyperparameter tuning* — the part of ML that's more cooking than math.)
-2. **Level-up loop:** lost a match? **Save the foe** (copy the winner into your library), train against
-   *it*, and **rematch.** Repeat until you win. The determinism means each rematch measures your *actual*
-   progress.
-3. **Tournament — the capstone:**
-   - **One device:** **vs Computer → Tournament** runs your saved fighters as a **Cup** (single-elim
-     bracket) or **Ladder** (round-robin); pick the discipline (Race / Soccer / Battle).
-   - **The class (optional):** **Arena → Radio → Room** gathers *every* nearby CYD's striker into **one
-     shared bracket**. The host picks the discipline and starts it; every board replays the identical
-     Cup from a shared seed and crowns the **same champion** — no central scoreboard, no internet, nothing
-     leaves the room.
+1. **Train a striker properly:** **Teach** a dribbler first (fast, from the expert), **then refine.** The
+   trainer **builds on the brain you have** (transfer learning is the default; **"Fresh"** is the only
+   thing that scrambles it). Prefer **Evolve against a real saved opponent**; if you Q-Learn, do it
+   against a **live** sparring partner and **let it run to the end**, not a quick stop. **Save** your
+   striker. *(The soccer trainer also helps: it **penalises a wrong-way push 2×** and **rewards a goalward
+   `zap`**, so the brain learns to avoid own-goals and use the swap.)* ![Train a striker](img/soccer-brain.png)
+2. **The loser-levels-up loop:** lost a match? **Save the foe** — it copies the winner into your library
+   as `«owner» «fighter»` (e.g. *AA fighter v4*) — train against **that exact bot**, and **rematch.**
+   Because the Arena is **deterministic**, a rematch is *exact*: any improvement you see is **real, not
+   luck.** That's what turns "train → save → rematch" into science instead of gambling.
+   - *Honest caveat to share:* a single levelling-up pass isn't always enough. In our tests **Battle
+     flipped** on one retrain (the skill gap was small) but **Soccer didn't** — the first competent
+     striker held its ground 5–2. A bigger gap needs more than a like-for-like retrain.
+3. **Knobs (optional, advanced):** open the **Knobs** panel to tune **learning rate / rounds / explore**
+   and watch the loss fall smoothly, crawl, or thrash — *hyperparameter tuning*, the part of ML that's
+   more cooking than math. Turn **explore to 0** and training can get stuck repeating one path; too high
+   and it never settles. There's a sweet spot.
+4. **Tournament — the capstone:**
+   - **One device:** **vs Computer → Tournament** runs your saved fighters as a **Cup** (single-elim) or
+     **Ladder** (round-robin); pick the discipline (Race / Soccer / Battle).
+   - **The class:** **Arena → Radio → Room** gathers *every* nearby CYD's striker into **one shared
+     bracket**. The host picks the discipline and starts it; every board replays the identical Cup from a
+     shared seed and crowns the **same champion** — no central scoreboard, no internet, nothing leaves
+     the room. ![The Room](img/radio.png)
+
+> **🩺 "My bot got *worse* after I trained it!" — the troubleshooting box.** This is the most valuable
+> moment of the week, not a failure. Walk through it:
+> - *Did you refine against a too-easy practice partner?* (a still cone, an idle bot) → it learned a
+>   simpler game than the real match. **Refine against a real, moving opponent** (Save-foes the bot you
+>   must beat).
+> - *Did you stop the reward run early?* → a half-finished Q-Learn is mid-regression. **Let it finish.**
+> - *Did you Evolve a long time on one board?* → over-fitting. **Vary the board** (or re-Teach to reset
+>   the habits, then refine).
+> - *Still stuck?* The gap may be too big for one pass — Teach a fresh competent base and Evolve *that*
+>   against the opponent.
 
 **Questions to ask:**
+- "Two kids both Teach a striker, then one Evolves vs the real rival and one Q-Learns vs a cone. **Why
+  does the cone one get worse**, even though it 'trained more'?" *(it practised an easier game than the
+  one it has to play.)*
 - "Your hand-coded bot vs your trained bot — which would you bring to the tournament, and **why**?"
-- "Turn the explore knob to zero. Why might *never trying anything new* trap the training?" *(too little
-  exploring and it's stuck; too much and it never settles — there's a sweet spot.)*
+- "Why does a *deterministic* Arena make a rematch a fair test of whether your change actually helped?"
 
-**Checkpoint (the finish line):** a **soccer-player bot the kid trained themselves**, fielded in a real
-bracket — and a kid who can say **when** they'd write the rules and **when** they'd train them.
+**Checkpoint (the finish line):** a **soccer-player bot the kid trained themselves**, refined with a
+recipe they can *justify* (Teach to get competent → refine against the real opponent → run it to the
+end), fielded in a real bracket — and a kid who can say **when** they'd write the rules and **when**
+they'd train them.
 
-> **For the classroom.** *Objective:* iterate a model using deterministic evaluation; reflect on method
-> choice. *Time:* 90–120 min (Day 5 alone can fill a "science-fair" afternoon — everyone trains a
-> striker, a Room tournament decides it). *Standards:* AI4K12 *Learning*; CSTA 2-AP-17 / 3A-AP-21
-> (testing, iterating). *Assessment (exit ticket):* "Describe one time today you changed something,
-> measured it, and kept or undid the change. What did the measurement tell you?"
+> **For the classroom.** *Objective:* iterate a model using deterministic evaluation; explain why
+> training-target alignment (and finishing the run) changes the outcome. *Time:* 90–120 min (Day 5 alone
+> can fill a "science-fair" afternoon — everyone trains a striker, a Room tournament decides it).
+> *Standards:* AI4K12 *Learning*; CSTA 2-AP-17 / 3A-AP-21 (testing, iterating). *Deep-dive for you:*
+> the full head-to-head log is in [TRAINING_FINDINGS.md](TRAINING_FINDINGS.md). *Assessment (exit
+> ticket):* "Describe one time today you changed something, measured it on a rematch, and kept or undid
+> the change. What did the measurement tell you?"
 
 ---
 
