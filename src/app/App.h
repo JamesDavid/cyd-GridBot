@@ -64,6 +64,15 @@ class App {
   void gotoHome();
   void gotoIntro(uint32_t level);
   void gotoGame();
+
+  // A persistent, always-accessible sound control: a speaker icon in the top-right corner that
+  // opens a modal (volume 0..3, mute music, mute SFX). Drawn over whatever screen is up.
+  bool _soundModal = false;
+  bool _soundDown = false;          // last touch state, for rising-edge tap detection on the overlay
+  void drawSoundIcon();             // the corner speaker (current state)
+  void drawSoundModal();            // the volume / music / sfx overlay
+  bool handleSoundUi(int tx, int ty, bool tapped);  // returns true if it consumed the tap
+  void applyAndSaveSound();         // push audio state into settings + persist (if a profile is loaded)
   void returnToSub();        // BACK from Badges/Shop/Draw -> Home or Stats (whoever opened it)
   void drawIntro();
   void loadProfileInto(const std::string& id);

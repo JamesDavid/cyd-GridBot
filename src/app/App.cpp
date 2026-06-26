@@ -85,6 +85,11 @@ void App::loadProfileInto(const std::string& id) {
   // Sticky unlocks: level only rises, so derive from level (SPEC §7).
   _profile.unlocks = gb::computeUnlocks(_profile.level);
   applog::event("playing as %s (Lv %u)", _profile.name.c_str(), (unsigned)_profile.level);
+  // apply this player's saved sound preferences
+  hal::audio.setEnabled(_profile.settings.sound);
+  hal::audio.setMusicOn(_profile.settings.music);
+  hal::audio.setSfxOn(_profile.settings.sfx);
+  hal::audio.setVolume(_profile.settings.volume);
 }
 
 void App::saveProfile() { store::profiles.save(_profile); }
@@ -331,6 +336,11 @@ void App::tick(uint32_t now) {
     return;
   }
   if (saverEligible() && now - _lastInput > SAVER_MS) { _saver = true; drawNametag(); return; }
+
+  // Global sound control: the corner speaker + its modal sit ABOVE every screen. If they consume
+  // the tap (modal open, or the icon tapped), the screen underneath is frozen this frame.
+  { bool stap = tp.pressed && !_soundDown; _soundDown = tp.pressed;   // rising edge
+    if (handleSoundUi(tp.x, tp.y, stap)) return; }
 
   switch (_state) {
     case State::SELECT: {
@@ -741,6 +751,73 @@ void App::tick(uint32_t now) {
       break;
     }
   }
+  drawSoundIcon();   // keep the always-on corner speaker painted over whatever the screen drew
+}
+
+// ----- always-accessible sound control ------------------------------------------------------
+static const ui::Rect SND_ICON  = {(int16_t)(SCREEN_W - 24), 2, 22, 18};
+static const ui::Rect SND_VOL_DN = {52, 78, 40, 32}, SND_VOL_UP = {228, 78, 40, 32};
+static const ui::Rect SND_MUSIC = {52, 120, 216, 28};
+static const ui::Rect SND_SFX   = {52, 154, 216, 28};
+static const ui::Rect SND_DONE  = {110, 190, 100, 28};
+
+void App::drawSoundIcon() {
+  if (_soundModal) return;
+  auto& g = hal::display.gfx();
+  int x = SND_ICON.x + 2, y = 5;
+  bool muted = hal::audio.volume() == 0 || (!hal::audio.musicOn() && !hal::audio.sfxOn());
+  uint16_t col = muted ? C_BAD : C_GO;
+  g.fillRect(SND_ICON.x, 0, SND_ICON.w, TOPBAR_H, C_PANEL);   // own the corner so it's always legible
+  g.fillRect(x, y + 4, 4, 6, col);                            // speaker body
+  g.fillTriangle(x + 4, y + 1, x + 4, y + 13, x + 9, y + 7, col);  // cone
+  if (muted) { g.drawLine(x + 11, y + 2, x + 17, y + 12, C_BAD); g.drawLine(x + 17, y + 2, x + 11, y + 12, C_BAD); }
+  else for (int i = 0; i < hal::audio.volume(); i++) g.drawFastVLine(x + 11 + i * 3, y + 5 - i, 4 + i * 2, col);  // volume bars
+}
+
+void App::drawSoundModal() {
+  auto& g = hal::display.gfx();
+  g.fillRoundRect(34, 38, 252, 174, 12, C_PANEL);
+  g.drawRoundRect(34, 38, 252, 174, 12, C_ACCENT);
+  ui::label(g, SCREEN_W / 2, 50, "Sound", C_ACCENT, textdatum_t::top_center, 2);
+  // volume row: [-]  ||||  [+]
+  ui::button(g, SND_VOL_DN, "-", C_INK, C_PANEL_HI);
+  ui::button(g, SND_VOL_UP, "+", C_INK, C_PANEL_HI);
+  ui::label(g, SCREEN_W / 2, 84, "Volume", C_DIM, textdatum_t::top_center);
+  for (int i = 0; i < 3; i++) {
+    bool on = hal::audio.volume() > i;
+    g.fillRoundRect(120 + i * 24, 92, 18, 18, 3, on ? C_GO : C_PANEL_HI);
+  }
+  ui::button(g, SND_MUSIC, hal::audio.musicOn() ? "Music: ON" : "Music: muted",
+             hal::audio.musicOn() ? C_GO : C_DIM, C_PANEL_HI);
+  ui::button(g, SND_SFX, hal::audio.sfxOn() ? "Sound FX: ON" : "Sound FX: muted",
+             hal::audio.sfxOn() ? C_GO : C_DIM, C_PANEL_HI);
+  ui::button(g, SND_DONE, "Done", C_GO, C_PANEL_HI);
+}
+
+bool App::handleSoundUi(int tx, int ty, bool tapped) {
+  if (_soundModal) {
+    if (tapped) {
+      if (SND_VOL_DN.contains(tx, ty))      { hal::audio.setVolume(hal::audio.volume() - 1); hal::audio.blip(); }
+      else if (SND_VOL_UP.contains(tx, ty)) { hal::audio.setVolume(hal::audio.volume() + 1); hal::audio.blip(); }
+      else if (SND_MUSIC.contains(tx, ty))  { hal::audio.setMusicOn(!hal::audio.musicOn());
+        if (hal::audio.musicOn() && saverEligible()) hal::audio.startMusic(hal::kTitleMusic, hal::kTitleMusicLen, true); }
+      else if (SND_SFX.contains(tx, ty))    { hal::audio.setSfxOn(!hal::audio.sfxOn()); hal::audio.blip(); }
+      else if (SND_DONE.contains(tx, ty))   { _soundModal = false; applyAndSaveSound(); wake(); return true; }
+      drawSoundModal();
+    }
+    return true;   // modal swallows every tap while open
+  }
+  if (tapped && SND_ICON.contains(tx, ty)) { _soundModal = true; drawSoundModal(); return true; }
+  return false;
+}
+
+void App::applyAndSaveSound() {
+  if (_profile.id.empty()) return;   // nothing to persist (e.g. at the player-select screen)
+  _profile.settings.music = hal::audio.musicOn();
+  _profile.settings.sfx = hal::audio.sfxOn();
+  _profile.settings.volume = (uint8_t)hal::audio.volume();
+  _profile.settings.sound = hal::audio.enabled();
+  saveProfile();
 }
 
 }  // namespace app

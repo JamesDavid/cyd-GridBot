@@ -14,6 +14,13 @@ class Audio {
   void begin();
   void setEnabled(bool on);
   bool enabled() const { return _on; }
+  // Independent channels + a 0..3 volume (0 = silent). Music and SFX mute separately.
+  void setMusicOn(bool on);
+  void setSfxOn(bool on);
+  void setVolume(int v);
+  bool musicOn() const { return _musicOn; }
+  bool sfxOn() const { return _sfxOn; }
+  int  volume() const { return _vol; }
   void blip();   // tap feedback
   void tick();   // step tick
   void win();    // happy fanfare
@@ -30,6 +37,8 @@ class Audio {
   void tone(uint16_t freq, uint16_t ms);
 
   bool _on = true;
+  bool _musicOn = true, _sfxOn = true;
+  int  _vol = 2;                 // 0 mute .. 3 loud (maps to PWM duty)
   const Note* _mel = nullptr;
   int _melLen = 0, _melIdx = 0;
   bool _melLoop = false, _playing = false;

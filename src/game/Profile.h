@@ -30,6 +30,9 @@ struct Settings {
   bool sound = true;
   uint8_t animSpeed = 1;   // 0=slow,1=med,2=fast
   bool miniMap = false;    // optional code-view mini-map (default off, SPEC §10)
+  bool music = true;       // background music on (sound modal)
+  bool sfx = true;         // sound effects on   (sound modal)
+  uint8_t volume = 2;      // 0 mute .. 3 loud    (sound modal)
 };
 
 struct Stats {

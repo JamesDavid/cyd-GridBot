@@ -7,7 +7,6 @@ using namespace ui;
 
 namespace screens {
 
-static const Rect R_SOUND = {250, 1, 68, 20};  // music on/off toggle
 static const Rect R_CAL   = {6, (int16_t)(SCREEN_H - 22), 96, 20};  // re-run touch calibration
 
 // Up to 6 profile cards in a 3x2 grid, plus a "+ New" card in the next slot.
@@ -38,8 +37,7 @@ void ProfileSelectScreen::draw() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   label(g, SCREEN_W / 2, 3, "Choose a Player", C_ACCENT,
         textdatum_t::top_center, 2);
-  bool snd = hal::audio.enabled();
-  button(g, R_SOUND, snd ? "Music:on" : "Music:off", snd ? C_GO : C_DIM, C_PANEL);
+  // (sound is controlled by the always-on speaker icon / modal in the top-right corner)
 
   int n = (int)_metas.size();
   if (n > 6) n = 6;
@@ -75,14 +73,6 @@ app::Signal ProfileSelectScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
 
   if (R_CAL.contains(tx, ty)) {         // re-run the inset touch calibration (modal, blocking)
     hal::touch.recalibrate();
-    draw();
-    return app::Signal::NONE;
-  }
-  if (R_SOUND.contains(tx, ty)) {       // toggle music/sound
-    bool on = !hal::audio.enabled();
-    hal::audio.setEnabled(on);
-    if (on) hal::audio.startMusic(hal::kTitleMusic, hal::kTitleMusicLen, true);
-    else hal::audio.stopMusic();
     draw();
     return app::Signal::NONE;
   }

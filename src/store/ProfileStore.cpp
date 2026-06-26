@@ -65,6 +65,9 @@ static void profileToJson(const gb::Profile& p, JsonObject o) {
   s["sound"] = p.settings.sound;
   s["animSpeed"] = p.settings.animSpeed;
   s["miniMap"] = p.settings.miniMap;
+  s["music"] = p.settings.music;
+  s["sfx"] = p.settings.sfx;
+  s["volume"] = p.settings.volume;
   JsonObject st = o["stats"].to<JsonObject>();
   st["levelsCompleted"] = p.stats.levelsCompleted;
   st["totalRuns"] = p.stats.totalRuns;
@@ -124,6 +127,9 @@ static void profileFromJson(JsonObjectConst o, gb::Profile& p) {
   p.settings.sound = s["sound"] | true;
   p.settings.animSpeed = s["animSpeed"] | 1;
   p.settings.miniMap = s["miniMap"] | false;
+  p.settings.music = s["music"] | true;
+  p.settings.sfx = s["sfx"] | true;
+  p.settings.volume = s["volume"] | 2;
   JsonObjectConst st = o["stats"];
   p.stats.levelsCompleted = st["levelsCompleted"] | 0;
   p.stats.totalRuns = st["totalRuns"] | 0;

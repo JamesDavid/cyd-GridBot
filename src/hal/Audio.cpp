@@ -10,10 +10,11 @@ static constexpr int SPK_CH = 0;
 // Volume = PWM duty (out of 255). The stock ledcWriteTone outputs a 50% square wave -- loud, and
 // it sags the 3.3V rail enough to visibly DIM the backlight. A low duty is quieter AND draws far
 // less current, so the screen stays bright. (8-bit res from ledcSetup, so 0..255.)
-static constexpr int SPK_VOL = 12;
+static const int VOL_DUTY[4] = {0, 6, 12, 26};   // volume 0..3 -> PWM duty (0 = silent, 12 = old default)
+static int g_duty = VOL_DUTY[2];
 static inline void spkFreq(uint16_t freq) {
   ledcWriteTone(SPK_CH, freq);              // set the tone frequency (also writes 50% duty)
-  ledcWrite(SPK_CH, freq ? SPK_VOL : 0);    // then knock the duty down to a gentle volume
+  ledcWrite(SPK_CH, freq ? g_duty : 0);     // then knock the duty down to the chosen volume
 }
 
 // A cheerful 8-bit theme that loops on the menu. (freq Hz, duration ms; 0 = rest)
@@ -43,34 +44,45 @@ void Audio::setEnabled(bool on) {
   if (!on) { _playing = false; spkFreq(0); }
 }
 
+void Audio::setVolume(int v) {
+  _vol = v < 0 ? 0 : v > 3 ? 3 : v;
+  g_duty = VOL_DUTY[_vol];
+  if (_vol == 0) { _playing = false; spkFreq(0); }   // silent: also drop any playing note
+}
+void Audio::setMusicOn(bool on) {
+  _musicOn = on;
+  if (!on) { _playing = false; spkFreq(0); }          // muting music stops the melody now
+}
+void Audio::setSfxOn(bool on) { _sfxOn = on; }
+
 void Audio::tone(uint16_t freq, uint16_t ms) {
-  if (!_on) return;
+  if (!_on || _vol == 0) return;
   spkFreq(freq);
   delay(ms);
   spkFreq(0);
   _noteStart = 0;  // make the melody re-assert its current note on the next update
 }
 
-void Audio::blip() { tone(880, 18); }
-void Audio::tick() { tone(660, 12); }
+void Audio::blip() { if (_sfxOn) tone(880, 18); }
+void Audio::tick() { if (_sfxOn) tone(660, 12); }
 
 void Audio::win() {
-  if (!_on) return;
+  if (!_on || !_sfxOn) return;
   tone(784, 110); tone(1047, 110); tone(1319, 110); tone(1047, 110); tone(1568, 320);
 }
 
 void Audio::fail() {
-  if (!_on) return;
+  if (!_on || !_sfxOn) return;
   tone(300, 120); tone(180, 160);
 }
 
 void Audio::badge() {
-  if (!_on) return;
+  if (!_on || !_sfxOn) return;
   tone(1047, 90); tone(1319, 90); tone(1568, 90); tone(2093, 240);
 }
 
 void Audio::startMusic(const Note* notes, int count, bool loop) {
-  if (!_on || !notes || count <= 0) return;
+  if (!_on || !_musicOn || _vol == 0 || !notes || count <= 0) return;
   _mel = notes; _melLen = count; _melIdx = 0; _melLoop = loop;
   _noteStart = 0; _playing = true;
 }
