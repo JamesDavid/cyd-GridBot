@@ -120,6 +120,7 @@ class ArenaScreen : public app::IScreen {
   Phase _phase = Phase::MENU;
   bool _running = false;
   uint32_t _last = 0;
+  uint32_t _goalHoldUntil = 0;   // soccer: keep the "GOAL!" flash up until this time, then clear it
   app::TapDetector _tap;
 };
 

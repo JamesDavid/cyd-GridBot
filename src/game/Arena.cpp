@@ -88,31 +88,32 @@ bool Arena::pushBall(int mover) {
     return true;
   };
 
-  // Contested ball: a straight shove into the OPPOSING bot would just oscillate the ball one tile
-  // back and forth forever (the midfield deadlock). Break it like a real nutmeg -- the ball skips
-  // PAST the defender (one tile further along the push), giving the attacker a clear path to goal
-  // and leaving the defender behind it. If the skip is blocked, squirt the ball loose to a
-  // perpendicular tile instead. Deterministic (folded into the hash like everything else).
+  auto canLand = [&](int r, int c) {
+    return inGoal(0, r, c) || inGoal(1, r, c) || (_maze->inBounds(r, c) && _maze->isWalkable(r, c));
+  };
+
+  // Clear shove: the tile ahead is open (or a goal) and no bot sits on it -> the ball just rolls.
   int other = 1 - mover;
   const Pose& op = _bot[other].it.pose();
-  if (_bot[other].alive && nr == op.row && nc == op.col) {
-    int sr = _ball.row + 2 * dr, sc = _ball.col + 2 * dc;     // skip past the defender (goalward)
-    if (inGoal(0, sr, sc) || inGoal(1, sr, sc) || (_maze->inBounds(sr, sc) && _maze->isWalkable(sr, sc)))
-      return land(sr, sc);
-    int r1 = _ball.row - dc, c1 = _ball.col + dr;             // else deflect loose (the two perpendiculars)
-    int r2 = _ball.row + dc, c2 = _ball.col - dr;
-    auto gd = [&](int r, int c) { int a = r - _goal[mover].row, b = c - _goal[mover].col; return (a < 0 ? -a : a) + (b < 0 ? -b : b); };
-    bool ok1 = (inGoal(mover, r1, c1) || (_maze->inBounds(r1, c1) && _maze->isWalkable(r1, c1)));
-    bool ok2 = (inGoal(mover, r2, c2) || (_maze->inBounds(r2, c2) && _maze->isWalkable(r2, c2)));
-    if (ok1 && (!ok2 || gd(r1, c1) <= gd(r2, c2))) return land(r1, c1);
-    if (ok2) return land(r2, c2);
-    return false;   // boxed in -> no push (the bot bounces back)
-  }
+  bool blockedByBot  = (_bot[other].alive && nr == op.row && nc == op.col);
+  bool blockedByWall = !canLand(nr, nc);
+  if (!blockedByBot && !blockedByWall) return land(nr, nc);
 
-  // A goal tile is always scorable; otherwise the ball can only roll onto walkable floor.
-  if (!inGoal(0, nr, nc) && !inGoal(1, nr, nc) && (!_maze->inBounds(nr, nc) || !_maze->isWalkable(nr, nc)))
-    return false;
-  return land(nr, nc);
+  // Jammed -- the ball is pressed into a WALL, or two bots are squeezing it from opposite sides.
+  // Either way pop it out SIDEWAYS so it never sticks: try the two tiles perpendicular to the push.
+  // Which side is tried first comes from a deterministic hash (tick + ball pos + push dir), so it's
+  // unpredictable yet replays byte-identically on every device. If that side is blocked, try the
+  // other; only if boxed in on both perpendiculars too does the ball stay put.
+  uint32_t h = (uint32_t)_ticks * 2654435761u
+             ^ (uint32_t)_ball.row * 73856093u ^ (uint32_t)_ball.col * 19349663u
+             ^ (uint32_t)(dr + 2) * 83492791u ^ (uint32_t)(dc + 2) * 2971215073u;
+  int s = (h & 1u) ? 1 : -1;                       // which perpendicular to try first
+  for (int k = 0; k < 2; k++, s = -s) {
+    int pr = _ball.row + s * (-dc);                // (-dc, dr) and (dc, -dr) are the two perpendiculars
+    int pc = _ball.col + s * (dr);
+    if (canLand(pr, pc)) return land(pr, pc);
+  }
+  return false;   // boxed in on three sides -> no push (the bot bounces back)
 }
 
 // After a goal: re-kickoff -- both bots back to their starts, and the ball dropped at a FRESH

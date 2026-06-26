@@ -976,6 +976,12 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   int tx, ty;
   bool tap = _tap.tapped(tp, now, tx, ty);
 
+  if (_phase == Phase::BOARD && _running && _goalHoldUntil) {
+    if (now < _goalHoldUntil) return app::Signal::NONE;   // keep the "GOAL!" flash up a beat
+    drawBoard(); _ballPrev = _arena.ball();               // then wipe it and play on
+    _goalHoldUntil = 0; _last = now;
+    return app::Signal::NONE;
+  }
   if (_phase == Phase::BOARD && _running && _last == 0) {
     _last = now;  // arm the timer; the first tick is one interval later (lets capture start at tick 0)
   } else if (_phase == Phase::BOARD && _running &&
@@ -986,10 +992,13 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     bool al0 = _arena.alive(0), al1 = _arena.alive(1);
     ArenaOutcome o = _arena.tick();
     if (_type == MatchType::SOCCER && _arena.justScored()) {
-      // a goal kicked off (ball + both bots reset) -> full redraw + scoreline + a "GOAL!" flash
+      // a goal kicked off (ball + both bots reset) -> full redraw + scoreline + a "GOAL!" flash that
+      // holds briefly, then clears itself (see the _goalHoldUntil branch above) so the text never
+      // lingers on the pitch waiting for a bot to redraw over it.
       drawBoard(); _ballPrev = _arena.ball();
       label(hal::display.gfx(), SCREEN_W / 2, SCREEN_H / 2 - 4, "GOAL!", C_GO, textdatum_t::middle_center, 3);
       hal::audio.win();
+      _goalHoldUntil = now + 750;
     } else {
       eraseBotAt(b0.row, b0.col); eraseBotAt(b1.row, b1.col);
       if (_type == MatchType::SOCCER) eraseBotAt(_ballPrev.row, _ballPrev.col);  // wipe the ball's old tile

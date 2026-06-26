@@ -80,9 +80,10 @@ inline Facing turnRight(Facing f) { return (Facing)((f + 1) & 3); }
 inline Facing turnLeft(Facing f)  { return (Facing)((f + 3) & 3); }
 
 // Soccer goal mouth: the END-column rows that count as a goal -- a 4-tile mouth centred on the pitch
-// with exactly ONE wall tile above and one below, so both ends are symmetric. Rows span
-// goalRow-2 .. goalRow+1. Shared by the pitch generator, the match engine, training, and rendering.
-constexpr int SOCCER_MOUTH_LO = -2, SOCCER_MOUTH_HI = 1;
+// The mouth spans the FULL playable height (goalRow-3 .. goalRow+2 = the 6 interior rows), so the
+// only walls at each end are the top/bottom corners -- a bot can't get pinned in a flanking-wall
+// corner next to the goal. Shared by the pitch generator, the match engine, training, and rendering.
+constexpr int SOCCER_MOUTH_LO = -3, SOCCER_MOUTH_HI = 2;
 inline bool inGoalMouth(int row, int goalRow) { int d = row - goalRow; return d >= SOCCER_MOUTH_LO && d <= SOCCER_MOUTH_HI; }
 
 }  // namespace gb
