@@ -55,6 +55,7 @@ class App {
   void debugDumpMaze();                   // GAME: print the exact maze grid over serial ('M')
   void debugLoadProg(uint32_t n);         // GAME: load a hand-coding-guide program into the editor ('D <n>')
   void debugZapDemo();                    // field a hand-coded zap-swap soccer bot vs Strika ('K')
+  void debugFightLib(int a, int b);       // list the library ('F'), or field lib[a] vs lib[b] in soccer ('F a b')
 
  private:
   enum class State : uint8_t { SELECT, CREATE, HOME, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE,

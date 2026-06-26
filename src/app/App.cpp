@@ -292,6 +292,26 @@ void App::debugZapDemo() {
   Serial.println("ZAPDEMO Zappy vs Strika");
 }
 
+void App::debugFightLib(int a, int b) {
+  if (_profile.id.empty()) { Serial.println("NOPROFILE"); return; }
+  int n = (int)_profile.library.size();
+  static const char* kSrc[] = {"unknown", "code", "neuro", "braincam", "arena", "radio"};
+  if (a < 0 || b < 0) {                                  // 'F' alone -> list saved fighters
+    Serial.printf("LIB %d fighters in profile '%s'\n", n, _profile.name.c_str());
+    for (int i = 0; i < n; i++) {
+      const auto& e = _profile.library[i];
+      Serial.printf("  [%d] %-16s src=%s brains=%d\n", i, e.name.c_str(),
+                    e.source < 6 ? kSrc[e.source] : "?", (int)e.program.brains.size());
+    }
+    return;
+  }
+  if (a >= n || b >= n) { Serial.printf("BADIDX (have %d)\n", n); return; }
+  // Field lib[a] as the player vs lib[b] by name -> deterministic soccer match, paused for stepping.
+  _arena.beginQuickBattle(&_profile, a, _profile.library[b].name.c_str(), gb::MatchType::SOCCER);
+  _state = State::ARENA;
+  Serial.printf("FIGHTLIB %s vs %s\n", _profile.library[a].name.c_str(), _profile.library[b].name.c_str());
+}
+
 void App::debugNeuroLesson() {
   hal::audio.stopMusic();
   _lessonsMenu.enter();
