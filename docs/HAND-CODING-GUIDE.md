@@ -291,9 +291,10 @@ networked **Room**).
    were wrong, ask *why* — what did your rule actually say to do?
 
 ### 🤖 Battle
-1. **Beat the basic hunter.** The plain hunter is strong — can you build one that beats *it*? Try
-   adding `if foe near { zap }` (hit a foe that's close, not only dead-ahead). Save both fighters and
-   pit them against each other.
+1. **Beat the basic hunter.** The plain hunter is strong — can you build one that beats *it*? Remember
+   a `zap` only shoves a foe in the tile **directly ahead** — so the trick is *lining up the shot*.
+   Experiment with the turn rules and their **order** to face the foe faster (a zap that fires when the
+   foe is merely "near" but not dead-ahead just whiffs). Save both fighters and pit them against each other.
 2. **Order is everything.** Move `forward` to the **top** of the list and watch your fighter turn dumb
    (it charges before it aims). Put it back. Explain *why* the order changed the whole bot.
 3. **Pull a rule out.** Delete the `if pit { turn right }` line and fight near a pit. What goes wrong?

@@ -352,7 +352,8 @@ means making **yours** smarter. Each tweak below can break the tie — try it, s
 
 - **🧩 Maze:** swap `turn left` → `turn right` (does it still solve? race left- vs right-follower);
   spend fewer moves (turn around some pits instead of always jumping) for a better star score.
-- **🤖 Battle:** add `if foe near { zap }` (hit a close foe, not only dead-ahead); pull out the
+- **🤖 Battle:** a `zap` only shoves a foe in the tile **directly ahead**, so the turn-to-face rules
+  are what make it land — experiment with their **order** to line up the shot faster. Then pull out the
   `if pit { turn right }` line and fight near a pit to see exactly what that one rule was doing.
 - **⚽ Soccer:** find **one** change that beats a mirror-image bot. *(Fair warning: an extra `forward`
   to "commit the shot" and a `foe`-based "aim away from the keeper" rule both made it **worse** in our

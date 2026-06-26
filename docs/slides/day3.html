@@ -10,22 +10,22 @@
 <div id="prog"></div>
 <div id="deck">
 
-  <section class="slide title" data-note="Today's honest goal is NOT a perfect soccer bot — it's the discovery that some jobs are easy to write as rules (maze, battle) and some aren't (soccer). That discovery earns Day 4.">
+  <section class="slide title" data-note="Today is hands-on building: write a battle bot and a soccer bot with blocks, using the new Arena senses. Keep it about the craft of the program — getting it to fight and dribble well.">
     <div class="emoji">⚔️</div>
     <div class="day">Day 3 of 5</div>
     <h1>Compete</h1>
-    <p class="sub">Hand-code a <b>fighter</b> and a <b>striker</b> for the Arena — and feel where rules start to strain.</p>
+    <p class="sub">Hand-code a <b>fighter</b> and a <b>striker</b> for the Arena — real bots you build with blocks.</p>
   </section>
 
-  <section class="slide" data-note="The Arena unlocked at Level 15. Three games; today we use Battle and Soccer.">
+  <section class="slide" data-note="The Arena unlocked at Level 15. Three games; today we build for Battle and Soccer.">
     <div class="cols">
       <div class="t">
         <p class="kicker">Today you will</p>
-        <h2>Enter the Arena</h2>
+        <h2>Build two Arena bots</h2>
         <ul>
-          <li>🤖 Hand-code a <b>battle</b> bot (it wins!).</li>
-          <li>⚽ Hand-code a <b>soccer</b> bot (it… struggles).</li>
-          <li>💡 Discover <b>which jobs need AI</b>.</li>
+          <li>🤖 Hand-code a <b>battle</b> bot and beat the computer.</li>
+          <li>⚽ Hand-code a <b>soccer</b> bot that dribbles and scores.</li>
+          <li>🏆 Make <b>yours</b> smarter than a friend's to win.</li>
         </ul>
       </div>
       <div class="v"><figure class="shot"><img src="../img/arena-menu.png" alt="Arena menu"><figcaption>Home → Arena</figcaption></figure></div>
@@ -45,7 +45,7 @@
     <div class="cols top">
       <div class="t">
         <p class="kicker">Battle (Sumo)</p>
-        <h2>The hunter 🤖</h2>
+        <h2>Build the hunter 🤖</h2>
         <div class="code"><span class="k">repeat until</span> goal {
   <span class="k">if</span> foe ^ { zap }
   <span class="k">if</span> pit  { <span class="k">turn</span> right }
@@ -62,27 +62,35 @@
     </div>
   </section>
 
-  <section class="slide" data-note="The hand-coded hunter WINS vs trained brains — battle rewards a clear, correct rule, and the trained bots are only imitating a hunter like this one.">
+  <section class="slide" data-note="Key mechanic to teach: a zap only shoves a foe in the tile DIRECTLY ahead. So facing the foe (the foe-left/foe-right turn rules) is what makes the zap land. 'foe near' alone wouldn't help a zap connect.">
     <div class="cols">
       <div class="t">
-        <p class="kicker">How it does · 16 matches</p>
-        <h2>Hand-coding <span style="color:var(--go)">wins</span> 🏆</h2>
-        <table>
-          <tr><th>vs a trained fighter</th><th>Hunter (W-D-L)</th></tr>
-          <tr><td>Distilled neural fighter</td><td><b style="color:var(--go)">9 - 5 - 2</b></td></tr>
-          <tr><td>Teach→Evolve fighter</td><td><b style="color:var(--go)">9 - 5 - 2</b></td></tr>
-        </table>
-        <p class="sub">Try it: move <b>forward</b> to the top of the list — watch it turn dumb. <b>Order is everything.</b></p>
+        <p class="kicker">Battle · try it</p>
+        <h2>Beat the computer 🏆</h2>
+        <p>Fight <b>vs Computer</b> and win — your hunter turns to face the rival, then shoves it toward the edge.</p>
+        <p class="callout">A <b>zap only hits the foe in the tile right in front of you</b> — so the <b>turn-to-face</b> rules are what make it land. Lining up the shot is the whole skill.</p>
       </div>
-      <div class="v"><figure class="shot"><img src="../img/battle.gif" alt="Battle"><figcaption>Sumo brawl</figcaption></figure></div>
+      <div class="v"><figure class="shot"><img src="../img/battle.gif" alt="Battle"><figcaption>turn to face, then zap</figcaption></figure></div>
     </div>
   </section>
 
-  <section class="slide" data-note="Soccer is the hard one. You must get BEHIND the ball (far side from the net) so a shove sends it toward goal, not your own net. Use the net sense to circle behind.">
+  <section class="slide" data-note="Order is the lesson. Have a kid move 'forward' to the top of the list and watch the bot charge before it aims — it gets much worse. Then put it back.">
+    <div class="cols">
+      <div class="t">
+        <p class="kicker">Battle · the big lesson</p>
+        <h2>Order = priority</h2>
+        <p>The editor does the <b>first rule that's true</b>, top to bottom.</p>
+        <p>Move <span class="pill">forward</span> to the <b>top</b> of your list → it charges before it aims, and turns dumb. Put it back. <b>Why did the order change the whole bot?</b></p>
+      </div>
+      <div class="v"><figure class="shot sm"><img src="../img/hc-battle-3.png" alt="hunter bottom"><figcaption>…forward goes last</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="slide" data-note="Soccer is the hard one to build. You must get BEHIND the ball (far side from the net) so a shove sends it toward goal, not your own net. Use the net sense to circle behind.">
     <div class="cols top">
       <div class="t">
         <p class="kicker">Soccer</p>
-        <h2>The dribbler ⚽ — get behind the ball</h2>
+        <h2>Build the dribbler ⚽</h2>
         <div class="code"><span class="k">repeat until</span> goal {
   <span class="k">if</span> ball ^ {
     <span class="k">if</span> net &lt; { <span class="k">turn</span> right }
@@ -112,42 +120,38 @@
     </div>
   </section>
 
-  <section class="slide" data-note="The honest moment. The hand-coded striker PLAYS but can't reliably beat a trained one. Reactive blocks can't hold a plan (aim the corner, stand in the exact spot). This is the AI doorway.">
+  <section class="slide" data-note="The honest 'this is the hard one' beat — kept about the CRAFT, not AI. Soccer is tricky because you must always get behind the ball; a stray push goes into your own net. No AI here; that's Day 4.">
     <div class="cols">
       <div class="t">
-        <p class="kicker">How it does · 16 matches each</p>
-        <h2>Soccer is <span style="color:var(--bad)">different</span></h2>
-        <table>
-          <tr><th>vs a trained striker</th><th>Best dribbler</th></tr>
-          <tr><td>Distilled A</td><td><b>draw</b> 208–208</td></tr>
-          <tr><td>Teach→Evolve</td><td><b style="color:var(--go)">wins</b> 288–208</td></tr>
-          <tr><td>Distilled B</td><td><b style="color:var(--bad)">loses</b> 128–320</td></tr>
-          <tr><td>Max-trained</td><td><b style="color:var(--bad)">loses</b> 80–352</td></tr>
-        </table>
+        <p class="kicker">Soccer</p>
+        <h2>The tricky one ⚽</h2>
+        <p>Your dribbler <b>plays</b> — but scoring cleanly is hard. You have to get <b>behind</b> the ball <i>every time</i>, or a stray push knocks it into your <b>own</b> net.</p>
+        <p class="sub">Getting that exactly right is a real puzzle — keep tuning your rules.</p>
       </div>
-      <div class="v"><figure class="shot"><img src="../soccer.gif" alt="Soccer"><figcaption>trained strikers play</figcaption></figure></div>
+      <div class="v"><figure class="shot"><img src="../soccer.gif" alt="Soccer"><figcaption>get behind it, then push</figcaption></figure></div>
     </div>
   </section>
 
-  <section class="slide" data-note="Multiplayer tie-in: two identical bots DRAW. The way to win a class match is to make yours a little smarter. Let kids try one tweak and challenge a friend.">
+  <section class="slide" data-note="Multiplayer tie-in: two identical bots DRAW. The way to win a class match is to make yours a little smarter. Note the Battle tweak is about LINING UP the zap (turn rules / order), since a zap only hits the tile dead-ahead.">
     <p class="kicker">Your turn — break the tie</p>
     <h2>Make <span style="color:var(--accent)">your</span> bot smarter</h2>
     <ul>
-      <li>🤖 Battle: add <span class="pill">if foe near { zap }</span> — hit a close foe, not only dead-ahead.</li>
-      <li>⚽ Soccer: find <b>one</b> change that beats a mirror-image bot. <span class="sub">(It's a real, open puzzle — beat it and you out-coded the grown-ups!)</span></li>
+      <li>🧩 Maze: swap <span class="pill">turn left</span> → <span class="pill">turn right</span> and race them — one hand is often the shorter way out.</li>
+      <li>🤖 Battle: your zap only hits the tile <b>dead-ahead</b> — so experiment with the <b>turn rules &amp; their order</b> to face the foe faster.</li>
+      <li>⚽ Soccer: find <b>one</b> change that beats a mirror-image bot. <span class="sub">(A real, open puzzle — beat it and you out-coded the grown-ups!)</span></li>
     </ul>
     <p class="sub">Two <b>identical</b> bots always draw. Smarter wins.</p>
   </section>
 
-  <section class="slide" data-note="Checkpoint: a working hand-coded soccer bot AND the realisation that it's not enough. That realisation is what earns Day 4 — soccer is where learning pays off most.">
+  <section class="slide" data-note="Checkpoint: a working hand-coded battle bot AND a working soccer bot, plus the feel that soccer is genuinely tricky to perfect. Keep the next-day hook light — no AI claims here.">
     <p class="kicker">You did it 🎉</p>
     <h2>Day 3 checkpoint</h2>
     <ul class="check">
       <li>My battle hunter beats the computer.</li>
-      <li>My soccer bot plays — but can't reliably win.</li>
-      <li>I can say <b>why</b> soccer is harder to write as rules than the maze.</li>
+      <li>My soccer bot dribbles and scores.</li>
+      <li>I can explain why getting <b>behind the ball</b> matters.</li>
     </ul>
-    <p class="callout">That “can't quite win” feeling? It just <b>earned you Day 4</b> → <b>🤖 Learn.</b></p>
+    <p class="callout">Soccer was tricky to perfect with rules — hold that thought. Next time → <b>🤖 Day 4: Learn.</b></p>
   </section>
 
 </div>
