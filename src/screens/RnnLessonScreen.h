@@ -27,8 +27,8 @@ class RnnLessonScreen : public app::IScreen {
   gb::Net  _ff;             // no memory
   gb::RNet _rnn;            // has memory
   int _phase = 0;           // 0 feedforward (stuck), 1 RNN (solves), 2 the explanation
-  uint8_t _path[120];
-  int _pathLen = 0;
+  uint8_t _path[104];   // trimmed from 120 to free static DRAM for the long-press menu; lesson
+  int _pathLen = 0;     // mazes are tiny so the route never approaches this (fill is size-bounded)
   bool _won = false;
   app::TapDetector _tap;
 };

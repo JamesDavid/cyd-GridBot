@@ -129,11 +129,11 @@ void Touch::clearCalibration() {
   if (LittleFS.exists(CALIB_PATH)) LittleFS.remove(CALIB_PATH);
 }
 
-void Touch::inject(int x, int y) {
-  // Exactly ONE pressed read, then released — so a synthetic tap is consumed by a
-  // single screen and never cascades through a transition (each new screen's tap
-  // detector would otherwise see the still-held press as a fresh tap).
-  _injX = x; _injY = y; _injCount = 1;
+void Touch::inject(int x, int y, int frames) {
+  // Normally ONE pressed read, then released — so a synthetic tap is consumed by a single screen
+  // and never cascades through a transition (each new screen's tap detector would otherwise see the
+  // still-held press as a fresh tap). `frames` > 1 holds the touch (for testing the long-press menu).
+  _injX = x; _injY = y; _injCount = frames < 1 ? 1 : frames;
 }
 
 TouchPoint Touch::read() {

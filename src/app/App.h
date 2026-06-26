@@ -66,11 +66,21 @@ class App {
   void gotoIntro(uint32_t level);
   void gotoGame();
 
-  // A persistent, always-accessible sound control: a speaker icon in the top-right corner that
-  // opens a modal (volume 0..3, mute music, mute SFX). Drawn over whatever screen is up.
+  // A long-press anywhere opens a small MENU modal (Home / Back / Sound / Close) -- the always-on
+  // corner sound icon used to get in the way, so navigation + sound now live behind a hold gesture.
+  bool _menuModal = false;
+  uint32_t _pressStart = 0;         // millis the current touch began (0 = no touch)
+  int16_t _pressX = 0, _pressY = 0; // where it began (to reject drags as long-presses)
+  bool _longFired = false;          // the long-press already opened the menu this touch
+  bool handleMenuUi(uint32_t now, const hal::TouchPoint& tp, bool tap);  // long-press detect + open modal; true if consumed
+  void drawMenuModal();
+  void goBack();                    // Menu "Back": re-enter the previous screen (else Home)
+  void enterState(State s);         // re-enter a screen by state (used by goBack)
+  State _prevState = State::HOME;   // the screen before the current one (for Back)
+  State _stateAtTickStart = State::SELECT;
+
   bool _soundModal = false;
   bool _soundDown = false;          // last touch state, for rising-edge tap detection on the overlay
-  void drawSoundIcon();             // the corner speaker (current state)
   void drawSoundModal();            // the volume / music / sfx overlay
   bool handleSoundUi(int tx, int ty, bool tapped);  // returns true if it consumed the tap
   void applyAndSaveSound();         // push audio state into settings + persist (if a profile is loaded)

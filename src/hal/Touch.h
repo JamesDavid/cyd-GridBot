@@ -17,7 +17,7 @@ class Touch {
   TouchPoint read();            // debounced single read (invert flags applied)
   void recalibrate();           // force the 4-corner routine + persist
   void clearCalibration();      // delete stored calibration (forces re-cal on reboot)
-  void inject(int x, int y);    // synthetic tap (PIO_DEBUG serial /api/tap equivalent)
+  void inject(int x, int y, int frames = 1);  // synthetic touch held for `frames` reads (1 = a tap)
   void setLog(bool on) { _log = on; }
 
  private:

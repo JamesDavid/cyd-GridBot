@@ -383,6 +383,10 @@ void App::tick(uint32_t now) {
   hal::audio.update(now);  // advance the background melody (no-op if not playing)
   hal::TouchPoint tp = hal::touch.read();
 
+  // Remember the screen we were on before the current one (for the Menu's Back button). A state
+  // change made during the previous tick is visible here as _state != the snapshot.
+  if (_state != _stateAtTickStart) { _prevState = _stateAtTickStart; _stateAtTickStart = _state; }
+
   // Idle nametag screensaver: track the last touch; arm after a quiet minute on a calm screen;
   // any touch wakes back to where you were (and is swallowed so it doesn't also act as a tap).
   if (tp.pressed) _lastInput = now;
@@ -392,10 +396,12 @@ void App::tick(uint32_t now) {
   }
   if (saverEligible() && now - _lastInput > SAVER_MS) { _saver = true; drawNametag(); return; }
 
-  // Global sound control: the corner speaker + its modal sit ABOVE every screen. If they consume
-  // the tap (modal open, or the icon tapped), the screen underneath is frozen this frame.
-  { bool stap = tp.pressed && !_soundDown; _soundDown = tp.pressed;   // rising edge
-    if (handleSoundUi(tp.x, tp.y, stap)) return; }
+  // Global overlays sit ABOVE every screen: a long-press opens the Menu modal (Home/Back/Sound/
+  // Close); the Sound modal opens from it. If either consumes the tap, the screen underneath is
+  // frozen this frame.
+  bool stap = tp.pressed && !_soundDown; _soundDown = tp.pressed;   // rising-edge tap
+  if (handleMenuUi(now, tp, stap)) return;
+  if (handleSoundUi(tp.x, tp.y, stap)) return;
 
   switch (_state) {
     case State::SELECT: {
@@ -807,27 +813,31 @@ void App::tick(uint32_t now) {
       break;
     }
   }
-  drawSoundIcon();   // keep the always-on corner speaker painted over whatever the screen drew
 }
 
-// ----- always-accessible sound control ------------------------------------------------------
-static const ui::Rect SND_ICON  = {(int16_t)(SCREEN_W - SOUND_ICON_W), 2, (int16_t)(SOUND_ICON_W - 2), 18};
+// ----- long-press Menu modal + the Sound modal it opens -------------------------------------
 static const ui::Rect SND_VOL_DN = {52, 78, 40, 32}, SND_VOL_UP = {228, 78, 40, 32};
 static const ui::Rect SND_MUSIC = {52, 120, 216, 28};
 static const ui::Rect SND_SFX   = {52, 154, 216, 28};
 static const ui::Rect SND_DONE  = {110, 190, 100, 28};
 
-void App::drawSoundIcon() {
-  if (_soundModal) return;
+// The Menu modal (held-anywhere): Home / Back on top, Sound + Close below.
+static const ui::Rect MENU_HOME  = {54, 78, 96, 34};
+static const ui::Rect MENU_BACK  = {170, 78, 96, 34};
+static const ui::Rect MENU_SOUND = {54, 122, 212, 30};
+static const ui::Rect MENU_CLOSE = {54, 160, 212, 30};
+static constexpr uint32_t LONGPRESS_MS = 550;   // hold this long to open the menu
+static constexpr int LONGPRESS_TOL = 14;        // ...without sliding more than this (so drags don't trigger)
+
+void App::drawMenuModal() {
   auto& g = hal::display.gfx();
-  int x = SND_ICON.x + 2, y = 5;
-  bool muted = hal::audio.volume() == 0 || (!hal::audio.musicOn() && !hal::audio.sfxOn());
-  uint16_t col = muted ? C_BAD : C_GO;
-  g.fillRect(SND_ICON.x, 0, SND_ICON.w, TOPBAR_H, C_PANEL);   // own the corner so it's always legible
-  g.fillRect(x, y + 4, 4, 6, col);                            // speaker body
-  g.fillTriangle(x + 4, y + 1, x + 4, y + 13, x + 9, y + 7, col);  // cone
-  if (muted) { g.drawLine(x + 11, y + 2, x + 17, y + 12, C_BAD); g.drawLine(x + 17, y + 2, x + 11, y + 12, C_BAD); }
-  else for (int i = 0; i < hal::audio.volume(); i++) g.drawFastVLine(x + 11 + i * 3, y + 5 - i, 4 + i * 2, col);  // volume bars
+  g.fillRoundRect(40, 44, 240, 164, 12, C_PANEL);
+  g.drawRoundRect(40, 44, 240, 164, 12, C_ACCENT);
+  ui::label(g, SCREEN_W / 2, 54, "Menu", C_ACCENT, textdatum_t::top_center, 2);
+  ui::button(g, MENU_HOME,  "Home",   C_GO,     C_PANEL_HI);
+  ui::button(g, MENU_BACK,  "< Back", C_ACCENT, C_PANEL_HI);
+  ui::button(g, MENU_SOUND, "Sound",  C_INK,    C_PANEL_HI);
+  ui::button(g, MENU_CLOSE, "Close",  C_DIM,    C_PANEL_HI);
 }
 
 void App::drawSoundModal() {
@@ -863,8 +873,56 @@ bool App::handleSoundUi(int tx, int ty, bool tapped) {
     }
     return true;   // modal swallows every tap while open
   }
-  if (tapped && SND_ICON.contains(tx, ty)) { _soundModal = true; drawSoundModal(); return true; }
   return false;
+}
+
+// Long-press anywhere opens the Menu modal; while it's open it owns every tap. Returns true when it
+// consumed the input (so the screen underneath is frozen this frame).
+bool App::handleMenuUi(uint32_t now, const hal::TouchPoint& tp, bool tap) {
+  if (_menuModal) {
+    if (tap) {
+      _pressStart = 0;
+      if (MENU_HOME.contains(tp.x, tp.y))       { _menuModal = false; _profile.id.empty() ? gotoSelect() : gotoHome(); }
+      else if (MENU_BACK.contains(tp.x, tp.y))  { _menuModal = false; goBack(); }
+      else if (MENU_SOUND.contains(tp.x, tp.y)) { _menuModal = false; _soundModal = true; drawSoundModal(); }
+      else if (MENU_CLOSE.contains(tp.x, tp.y)) { _menuModal = false; wake(); }
+    }
+    return true;
+  }
+  if (_soundModal) { _pressStart = 0; return false; }            // the Sound modal owns input; no hold over it
+  if (_state == State::DRAW) { _pressStart = 0; return false; }   // pixel editor uses press-and-drag to paint
+  if (tp.pressed) {
+    if (_pressStart == 0) { _pressStart = now; _pressX = tp.x; _pressY = tp.y; _longFired = false; }
+    else if (!_longFired && now - _pressStart >= LONGPRESS_MS) {
+      int dx = tp.x - _pressX, dy = tp.y - _pressY;
+      if (dx * dx + dy * dy <= LONGPRESS_TOL * LONGPRESS_TOL) {   // a hold, not a slide
+        _longFired = true; _menuModal = true; drawMenuModal();
+        return true;
+      }
+    }
+  } else {
+    _pressStart = 0;
+  }
+  return false;
+}
+
+// Menu "Back": re-enter the screen we were on before this one (transient screens fall back to Home).
+void App::goBack() { enterState(_prevState); }
+
+void App::enterState(State s) {
+  if (_profile.id.empty()) { gotoSelect(); return; }   // no profile loaded -> only player-select is valid
+  switch (s) {
+    case State::SELECT:       gotoSelect(); break;
+    case State::HOME:         gotoHome();   break;
+    case State::ARENA:        _arena.begin(&_profile); _arena.enter(); _state = State::ARENA; break;
+    case State::LIBRARY:      _library.begin(&_profile); _library.enter(); _state = State::LIBRARY; break;
+    case State::STATS:        _stats.begin(&_profile); _stats.enter(); _state = State::STATS; break;
+    case State::LESSONS_MENU: _lessonsMenu.enter(); _state = State::LESSONS_MENU; break;
+    case State::NEURO_HUB:    _lessonHub.enter(); _state = State::NEURO_HUB; break;
+    case State::BADGES:       _subFromHome = true; _badges.begin(&_profile); _badges.enter(); _state = State::BADGES; break;
+    case State::SHOP:         _subFromHome = true; _shop.begin(&_profile); _shop.enter(); _state = State::SHOP; break;
+    default:                  gotoHome(); break;   // GAME/INTRO/matches/training/etc. -> the hub
+  }
 }
 
 void App::applyAndSaveSound() {

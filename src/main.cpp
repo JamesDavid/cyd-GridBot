@@ -40,10 +40,11 @@ static void handleSerialLine(const String& line) {
   if (c == 'S') {
     serialShot();
   } else if (c == 'T') {
-    int x = 0, y = 0;
-    if (sscanf(line.c_str() + 1, "%d %d", &x, &y) == 2) {
-      hal::touch.inject(x, y);
-      Serial.printf("TAP %d %d\n", x, y);
+    int x = 0, y = 0, frames = 1;
+    int n = sscanf(line.c_str() + 1, "%d %d %d", &x, &y, &frames);
+    if (n >= 2) {
+      hal::touch.inject(x, y, n >= 3 ? frames : 1);   // 3rd arg = hold N frames (test long-press)
+      Serial.printf("TAP %d %d %d\n", x, y, n >= 3 ? frames : 1);
     }
   } else if (c == 'L') {
     static bool on = false; on = !on; hal::touch.setLog(on);
