@@ -180,17 +180,22 @@ This "circle behind, then push" robot is **much** stronger.
 
 ### How it does
 
-| Opponent (16 matches) | "Get behind the ball" record |
-|---|---|
-| A standard **distilled** striker | **draw** (dead even, 208–208 goals) |
-| A **Teach→Evolve** striker | **wins 16–0** |
-| A **maximally-trained** striker (the strongest possible) | **loses** |
+Each row is **16 matches** against a different trained neural striker (goals = total over the 16):
 
-So a *well-designed* hand-coded soccer bot is **competitive** — it holds the normal trained striker to
-a tie and beats the evolved one. But the **very best trained brain edges it out**, and simpler hand
-rules lose outright. We tried *eight* hand-coded strategies (including using the `foe` sense to aim
-away from the keeper — it actually made things **worse**). The ceiling for simple rules is "good, but
-a notch below the best brain."
+| Trained-striker opponent | "Get behind the ball" |
+|---|---|
+| Distilled striker **A** | **draw** — 208–208 |
+| Distilled striker **B** *(same recipe, different practice)* | **loses** — 128–320 |
+| **Teach → Evolve** striker | **wins** — 288–208 (16–0) |
+| **Max-trained** striker *(the strongest possible)* | **loses** — 80–352 |
+
+So an honest read: a *well-designed* hand-coded soccer bot is **right at the edge of competitive**. It
+can **tie** one trained striker and even **beat** the evolved one — but it **loses to others**, and the
+strongest brain beats it **clearly** (80–352). It is **not** a robust win the way the maze and battle
+bots are; across the board the trained brains have the edge. We tried *eight* hand-coded strategies
+(including using the `foe` sense to aim away from the keeper — it made things **worse**, and a
+"commit the shot" variant lost every match). The ceiling for simple reactive rules is "can hang with a
+trained striker on a good day, but a notch below the best."
 
 **Why?** A trained brain saw thousands of examples and learned *finishing finesse* — aiming at the
 open corner of the net, hitting the exact spot to stand. Reactive blocks can't hold a plan in memory
@@ -207,7 +212,7 @@ Here's the whole lesson on one line each:
 |---|---|---|
 | 🧩 **Maze** | a 3-rule wall-follower solves **8×** more unseen mazes | ✍️ **Hand-coding** — a correct rule generalises |
 | 🤖 **Battle** | the hunter goes **9-5-2** vs trained fighters | ✍️ **Hand-coding** — clear priorities win |
-| ⚽ **Soccer** | the best dribbler only **draws** the normal brain, loses to the best | 🧠 **Learning** — finesse needs practice |
+| ⚽ **Soccer** | the best dribbler **ties some** trained strikers, **loses to others**, and the strongest beats it 80–352 | 🧠 **Learning** — finesse needs practice |
 
 **That's why machine learning exists.** When a job is easy to describe as rules (find the wall, face
 the foe), *write the rules* — it's clearer, faster, and it generalises. When a job is full of feel and

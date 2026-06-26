@@ -204,7 +204,8 @@ a one-off match, a local **Tournament**, or a multi-device **Room**.
 > a trained neural bot and shows, with measured results, **which jobs hand-coding wins and which need
 > AI**: Maze & Battle reward a clear rule (a 3-rule wall-follower solves **8× more unseen mazes**; the
 > hunter goes **9-5-2** vs trained fighters), while Soccer is where *learning* pulls ahead (the best
-> hand-coded dribbler only **draws** the trained striker). It's the hands-on on-ramp from *"I write
+> hand-coded dribbler **ties some** trained strikers but **loses to others**, and the strongest beats
+> it 80–352). It's the hands-on on-ramp from *"I write
 > the rules"* to *"I train the rules"* — kids earn NeuroLab by feeling exactly where rules run out.
 
 ### NeuroBot — *stop writing the rules, start training them*

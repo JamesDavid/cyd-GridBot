@@ -177,7 +177,8 @@ Condensed pages. Same shape as the sample: **Big idea · On screen · Ask · Wat
 > the measured punchline *is* the "match the method" lesson (NeuroLab 17): **Maze & Battle → hand-coding
 > wins** (a 3-rule wall-follower solves **8× more unseen mazes** than a one-maze brain; the priority-rule
 > hunter goes **9-5-2** vs trained fighters), **Soccer → learning wins** (the best hand-coded dribbler
-> only *draws* the trained striker; finishing finesse needs practice). Kids earn NeuroLab by feeling
+> *ties some* trained strikers but loses to others — the strongest wins 80–352; finishing finesse
+> needs practice). Kids earn NeuroLab by feeling
 > exactly where rules run out — then open it knowing *what* the brain is trying to learn. Every number
 > is reproducible from `tools/bot_eval.cpp`.
 
