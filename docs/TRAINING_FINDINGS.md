@@ -34,6 +34,7 @@ AA models at it in the deterministic Room. Same pitch, same opponent, same seed 
 | Over-Evolved (gen **256**, **fixed** board) | Evolve from scratch, one pitch, many generations | **broken** — *"just stays there"* | **Overfitting.** More generations on one board made it memorise that board and freeze elsewhere. |
 | Varied-board Evolve (gen **128**) | Evolve from scratch, **ball moved every generation** | lost **1 – 7** | Generalises (it plays everywhere now, doesn't freeze) — but from-scratch evolution is still **weak**. |
 | Teach (distill) | Imitate the expert dribbler | lost **4 – 5** | **Competent out of the box.** A one-goal game — distillation alone is already close. |
+| Teach → **Q-Learn** | Distill the expert, **then reward-refine** it (score = reward) | lost **0 – 7** | **Regressed — refinement can HURT.** The opponent-agnostic reward signal overwrote the clean distilled policy and made it *worse than Teach alone*. |
 | **Teach → Evolve vs BB** | Distill the expert, **then evolve *that* to beat BB** | **won 5 – 2** ✅ | **The winner.** Competent **+** adapted-to-the-opponent. |
 
 Then we ran the **loser-levels-up loop**: BB saved AA's champion and trained the *same*
@@ -75,10 +76,22 @@ levelling-up pass was enough. **Different disciplines, different losers, differe
    the brain to play from anywhere — it stopped freezing. (Generalisation ≠ winning, though; it was
    robust but still weak.)
 
-4. **Transfer learning wins: Teach → Evolve.** Distill a competent striker, *then* evolve **that**
-   brain against the specific opponent. Competent **+** adapted out-performed either technique
-   alone — it's the only AA model that beat BB (5–2). The key enabler was making Evolve **seed its
-   population from the current brain** instead of restarting from noise.
+4. **Transfer learning wins — but only the *right* refinement. Teach → Evolve, not Teach →
+   Q-Learn.** Distilling a competent striker and *then* evolving **that** brain against the specific
+   opponent was the only AA model to beat BB (**5–2**). But distilling and then **Q-Learning** it
+   made it *worse than Teach alone* (**0–7**). The difference is **alignment**:
+   - **Evolve vs BB** selects directly for *"did you beat BB?"* — every generation pushes the
+     competent brain toward the actual goal, so it compounds.
+   - **Q-Learn** *does* sense the ball **and** the rival (it uses the full soccer senses, and the
+     defender is a solid obstacle), but it optimises a **single-agent proxy reward** — "get the ball
+     in the goal" — against a **stationary** defender. That's a *simpler world than the match*
+     (Teach trains vs a **moving**, jittered rival). Its reward gradient **overwrote the distilled
+     policy**, pulling the brain toward that narrower task — so it regressed. A refinement aimed at
+     a simpler objective than your real one can *destroy* a good brain. The combo only compounds
+     when the second stage pulls in the same direction as the first (Evolve-vs-the-actual-opponent
+     does; score-the-ball-vs-a-cone doesn't).
+   (The enabler for *any* of this was making the trainer **seed from the current brain** by default
+   instead of restarting from noise — so Teach → anything actually builds on the Teach.)
 
 5. **Determinism makes it science.** Because the Room replays byte-identically across both boards,
    every result above is repeatable — you can re-run a matchup and get the same scoreline, which is
