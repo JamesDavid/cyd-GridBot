@@ -54,7 +54,7 @@ inline Program hunterProgram() {
     Node n = Node::ifCond(c); n.body.push_back(Node::command(cmd)); loop.body.push_back(n);
   };
   rule(ENEMY_AHEAD, CMD_FIRE);    // foe in the tile ahead -> ZAP (shoves it)
-  rule(PIT_AHEAD,   CMD_TURN_R);  // never charge into a pit, even while chasing (no suicide)
+  rule(PIT_AHEAD,   CMD_TURN_R);  // never charge into a pit, even while chasing (no falling in)
   rule(ENEMY_RIGHT, CMD_TURN_R);  // foe off to the right -> turn to face it
   rule(ENEMY_LEFT,  CMD_TURN_L);  // foe off to the left  -> turn to face it
   rule(WALL_AHEAD,  CMD_TURN_R);  // wall straight ahead -> turn (don't jam)

@@ -275,10 +275,13 @@ void App::debugZapDemo() {
   if (_profile.id.empty()) { Serial.println("NOPROFILE"); return; }
   using namespace gb;
   auto ifDo = [](Cond c, Cmd cmd) { Node x = Node::ifCond(c); x.body.push_back(Node::command(cmd)); return x; };
-  Program p;                                            // a hand-coded "zap to flip the ball" dribbler
-  Node loop = Node::repeatUntil(AT_GOAL);
-  loop.body.push_back(ifDo(BALL_AHEAD, CMD_FIRE));      // facing the ball -> zap-swap (turn it around)
-  loop.body.push_back(ifDo(BALL_LEFT,  CMD_TURN_L));
+  Program p;                                            // a net-AWARE zap-swap dribbler. The plain
+  Node loop = Node::repeatUntil(AT_GOAL);               // "always zap" version shoves the ball into its
+  Node onBall = Node::ifCond(BALL_AHEAD);               // own net (the swap pops the ball OPPOSITE your
+  onBall.body.push_back(ifDo(NET_LEFT,  CMD_FIRE));     // facing). Zapping ONLY when the net is off to a
+  onBall.body.push_back(ifDo(NET_RIGHT, CMD_FIRE));     // side means you're facing vertically, so the
+  loop.body.push_back(onBall);                          // ball flips up/down to re-line-up -- never into
+  loop.body.push_back(ifDo(BALL_LEFT,  CMD_TURN_L));    // a goal. Lined up (net ahead) -> just push it in.
   loop.body.push_back(ifDo(BALL_RIGHT, CMD_TURN_R));
   loop.body.push_back(Node::command(CMD_FWD));
   p.main.push_back(loop);
@@ -289,7 +292,7 @@ void App::debugZapDemo() {
   _profile.library.push_back(e);                        // in-memory only (not saved -> gone on reboot)
   _arena.beginQuickBattle(&_profile, idx, "Cone", MatchType::SOCCER);    // vs the idle cone -> BOARD phase
   _state = State::ARENA;
-  Serial.println("ZAPDEMO Zappy vs Strika");
+  Serial.println("ZAPDEMO Zappy vs Cone");
 }
 
 void App::debugFightLib(int a, int b) {

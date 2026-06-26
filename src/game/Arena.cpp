@@ -75,7 +75,7 @@ void Arena::refDriftBall() {
 // Bot `mover` has stepped onto the ball's tile -- try to shove the ball one tile further in the
 // mover's facing. Off-board / wall / pit blocks the shove; landing on a goal tile scores. Returns
 // false if the ball can't move (the caller then bounces the bot back -- you can't walk through it).
-bool Arena::pushBall(int mover) {
+bool Arena::pushBall(int mover, bool* squeezed) {
   int dr, dc; facingDelta(_bot[mover].it.pose().facing, dr, dc);
   int nr = _ball.row + dr, nc = _ball.col + dc;
   // A goal is the END column +/- one row of the mouth centre (a 3-tile-tall mouth on the pitch;
@@ -111,7 +111,7 @@ bool Arena::pushBall(int mover) {
   for (int k = 0; k < 2; k++, s = -s) {
     int pr = _ball.row + s * (-dc);                // (-dc, dr) and (dc, -dr) are the two perpendiculars
     int pc = _ball.col + s * (dr);
-    if (canLand(pr, pc)) return land(pr, pc);
+    if (canLand(pr, pc)) { if (squeezed) *squeezed = true; return land(pr, pc); }
   }
   return false;   // boxed in on three sides -> no push (the bot bounces back)
 }
@@ -220,8 +220,13 @@ ArenaOutcome Arena::tick() {
     for (int i = 0; i < 2; i++) {
       if (!moved[i] || !_bot[i].alive) continue;
       const Pose& p = _bot[i].it.pose();
-      if (p.row == _ball.row && p.col == _ball.col)
-        if (!pushBall(i)) _bot[i].it.setPose(before[i]);
+      if (p.row == _ball.row && p.col == _ball.col) {
+        bool squeezed = false;
+        // No push at all -> bounce back (you can't walk through the ball). If the ball squirted out
+        // SIDEWAYS (pressed into a wall), step the bot back one tile too, so it doesn't stay jammed
+        // on the wall where the ball just was -- it ends up beside the loose ball, free to chase it.
+        if (!pushBall(i, &squeezed) || squeezed) _bot[i].it.setPose(before[i]);
+      }
     }
     // Loose-ball "referee": if nobody touches the ball for a good while (a true midfield deadlock),
     // it's dropped at a fresh spot so both bots scramble for it again -- never nudged toward a goal,

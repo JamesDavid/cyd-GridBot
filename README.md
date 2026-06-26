@@ -174,7 +174,7 @@ a one-off match, a local **Tournament**, or a multi-device **Room**.
 
 | ![Zap-swap](docs/img/zappy.gif) |
 |:--|
-| **The `zap`-swap — turn the ball around.** Caught on the *wrong* side of the ball? In Soccer, **zap** while facing it and your robot and the ball **trade places** — the ball pops one tile *past* you toward goal, leaving you neatly behind it. It's a one-move fix for the wrong-side scrambles that otherwise make bots shove the ball into their *own* net, and the soccer trainer now **rewards a goalward zap** (and penalises a wrong-way push 2×) so a brain can learn it. *(GIF: a hand-coded `if ball ^ { zap }` bot using **nothing but the swap** to walk the ball downfield and score three times — captured tick-by-tick on a real CYD.)* |
+| **The `zap`-swap — turn the ball around.** Caught on the *wrong* side of the ball? In Soccer, **zap** while facing it and your robot and the ball **trade places** — the ball pops one tile *past* you toward goal, leaving you neatly behind it. It's a one-move fix for the wrong-side scrambles that otherwise make bots shove the ball into their *own* net, and the soccer trainer now **rewards a goalward zap** (and penalises a wrong-way push 2×) so a brain can learn it. *(GIF: a hand-coded **net-aware** dribbler that uses the swap to stay on the ball's goal side and buries two clean goals in the correct net — captured tick-by-tick on a real CYD.)* |
 
 | ![Soccer brain](docs/img/soccer-brain.png) |
 |:--|

@@ -68,7 +68,8 @@ class Arena {
   // Soccer state (deterministic, folded into the hash like every other field). A soccer match is
   // TIMED, not sudden-death: a goal increments the scorer's tally and re-kicks off (ball + bots to
   // their starts); the higher score at the cap wins (level -> ball-position tiebreak, then draw).
-  bool pushBall(int mover);   // bot `mover` stands on the ball -> shove it; false if blocked
+  bool pushBall(int mover, bool* squeezed = nullptr);   // bot `mover` stands on the ball -> shove it;
+                              // false if blocked; *squeezed = true if it popped out sideways into a wall
   void kickoff();             // reset the ball to centre + both bots to their starts (after a goal)
   Pose _ball;                 // ball tile
   Pose _kickoff;              // the centre kickoff tile (ball returns here after each goal)
