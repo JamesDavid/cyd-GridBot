@@ -21,8 +21,9 @@ namespace screens {
 static const Rect R_OPP   = {6,   (int16_t)(BAND_Y + 2), 84,  18}; // tap to change sparring partner
 static const Rect R_MODE  = {92,  (int16_t)(BAND_Y + 2), 52,  18}; // Race <-> Sumo
 static const Rect R_BTYPE = {146, (int16_t)(BAND_Y + 2), 40,  18}; // brain type: feedforward <-> RNN
-static const Rect R_VIEW  = {188, (int16_t)(BAND_Y + 2), 64,  18}; // toggle arena <-> brain view
-static const Rect R_KNOBS = {254, (int16_t)(BAND_Y + 2), 60,  18}; // open the advanced knobs overlay
+static const Rect R_VIEW  = {188, (int16_t)(BAND_Y + 2), 44,  18}; // toggle arena <-> brain view
+static const Rect R_SCRAM = {234, (int16_t)(BAND_Y + 2), 42,  18}; // scramble: a fresh random brain (explicit reset)
+static const Rect R_KNOBS = {278, (int16_t)(BAND_Y + 2), 38,  18}; // open the advanced knobs overlay
 // Three training engines side by side (Teach = imitate, Evolve = select, Q-Learn = reward),
 // then Save + Back. Compact so all five fit the 320px bar.
 static const Rect R_TEACH = {4,   (int16_t)(BOTBAR_Y + 2), 52, 32};
@@ -382,7 +383,8 @@ void ArenaTrainScreen::draw() {
   button(g, R_MODE, _matchType == MatchType::SUMO ? "Battle >" :
                     _matchType == MatchType::SOCCER ? "Soccer >" : "Race >", C_FUNC, C_PANEL);
   button(g, R_BTYPE, _rnn ? "RNN >" : "FF >", _rnn ? C_MOVE : C_DIM, C_PANEL);  // brain type to train
-  button(g, R_VIEW, _netView ? "arena >" : "brain >", C_ACCENT, C_PANEL);
+  button(g, R_VIEW, _netView ? "arena" : "brain", C_ACCENT, C_PANEL);
+  button(g, R_SCRAM, "Fresh", C_BAD, C_PANEL);   // explicit scramble back to a random brain
   // "Knobs" lights up (accent) when any hyperparameter is off its default, so it's clear they're active
   button(g, R_KNOBS, "Knobs", _knobs.isDefault() ? C_DIM : C_ACCENT, C_PANEL);
 
@@ -629,6 +631,14 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
   }
   if (R_KNOBS.contains(tx, ty)) {
     _advanced = true; hal::audio.blip(); draw();
+  } else if (R_SCRAM.contains(tx, ty)) {
+    // explicit "scramble": throw away the current brain and start from random noise. Training is
+    // transfer-learning by default, so this is the ONLY way to deliberately restart from scratch.
+    uint32_t s = (_profile ? _profile->seedBase : 7u) + (uint32_t)now;
+    if (_rnn) rbrain().config(SENSOR_COUNT_FOR_BRAIN, 8, 5, s);
+    else      _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, s);
+    _taught = false; _saved = false; _savedIdx = -1; _qLearning = false; _animating = false; _curveLen = 0;
+    evaluateAndTrace(); hal::audio.fail(); draw();
   } else if (R_VIEW.contains(tx, ty)) {
     _netView = !_netView; hal::audio.blip(); draw();
   } else if (R_MODE.contains(tx, ty)) {  // Race -> Sumo -> Soccer -> Race
@@ -671,9 +681,10 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     if (_rnn) { hal::audio.fail(); }  // Evolve is feedforward-only
     else {
       _qLearning = false; _curveLen = 0;
-      // If you just TAUGHT a brain, Evolve refines THAT (seed the population from it) instead of
-      // throwing it away and restarting from noise -- so Teach -> Evolve = competent + adapted.
-      if (_taught) _evo.seedFrom(_brain, 0.2f);
+      // Evolve REFINES the current brain: seed the whole population from it (transfer learning is the
+      // default -- whether you just Taught it, loaded a saved fighter, or evolved already). Tap
+      // Scramble first for a from-scratch run.
+      _evo.seedFrom(_brain, 0.2f);
       _animating = true; _animLeft = 16 * _knobs.rounds; _animAt = now; _genAt = now; _animFrame = 0;  // watch it hunt & learn
       hal::audio.blip();
     }
@@ -681,11 +692,12 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     bool noQ = (_matchType == MatchType::RACE && !_rnn);        // only FF race has no Q engine
     if (noQ) { hal::audio.fail(); }
     else {
-      // reward-driven training, animated in chunks so the kid watches it learn without a long
-      // freeze. Fresh brain each run. FF battle = 8 chunks; any RNN = 4 (BPTT is heavier). The
-      // Rounds knob multiplies the chunk count; set lr AFTER config (config resets it to default).
-      if (_rnn) { rbrain().config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23); rbrain().lr = _knobs.lr * 0.33f; _qChunks = 4 * _knobs.rounds; }
-      else      { _brain.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);   _brain.lr = _knobs.lr;          _qChunks = 8 * _knobs.rounds; }
+      // reward-driven training, animated in chunks so the kid watches it learn without a long freeze.
+      // It REFINES the current brain (transfer learning by default -- e.g. Teach a dribbler, then
+      // Q-Learn to sharpen it); no reset, so tap Scramble first for a from-scratch run. FF = 8 chunks,
+      // any RNN = 4 (BPTT is heavier); the Rounds knob multiplies the chunk count.
+      if (_rnn) { rbrain().lr = _knobs.lr * 0.33f; _qChunks = 4 * _knobs.rounds; }
+      else      { _brain.lr = _knobs.lr;          _qChunks = 8 * _knobs.rounds; }
       _qLearning = true; _curveLen = 0;
       _animating = true; _animLeft = _qChunks; _animAt = now; _genAt = now; _animFrame = 0;
       hal::audio.blip();
