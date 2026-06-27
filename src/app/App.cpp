@@ -40,6 +40,12 @@ void App::begin() {
   hal::audio.begin();
   hal::led.begin();
   store::profiles.begin();
+  // Device-wide sound settings, applied BEFORE the menu music starts so volume/mute persist across
+  // reboots and are honoured on the player-select screen (before any profile is picked).
+  bool snd, mus, sfx; uint8_t vol;
+  if (store::profiles.loadAudio(snd, mus, sfx, vol)) {
+    hal::audio.setEnabled(snd); hal::audio.setMusicOn(mus); hal::audio.setSfxOn(sfx); hal::audio.setVolume(vol);
+  }
   drawSplash();
   delay(1900);            // a moment to read the splash, then into player select
   gotoSelect();
@@ -85,11 +91,9 @@ void App::loadProfileInto(const std::string& id) {
   // Sticky unlocks: level only rises, so derive from level (SPEC §7).
   _profile.unlocks = gb::computeUnlocks(_profile.level);
   applog::event("playing as %s (Lv %u)", _profile.name.c_str(), (unsigned)_profile.level);
-  // apply this player's saved sound preferences
-  hal::audio.setEnabled(_profile.settings.sound);
-  hal::audio.setMusicOn(_profile.settings.music);
-  hal::audio.setSfxOn(_profile.settings.sfx);
-  hal::audio.setVolume(_profile.settings.volume);
+  // NOTE: sound is DEVICE-WIDE (applied once at boot from /audio.cfg), not per-profile, so picking a
+  // player no longer changes the volume/mute. (Kept the per-profile fields for back-compat only.)
+  (void)_profile.settings.sound;
 }
 
 void App::saveProfile() { store::profiles.save(_profile); }
@@ -1048,7 +1052,10 @@ void App::enterState(State s) {
 }
 
 void App::applyAndSaveSound() {
-  if (_profile.id.empty()) return;   // nothing to persist (e.g. at the player-select screen)
+  // Device-wide first, so it persists + applies on the next boot's menu even with no profile loaded.
+  store::profiles.saveAudio(hal::audio.enabled(), hal::audio.musicOn(),
+                            hal::audio.sfxOn(), (uint8_t)hal::audio.volume());
+  if (_profile.id.empty()) return;   // also mirror into the profile (back-compat) when one is loaded
   _profile.settings.music = hal::audio.musicOn();
   _profile.settings.sfx = hal::audio.sfxOn();
   _profile.settings.volume = (uint8_t)hal::audio.volume();

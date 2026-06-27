@@ -32,6 +32,11 @@ class ProfileStore {
   bool saveLevelProgram(const std::string& id, uint32_t level, const gb::Program& prog);
   bool loadLevelProgram(const std::string& id, uint32_t level, gb::Program& out);
 
+  // Device-wide sound settings (the speaker is shared, not per-kid). Persisted in their own file so
+  // they survive reboots and apply on the menu BEFORE any profile is picked.
+  void saveAudio(bool sound, bool music, bool sfx, uint8_t volume);
+  bool loadAudio(bool& sound, bool& music, bool& sfx, uint8_t& volume);  // false if never saved
+
  private:
   void rebuildIndex();
 };

@@ -247,6 +247,26 @@ bool ProfileStore::loadLevelProgram(const std::string& id, uint32_t level, gb::P
   return true;
 }
 
+// Device-wide sound config: 4 bytes [sound, music, sfx, volume] in /audio.cfg.
+static const char* AUDIO_CFG = "/audio.cfg";
+void ProfileStore::saveAudio(bool sound, bool music, bool sfx, uint8_t volume) {
+  File f = LittleFS.open(AUDIO_CFG, "w");
+  if (!f) return;
+  uint8_t b[4] = {(uint8_t)sound, (uint8_t)music, (uint8_t)sfx, volume};
+  f.write(b, 4);
+  f.close();
+}
+bool ProfileStore::loadAudio(bool& sound, bool& music, bool& sfx, uint8_t& volume) {
+  File f = LittleFS.open(AUDIO_CFG, "r");
+  if (!f) return false;
+  uint8_t b[4] = {0, 0, 0, 0};
+  size_t n = f.read(b, 4);
+  f.close();
+  if (n < 4) return false;
+  sound = b[0]; music = b[1]; sfx = b[2]; volume = b[3];
+  return true;
+}
+
 bool ProfileStore::listProfiles(std::vector<ProfileMeta>& out) {
   out.clear();
   File f = LittleFS.open(INDEX, "r");
