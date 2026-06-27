@@ -2,9 +2,10 @@
 
 ### *Everything you need to take a kid from zero to a soccer-player bot they trained themselves — in one document.*
 
-This is the **all-in-one** version of the GridBot teaching materials. It folds the three companion
-docs — the [5-Day Curriculum](CURRICULUM.md) (the plan), the [Handbook](HANDBOOK.md) (the why), and
-the [Hand-Coding Guide](HAND-CODING-GUIDE.md) (the how) — into a **single, self-contained guide you can
+This is the **all-in-one** version of the GridBot teaching materials. It folds the companion docs — the
+[5-Day Curriculum](CURRICULUM.md) (the plan), the [Handbook](HANDBOOK.md) (the why), the
+[Hand-Coding Guide](HAND-CODING-GUIDE.md) (write the rules) and its sequel the
+[AI Coding Guide](AI-CODING-GUIDE.md) (train the rules) — into a **single, self-contained guide you can
 teach straight from**. You should not need to open another file: every program, question, screenshot
 pointer, checkpoint, and bit of background a grown-up needs is right here, in the order you'll use it.
 
@@ -387,6 +388,9 @@ means making **yours** smarter. Each tweak below can break the tie — try it, s
 
 > ▶ **[Present Day 4 as slides »](https://jamesdavid.github.io/cyd-GridBot/slides/day4.html)**
 
+> **📗 Deep dive: the [AI Coding Guide](AI-CODING-GUIDE.md).** Today's sequel to the Hand-Coding Guide —
+> training the `+brain` with Teach / Q-Learn / Evolve, with on-device screenshots and the measured
+> results behind every claim below. Use it the way Day 3 used the Hand-Coding Guide.
 
 **Objective:** reach **NeuroBot** and train a brain from **examples** and **reward** — then beat
 yesterday's hand-coded bot with it.

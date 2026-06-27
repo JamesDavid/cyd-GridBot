@@ -22,7 +22,8 @@ all on the same $10 board.
 > trained themselves** in **five 1–2 hour days** — every program, question, checkpoint, and standard
 > inline. Project it from the ready-made [**slide decks →**](https://jamesdavid.github.io/cyd-GridBot/slides/)
 > (one per day, full-screen, with on-device screenshots). Prefer depth or a one-pager? The full teacher
-> [**Handbook**](docs/HANDBOOK.md), the [**Hand-Coding Guide**](docs/HAND-CODING-GUIDE.md), and the
+> [**Handbook**](docs/HANDBOOK.md), the [**Hand-Coding Guide**](docs/HAND-CODING-GUIDE.md) (write the
+> rules) and its sequel the [**AI Coding Guide**](docs/AI-CODING-GUIDE.md) (train the rules), and the
 > one-page [**5-Day Curriculum**](docs/CURRICULUM.md) are right here too. No coding or AI background needed.
 
 ---

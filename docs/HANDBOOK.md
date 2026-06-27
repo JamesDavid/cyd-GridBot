@@ -191,6 +191,11 @@ Condensed pages. Same shape as the sample: **Big idea · On screen · Ask · Wat
 > exactly where rules run out — then open it knowing *what* the brain is trying to learn. Every number
 > is reproducible from `tools/bot_eval.cpp`.
 
+> **📗 The NeuroLab-side companion — the [AI Coding Guide](AI-CODING-GUIDE.md).** The sequel that does
+> the same three games with a trained **`+brain`** (Teach / Q-Learn / Evolve), with on-device
+> screenshots and the measured training results (the championship recipe, the regression trap, and how
+> to train without over-fitting). Pair it with the Hand-Coding Guide for the full "rules vs. learning" arc.
+
 ### NeuroLab (train the rules)
 
 **1 · One neuron** — *watch it learn.* Fully worked in **§5**.

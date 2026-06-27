@@ -11,6 +11,10 @@ that's exactly *why* machine learning exists. You'll feel it in your hands.
 > that follow — into **[COURSE.md, the all-in-one Complete Course](COURSE.md)** (Day 3 covers the bots
 > below). Use that if you'd rather not flip between docs; use this guide for the deepest dive on the
 > hand-coding itself.
+>
+> **Ready for the AI half?** Its sequel, the **[AI Coding Guide](AI-CODING-GUIDE.md)**, does these same
+> three games with a trained **`+brain`** (Teach / Q-Learn / Evolve) — and shows, with measured results,
+> exactly where *training* beats *writing the rules*.
 
 > Everything below is a real program you can build in the editor, and every result was measured by
 > playing these exact bots against trained neural bots on the device's match engine. The numbers are
