@@ -10,6 +10,7 @@
 #include "assets/Assets.h"
 #include "game/MazeGen.h"
 #include "game/Score.h"
+#include "store/ProfileStore.h"
 
 using namespace ui;
 using namespace gb;
@@ -1121,6 +1122,15 @@ void GameScreen::settleOutcome(Outcome o) {
       _profile->stats.totalWins++;
       _profile->stats.starsTotal += _stars;
       _profile->coins += _coinsThisRun + gemCoins;  // keep collected coins+gems on a win
+      // Per-level "go for gold" record: keep best stars/blocks; if this run set a NEW fewest-blocks
+      // best, save its program so the kid can reopen the level and try to trim it further. (Not for
+      // library edits or debug auto-runs -- only genuine campaign plays.)
+      if (!_editLib && !_auto) {
+        uint8_t blocksB = _writtenCount > 255 ? 255 : (uint8_t)_writtenCount;
+        uint8_t parB = (_par > 0 && _par < 256) ? (uint8_t)_par : 0;
+        if (_profile->recordLevelResult(_level, (uint8_t)_stars, blocksB, parB))
+          store::profiles.saveLevelProgram(_profile->id, _level, _prog);
+      }
     }
     winCelebration();
     auto& g = hal::display.gfx();
