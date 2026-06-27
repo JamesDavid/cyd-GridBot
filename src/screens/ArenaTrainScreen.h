@@ -110,6 +110,19 @@ class ArenaTrainScreen : public app::IScreen {
   float _score = 0.0f;        // current brain's score vs the opponent (HP margin / goal progress)
   void  pushCurve();          // append _score to the curve (during an animated training run)
   void  drawCurve(int x, int y, int w, int h);
+
+  // Keep-best checkpoint (feedforward path). Refining a good brain can make it WORSE; we keep the
+  // best-scoring brain seen this session and which RECIPE produced it, so Save never returns a
+  // regression and the kid learns where the best happened ("Teach + Q-Learn x3").
+  gb::Net* _bestBrain = nullptr;   // heap (the screen's static DRAM is nearly full)
+  float    _bestScore = -1.0f;
+  uint8_t  _teachN = 0, _qN = 0, _evoN = 0;  // cumulative refinement counts -> the recipe label
+  bool     _restored = false;      // the last training action ended worse, so we restored the best
+  char     _bestStage[28] = "";    // e.g. "Teach + Q-Learn x3"
+  void  buildStage(char* out, int n) const;
+  void  checkpoint();              // after a training step: keep the brain if it's a new best
+  void  maybeRestoreBest();        // at a refinement's end: never leave the kid worse off
+  void  resetBest();               // new session/mode/Fresh -> forget the checkpoint
   app::TapDetector _tap;
 };
 

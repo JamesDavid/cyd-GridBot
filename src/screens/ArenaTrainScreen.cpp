@@ -164,6 +164,7 @@ void ArenaTrainScreen::begin(Profile* profile) {
   _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
   _rnn = false; _qLearning = false;   // RNN brain (rbrain()) is allocated lazily on first toggle
   _taught = false; _saved = false; _savedIdx = -1; _curveLen = 0; _didTrain = false;
+  resetBest();
   evaluateAndTrace();
 }
 
@@ -216,6 +217,7 @@ void ArenaTrainScreen::setMode(MatchType t) {
   _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
   if (_rnn) rbrain().config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);  // fresh brain of the current type
   _taught = false; _saved = false; _savedIdx = -1; _curveLen = 0; _didTrain = false;
+  resetBest();
   evaluateAndTrace();
 }
 
@@ -309,6 +311,47 @@ void ArenaTrainScreen::evaluateAndTrace() {
 void ArenaTrainScreen::pushCurve() {
   if (_curveLen < CURVE_N) _curve[_curveLen++] = _score;
   else { for (int i = 1; i < CURVE_N; i++) _curve[i - 1] = _curve[i]; _curve[CURVE_N - 1] = _score; }
+}
+
+// ---- keep-best checkpoint ------------------------------------------------------------------------
+void ArenaTrainScreen::resetBest() {
+  _bestScore = -1.0f; _teachN = _qN = _evoN = 0; _restored = false; _bestStage[0] = 0;
+}
+// Build the recipe label from the cumulative counts (the order a kid actually uses: Teach, then refine).
+void ArenaTrainScreen::buildStage(char* out, int n) const {
+  int len = 0; out[0] = 0;
+  auto add = [&](const char* s) {
+    if (len && len < n) len += snprintf(out + len, n - len, " + ");
+    if (len < n) len += snprintf(out + len, n - len, "%s", s);
+  };
+  char b[16];
+  if (_teachN) add(_teachN > 1 ? "Teach x2" : "Teach");
+  if (_qN)  { snprintf(b, sizeof(b), "Q-Learn x%u", (unsigned)_qN); add(b); }
+  if (_evoN){ snprintf(b, sizeof(b), "Evolve x%u", (unsigned)_evoN); add(b); }
+  if (!len) snprintf(out, n, "untrained");
+}
+// After a training step: if this brain scores higher than any seen, snapshot it + the recipe that
+// made it. Feedforward only (the RNN path is Teach-only, so there's nothing to regress).
+void ArenaTrainScreen::checkpoint() {
+  if (_rnn) return;
+  if (_score > _bestScore + 0.001f) {
+    _bestScore = _score;
+    if (!_bestBrain) _bestBrain = new gb::Net;
+    *_bestBrain = _brain;
+    buildStage(_bestStage, sizeof(_bestStage));
+  }
+}
+// At the end of a refinement (Q-Learn / Evolve): if the brain you ended on is worse than a checkpoint,
+// restore the best so Save never hands back a regression -- and flag it so the status names the recipe.
+void ArenaTrainScreen::maybeRestoreBest() {
+  if (_rnn || !_bestBrain) return;
+  if (_bestScore > _score + 0.02f) {
+    _brain = *_bestBrain; _taught = true;
+    evaluateAndTrace();
+    _restored = true;
+  } else {
+    _restored = false;
+  }
 }
 
 // A little sparkline of the brain's score climbing as it trains -- the "is it actually learning?"
@@ -433,15 +476,19 @@ void ArenaTrainScreen::draw() {
       g.fillCircle(ox + c * tile + tile / 2, oy + r * tile + tile / 2,
                    head ? tile / 3 : tile / 6 + 1, _beatsAI ? C_GO : C_MOVE);
     }
-    char leg[48];
+    char leg[52];
     if (_saved && _savedIdx >= 0 && _savedIdx < (int)_profile->library.size())
-      snprintf(leg, sizeof(leg), "saved as \"%s\" -> My Bots", _profile->library[_savedIdx].name.c_str());
+      snprintf(leg, sizeof(leg), "saved \"%s\" (best: %s)", _profile->library[_savedIdx].name.c_str(), _bestStage);
+    else if (_restored && !_animating)
+      snprintf(leg, sizeof(leg), "kept your best: %s", _bestStage);   // refining got worse -> restored
     else if (firstFighter() && !_animating)
       snprintf(leg, sizeof(leg), "Tap EVOLVE to train, then SAVE to %s!",
                _matchType == gb::MatchType::SOCCER ? "play" : _matchType == gb::MatchType::RACE ? "race" : "battle");
+    else if (_bestStage[0] && !_animating)
+      snprintf(leg, sizeof(leg), "best so far: %s", _bestStage);
     else snprintf(leg, sizeof(leg), "you  vs  %s", _oppName.c_str());
     label(g, SCREEN_W / 2, BOTBAR_Y - 9, leg,
-          _saved ? C_GO : (firstFighter() ? C_ACCENT : C_DIM), textdatum_t::bottom_center);
+          _saved ? C_GO : (_restored ? C_ACCENT : (firstFighter() ? C_ACCENT : C_DIM)), textdatum_t::bottom_center);
     if (_curveLen >= 1 && ox > 50) drawCurve(4, oy, ox - 8, 44);   // learning curve in the left margin
   }
 
@@ -507,12 +554,14 @@ void ArenaTrainScreen::drawNet() {
   const char* verb = _matchType == MatchType::SUMO ? (_beatsAI ? "K.O.!" : "hunting")
                                                    : (_beatsAI ? "WINS!" : "racing");
   if (_saved && _savedIdx >= 0 && _savedIdx < (int)_profile->library.size())
-    snprintf(st, sizeof(st), "saved as \"%s\" -> My Bots", _profile->library[_savedIdx].name.c_str());
+    snprintf(st, sizeof(st), "saved \"%s\" (best: %s)", _profile->library[_savedIdx].name.c_str(), _bestStage);
+  else if (_restored && !_animating) snprintf(st, sizeof(st), "kept your best: %s", _bestStage);
   else if (_animating && _qLearning && _matchType == MatchType::SOCCER) snprintf(st, sizeof(st), "Q-learning... (reward: shove the ball into the goal)");
   else if (_animating && _qLearning) snprintf(st, sizeof(st), "Q-learning... (reward: hunt %s, then zap)", _oppName.c_str());
   else if (_animating) snprintf(st, sizeof(st), "learning... gen %d  (you green vs %s red)", _evo.gen, _oppName.c_str());
+  else if (_bestStage[0]) snprintf(st, sizeof(st), "best so far: %s", _bestStage);
   else snprintf(st, sizeof(st), "you(green) vs %s(red): %s", _oppName.c_str(), verb);
-  label(g, 6, BOTBAR_Y - 13, st, _saved ? C_GO : (_beatsAI ? C_GO : C_DIM));
+  label(g, 6, BOTBAR_Y - 13, st, _saved ? C_GO : (_restored ? C_ACCENT : (_beatsAI ? C_GO : C_DIM)));
 }
 
 // Persist the current brain (feedforward _brain or recurrent rbrain) as a library fighter.
@@ -520,6 +569,8 @@ void ArenaTrainScreen::drawNet() {
 // Returns the library index, or -1 if it can't be saved.
 int ArenaTrainScreen::saveFighterToLibrary() {
   if (!_profile) return -1;
+  // Save the BEST checkpoint, not necessarily the last brain -- so refining never costs you a regression.
+  if (!_rnn && _bestBrain && _bestScore > _score) { _brain = *_bestBrain; _taught = true; evaluateAndTrace(); }
   Program prog;
   Node loop = Node::repeatUntil(AT_GOAL);
   if (_rnn) { prog.rbrains.push_back(rbrain()); loop.body.push_back(Node::rnnBrain(0)); }
@@ -574,7 +625,7 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         } else {
           qTrainHunter(_brain, base + 101u * (uint32_t)_animLeft, 1000, done, total, _knobs.explore, &_ai);
         }
-        _taught = true;
+        _taught = true; if (!_rnn) _qN++;
       } else {
         // SELF-PLAY: refresh the sparring partner to the current champion BEFORE scoring, so each
         // generation must beat the best-so-far -- an arms race that bootstraps without a fixed foe.
@@ -594,13 +645,15 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         } else
           _evo.evaluateArena(_maze, _s0, _s1, _ai, 200, _matchType);
         _brain = _evo.best();
-        _taught = false;
+        _taught = false; _evoN++;
       }
       _saved = false; evaluateAndTrace();        // recompute the hunt for the new brain
       pushCurve();                               // record this step's score onto the learning curve
+      checkpoint();                              // keep the best brain + the recipe that made it
       if (--_animLeft <= 0) {
         _animating = false; _qLearning = false; _animFrame = 9999;  // done -> full trail
         if (_matchType == MatchType::SOCCER) { setupBoard(); evaluateAndTrace(); }  // ball back to centre kickoff
+        maybeRestoreBest();                      // refining can make it worse -> never leave them worse off
       }
       redraw = true;
     }
@@ -672,7 +725,9 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       _brain.lr = _knobs.lr;
       distillSolver(_brain, _maze, true, 700 * _knobs.rounds);    // a strong racer beats most AIs
     }
-    _taught = true; _didTrain = true; _saved = false; _curveLen = 0; evaluateAndTrace(); pushCurve(); hal::audio.blip(); draw();
+    _taught = true; _didTrain = true; _saved = false; _curveLen = 0;
+    resetBest(); _teachN = 1;            // a fresh Teach is a new baseline; refinements can't drop below it
+    evaluateAndTrace(); pushCurve(); checkpoint(); hal::audio.blip(); draw();
   } else if (R_BTYPE.contains(tx, ty)) {
     // flip feedforward <-> RNN: it's a fresh brain of the new type, so clear training state
     _rnn = !_rnn;
