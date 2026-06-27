@@ -45,6 +45,9 @@ static inline Rect ifCombRect(int y) { return {(int16_t)(LIST_X + 94),  (int16_t
 static inline Rect ifC2Rect(int y)   { return {(int16_t)(LIST_X + 118), (int16_t)(y + 1), 36, (int16_t)(ROW_H - 2)}; }  // 284..320
 // the condition chip for CALL (F1/F2) and NEURO (brain mode), still right-aligned.
 static inline Rect condRect(int y) { return {(int16_t)(LIST_X + LIST_W - 56), (int16_t)(y + 1), 44, (int16_t)(ROW_H - 2)}; }  // 264..308
+// a selected plain command (forward / turn L/R / jump / zap) shows the op in a button -> tap to
+// CHANGE it in place (cycles to the next available command), e.g. turn-left -> turn-right.
+static inline Rect cmdBtnRect(int y) { return {(int16_t)(LIST_X + LIST_W - 78), (int16_t)(y + 1), 66, (int16_t)(ROW_H - 2)}; }
 static const Rect R_PAUSE = {238, 0, 82, 22};   // big back button in the status bar
 static const Rect R_TOGGLE = {6, (int16_t)(BOTBAR_Y + 2), 156, 26};  // right edge aligns with the RUN/pad above
 static const Rect R_RUNBAR = {164, (int16_t)(BOTBAR_Y + 2), 150, 26};
@@ -716,6 +719,9 @@ void GameScreen::drawProgramList() {
       const char* mode = nd->rnn ? (nd->pilot ? "rnn+pilot" : "rnn")
                                  : (nd->pilot ? "pilot" : "plain");
       button(g, condRect(y), mode, ui::rgb(120, 230, 245), C_PANEL_HI);  // cycle brain mode
+    } else if (sel && nd->type == N_CMD) {
+      label(g, gx + 18, y + 6, lab, col);                      // the command, in its own colour
+      button(g, cmdBtnRect(y), "change", C_MOVE, C_PANEL_HI);  // tap -> swap it for the next op, in place
     } else {
       label(g, gx + 18, y + 6, lab, C_INK);
     }
@@ -757,6 +763,24 @@ void GameScreen::toast(const char* msg, uint16_t color) {
 }
 
 // ---- input ----------------------------------------------------------------
+// The next command to cycle to when you tap a selected command's CHANGE button. Walks
+// forward -> turn L -> turn R -> jump -> zap -> (wrap), skipping any that aren't unlocked yet
+// (jump = Lv 6, zap = Arena/Sense) so a kid only ever lands on ops they actually have.
+Cmd GameScreen::nextCmd(Cmd c) const {
+  static const Cmd order[] = {CMD_FWD, CMD_TURN_L, CMD_TURN_R, CMD_JUMP, CMD_FIRE};
+  bool jumpOk = !_profile || _profile->unlocks.jump;
+  bool zapOk  = !_profile || _profile->unlocks.sense;   // zap opens with the Arena senses (Lv 15)
+  int idx = 0;
+  for (int i = 0; i < 5; i++) if (order[i] == c) { idx = i; break; }
+  for (int k = 1; k <= 5; k++) {
+    Cmd n = order[(idx + k) % 5];
+    if (n == CMD_JUMP && !jumpOk) continue;
+    if (n == CMD_FIRE && !zapOk) continue;
+    return n;
+  }
+  return c;
+}
+
 void GameScreen::appendCommand(Cmd c) {
   if (!_editList) return;
   if (_profile) {  // command histogram (SPEC §9)
@@ -891,6 +915,11 @@ void GameScreen::handleListTap(int x, int y) {
               if ((wantP && !uP) || (wantR && !uR)) continue;
               sn->pilot = wantP; sn->rnn = wantR; break;
             }
+            hal::audio.blip(); drawProgramList(); return;
+          }
+        } else if (sn->type == N_CMD) {
+          if (cmdBtnRect(yy).contains(x, y)) {     // "change": swap this op for the next one, in place
+            sn->cmd = nextCmd(sn->cmd);
             hal::audio.blip(); drawProgramList(); return;
           }
         }

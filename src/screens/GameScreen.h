@@ -72,6 +72,7 @@ class GameScreen : public app::IScreen {
   void handlePadTap(int x, int y);
   void handleListTap(int x, int y);
   void appendCommand(gb::Cmd c);
+  gb::Cmd nextCmd(gb::Cmd c) const;   // next unlocked op when changing a selected command in place
   void deleteSelected();
   void moveSelected(int dir);   // reorder the selected line within its block (-1 up, +1 down)
   void startRun();
