@@ -111,9 +111,12 @@ rewarded changes.) **Checkpoint:** a trained brain that out-plays the hand-coded
 
 **Goal:** refine a real soccer **striker**, then crown a champion across the class.
 
-1. **Train a striker properly:** **Teach** a dribbler, then **Q-Learn** to sharpen it. The trainer
-   **penalises pushing the ball the wrong way (toward your own net) 2×** and **rewards a goalward
-   zap**, so the brain learns to **avoid own-goals** and use the **swap**. **Save** it as your fighter.
+1. **Train a striker properly:** **Teach** a dribbler first — it's strong in seconds. *Keep that Teach
+   base* and only adopt a refinement if a **rematch proves it's better**: in our measured bake-off,
+   Teach (63%) was already strong, refining **against the real opponent** (Teach→Evolve, 84%) helped,
+   while **Q-Learn often *hurt*** (44%/26%, below Teach). The trainer **penalises pushing the ball the
+   wrong way (toward your own net) 2×** and **rewards a goalward zap**, so the brain learns to **avoid
+   own-goals** and use the **swap**. **Save** your striker.
    *(Tune the **Knobs** — learning rate, rounds, explore — and watch the loss fall, or thrash.)*
 2. **Level-up loop:** lost a match? **Save foes** (copy the winner into your library), train against
    *it*, and **rematch**. Because the Arena is **deterministic**, a rematch is exact — so improvements

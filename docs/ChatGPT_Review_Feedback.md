@@ -16,10 +16,8 @@ This is a working checklist from a read-only review of the codebase, `docs/COURS
   - Safety verified: a stray soccer fire is a harmless wasted tick (no sumo damage in soccer; bounded by the match step cap), so the old "freeze forever" concern doesn't apply.
   - Re-ran `tools/bot_eval.cpp` (deterministic, byte-identical across two runs): only the reward-refined recipes moved — Q-vs-cone 37%→**44%**, Q-vs-live 29%→**26%**, evolve-from-scratch 23%→**13%**; Teach (63%) / Teach→Evolve (84%) and all hand-coded-vs-trained numbers unchanged. Every conclusion holds; updated the numbers in TRAINING_FINDINGS, AI-CODING-GUIDE, COURSE, README, and slides day4/day5. 109/109 native tests pass; firmware builds.
 
-- [ ] Update `docs/CURRICULUM.md` Day 5 to match the newer training findings.
-  - It still recommends: Teach a dribbler, then Q-Learn to sharpen it.
-  - `COURSE.md`, `AI-CODING-GUIDE.md`, `TRAINING_FINDINGS.md`, and `slides/day5.html` now say Q-Learn often hurt in the measured bake-off, and Teach -> Evolve was best in that eval.
-  - The one-page curriculum should recommend keeping the Teach base and using refinement only when rematches prove it helps.
+- [x] Update `docs/CURRICULUM.md` Day 5 to match the newer training findings. **(Done 2026-06-27.)**
+  - Rewrote Day 5 step 1: lead with Teach (63%, strong in seconds), **keep the Teach base**, and only adopt a refinement if a **rematch proves it's better** — citing the bake-off (Teach→Evolve 84% helped; Q-Learn 44%/26% often hurt). No longer recommends "Teach then Q-Learn to sharpen" by default.
 
 - [ ] Fix the badge hint table length.
   - `ACH_COUNT` is 17 and includes `Generalist`.
