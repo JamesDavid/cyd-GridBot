@@ -89,6 +89,9 @@ static void handleSerialLine(const String& line) {
   } else if (c == 'F') {
     int a = -1, b = -1; sscanf(line.c_str() + 1, "%d %d", &a, &b);
     gApp.debugFightLib(a, b);                 // 'F' lists the library; 'F a b' fields lib a vs b in soccer
+  } else if (c == 'R') {
+    int lvl = -1, stars = 0; sscanf(line.c_str() + 1, "%d %d", &lvl, &stars);
+    gApp.debugLevelRecs(lvl, stars);          // 'R' dumps level records; 'R lvl stars' force-records one
   } else if (c == 'M') {
     gApp.debugDumpMaze();
   } else if (c == '?' || c == 'h') {

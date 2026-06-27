@@ -7,9 +7,10 @@ using namespace gb;
 
 namespace screens {
 
-// 4x4 grid of level tiles per page.
+// 4x4 grid of level tiles per page. Four rows of TH+GAP must clear the bottom bar (BOTBAR_Y=204):
+// 28 + 4*40 + 3*4 = 200 < 204.
 static const int COLS = 4, ROWS = 4, PER = COLS * ROWS;
-static const int GTOP = 30, GLEFT = 8, GW = 304, GAP = 6, TH = 42;
+static const int GTOP = 28, GLEFT = 8, GW = 304, GAP = 4, TH = 40;
 static int tileW() { return (GW - (COLS - 1) * GAP) / COLS; }
 static Rect tileRect(int slot) {
   int r = slot / COLS, c = slot % COLS, w = tileW();
@@ -19,11 +20,11 @@ static const Rect R_BACK = {6,   (int16_t)(BOTBAR_Y + 2), 96, 26};
 static const Rect R_PREV = {150, (int16_t)(BOTBAR_Y + 2), 78, 26};
 static const Rect R_NEXT = {234, (int16_t)(BOTBAR_Y + 2), 80, 26};
 
-void LevelSelectScreen::begin(Profile* profile) {
+void LevelSelectScreen::begin(Profile* profile, uint32_t focusLevel) {
   _p = profile;
   _picked = 0;
-  uint32_t cur = profile ? profile->level : 1;
-  _page = cur > 0 ? (int)((cur - 1) / PER) : 0;
+  uint32_t focus = focusLevel ? focusLevel : (profile ? profile->level : 1);
+  _page = focus > 0 ? (int)((focus - 1) / PER) : 0;
 }
 
 void LevelSelectScreen::enter() { draw(); }
@@ -51,15 +52,15 @@ void LevelSelectScreen::draw() {
     g.drawRoundRect(t.x, t.y, t.w, t.h, 6, current ? C_ACCENT : ui::rgb(44, 60, 90));
 
     char nb[8]; snprintf(nb, sizeof(nb), "%u", (unsigned)lvl);
-    label(g, t.x + t.w / 2, t.y + 4, nb, locked ? C_LOCK : C_INK, textdatum_t::top_center, 2);
+    label(g, t.x + t.w / 2, t.y + 3, nb, locked ? C_LOCK : C_INK, textdatum_t::top_center, 2);
     if (locked) {
-      label(g, t.x + t.w / 2, t.y + t.h - 13, "locked", C_LOCK, textdatum_t::top_center);
+      label(g, t.x + t.w / 2, t.y + t.h - 12, "locked", C_LOCK, textdatum_t::top_center);
       continue;
     }
     // star pips: gold-filled for earned, hollow for not
     const LevelRec* rec = _p ? _p->levelRec(lvl) : nullptr;
     int stars = rec ? rec->stars : 0;
-    int py = t.y + 25;
+    int py = t.y + 22;
     for (int i = 0; i < 3; i++) {
       int px = t.x + t.w / 2 + (i - 1) * 12;
       if (i < stars) g.fillCircle(px, py, 4, C_ACCENT);
@@ -69,9 +70,9 @@ void LevelSelectScreen::draw() {
     if (rec && rec->bestBlocks > 0) {
       char bb[12];
       snprintf(bb, sizeof(bb), "%u/%u", (unsigned)rec->bestBlocks, (unsigned)(rec->par ? rec->par : rec->bestBlocks));
-      label(g, t.x + t.w / 2, t.y + t.h - 13, bb, C_DIM, textdatum_t::top_center);
+      label(g, t.x + t.w / 2, t.y + t.h - 12, bb, C_DIM, textdatum_t::top_center);
     } else {
-      label(g, t.x + t.w / 2, t.y + t.h - 13, current ? "play >" : "new", current ? C_GO : C_DIM, textdatum_t::top_center);
+      label(g, t.x + t.w / 2, t.y + t.h - 12, current ? "play >" : "new", current ? C_GO : C_DIM, textdatum_t::top_center);
     }
   }
 

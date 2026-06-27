@@ -1112,7 +1112,7 @@ void GameScreen::settleOutcome(Outcome o) {
     drawChrome();   // refresh the top button label (was "< Code" during the run -> "Menu")
     _writtenCount = programWrittenCount(_prog);
     _stars = starsFor(_writtenCount, _par);
-    applog::event("WON level %u  (%d/3 stars, %d blocks)", (unsigned)(_profile ? _profile->level : 0), _stars, _writtenCount);
+    applog::event("WON level %u  (%d/3 stars, %d blocks)", (unsigned)_level, _stars, _writtenCount);
     hal::audio.win();
     hal::led.green();
     // gems pay out in coins; grabbing every gem on the board adds an all-clear bonus
@@ -1121,7 +1121,7 @@ void GameScreen::settleOutcome(Outcome o) {
     if (_profile && !_challenge) {  // challenges award no coins/stats (not farmable)
       _profile->stats.totalWins++;
       _profile->coins += _coinsThisRun + gemCoins;  // keep collected coins+gems on a win
-      if (!_editLib && !_auto) {
+      if (!_editLib) {  // a real campaign play (_auto is just "the run is auto-stepping" -- every win has it)
         // "Go for gold": record the per-level best, and if this run set a NEW fewest-blocks best,
         // save its program so the kid can reopen the level and trim it further. Count only star
         // IMPROVEMENTS toward the running total + the 3-star tally, so replaying an old level for
@@ -1135,7 +1135,7 @@ void GameScreen::settleOutcome(Outcome o) {
         if (_profile->recordLevelResult(_level, (uint8_t)_stars, blocksB, parB))
           store::profiles.saveLevelProgram(_profile->id, _level, _prog);
       } else {
-        _profile->stats.starsTotal += _stars;  // library-edit / debug runs: prior behavior
+        _profile->stats.starsTotal += _stars;  // library-edit runs: prior behavior
       }
     }
     winCelebration();

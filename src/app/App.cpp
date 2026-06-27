@@ -315,6 +315,22 @@ void App::debugFightLib(int a, int b) {
   Serial.printf("FIGHTLIB %s vs %s\n", _profile.library[a].name.c_str(), _profile.library[b].name.c_str());
 }
 
+void App::debugLevelRecs(int lvl, int stars) {
+  if (_profile.id.empty()) { Serial.println("NOPROFILE"); return; }
+  if (lvl > 0) {
+    bool nb = _profile.recordLevelResult((uint32_t)lvl, (uint8_t)stars, 5, 4);
+    saveProfile();
+    Serial.printf("RECORDED L%d = %d* (newBest=%d)\n", lvl, stars, (int)nb);
+  }
+  Serial.printf("LEVELRECS: %d entries, profile.level=%u\n",
+                (int)_profile.levelRecs.size(), (unsigned)_profile.level);
+  for (size_t i = 0; i < _profile.levelRecs.size(); i++) {
+    const auto& r = _profile.levelRecs[i];
+    if (r.stars || r.bestBlocks)
+      Serial.printf("  L%u: %u* best=%u par=%u\n", (unsigned)(i + 1), r.stars, r.bestBlocks, r.par);
+  }
+}
+
 void App::debugNeuroLesson() {
   hal::audio.stopMusic();
   _lessonsMenu.enter();
@@ -569,7 +585,7 @@ void App::tick(uint32_t now) {
           else if (_introLesson == 104) { _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; }                 // Memory
           else { _codeLesson.begin(_introLesson); _codeLesson.enter(); _state = State::CODE_LESSON; }
         } else if (_backBtn.contains(x, y)) {            // back to the level browser we came from
-          _levelSelect.begin(&_profile); _levelSelect.enter(); _state = State::LEVEL_SELECT;
+          _levelSelect.begin(&_profile, _introLevel); _levelSelect.enter(); _state = State::LEVEL_SELECT;
         } else gotoGame();                                // tap the card to start the level
       }
       break;
@@ -602,7 +618,7 @@ void App::tick(uint32_t now) {
       }
       if (s == Signal::BACK) {  // leave the level -> back to the browser we came from
         saveProfile();
-        _levelSelect.begin(&_profile); _levelSelect.enter(); _state = State::LEVEL_SELECT;
+        _levelSelect.begin(&_profile, _introLevel); _levelSelect.enter(); _state = State::LEVEL_SELECT;
         break;
       }
       if (s == Signal::WON) {
@@ -633,7 +649,7 @@ void App::tick(uint32_t now) {
           hal::audio.badge();  // achievement chime
         }
         saveProfile();  // autosave on WIN (SPEC §11)
-        if (replay) { _levelSelect.begin(&_profile); _levelSelect.enter(); _state = State::LEVEL_SELECT; }
+        if (replay) { _levelSelect.begin(&_profile, _introLevel); _levelSelect.enter(); _state = State::LEVEL_SELECT; }
         else gotoIntro(_profile.level);
       }
       break;

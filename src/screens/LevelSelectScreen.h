@@ -10,7 +10,7 @@ namespace screens {
 
 class LevelSelectScreen : public app::IScreen {
  public:
-  void begin(gb::Profile* profile);                 // opens on the page holding the current level
+  void begin(gb::Profile* profile, uint32_t focusLevel = 0);  // opens on focusLevel's page (0 = current)
   void enter() override;
   app::Signal tick(uint32_t now, const hal::TouchPoint& tp) override;
   uint32_t pickedLevel() const { return _picked; }  // level to (re)play, set when a tile is tapped
