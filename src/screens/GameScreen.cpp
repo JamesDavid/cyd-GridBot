@@ -1120,16 +1120,22 @@ void GameScreen::settleOutcome(Outcome o) {
     int gemCoins = _gemsThisRun * 3 + (allGems ? 5 : 0);
     if (_profile && !_challenge) {  // challenges award no coins/stats (not farmable)
       _profile->stats.totalWins++;
-      _profile->stats.starsTotal += _stars;
       _profile->coins += _coinsThisRun + gemCoins;  // keep collected coins+gems on a win
-      // Per-level "go for gold" record: keep best stars/blocks; if this run set a NEW fewest-blocks
-      // best, save its program so the kid can reopen the level and try to trim it further. (Not for
-      // library edits or debug auto-runs -- only genuine campaign plays.)
       if (!_editLib && !_auto) {
+        // "Go for gold": record the per-level best, and if this run set a NEW fewest-blocks best,
+        // save its program so the kid can reopen the level and trim it further. Count only star
+        // IMPROVEMENTS toward the running total + the 3-star tally, so replaying an old level for
+        // more stars credits correctly without double-counting.
+        const LevelRec* prev = _profile->levelRec(_level);
+        int oldStars = prev ? prev->stars : 0;
+        if (_stars > oldStars) _profile->stats.starsTotal += (_stars - oldStars);
+        if (_stars == 3 && oldStars < 3) _profile->stats.threeStarWins++;
         uint8_t blocksB = _writtenCount > 255 ? 255 : (uint8_t)_writtenCount;
         uint8_t parB = (_par > 0 && _par < 256) ? (uint8_t)_par : 0;
         if (_profile->recordLevelResult(_level, (uint8_t)_stars, blocksB, parB))
           store::profiles.saveLevelProgram(_profile->id, _level, _prog);
+      } else {
+        _profile->stats.starsTotal += _stars;  // library-edit / debug runs: prior behavior
       }
     }
     winCelebration();

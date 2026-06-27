@@ -6,6 +6,7 @@
 #include "game/Profile.h"
 #include "screens/GameScreen.h"
 #include "screens/HomeScreen.h"
+#include "screens/LevelSelectScreen.h"
 #include "screens/ProfileSelectScreen.h"
 #include "screens/ProfileCreateScreen.h"
 #include "screens/StatsScreen.h"
@@ -61,7 +62,7 @@ class App {
   enum class State : uint8_t { SELECT, CREATE, HOME, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE,
                                NEURO_HUB, NEURO_LESSON, Q_LESSON, TUNE_LESSON, TUNENET_LESSON, SELFPLAY_LESSON, METHOD_LESSON, EVO_LESSON, NEURO_TRAIN, ARENA_TRAIN,
                                LESSONS_MENU, CODE_LAB, CODE_LESSON, TRANSFER_LESSON, BRAIN_VIEW, BRAIN_MAP,
-                               PILOT_LESSON, RNN_LESSON, PERCEPTION_LESSON, BACKPROP_LESSON, LIBRARY, TRAIN_PICK };
+                               PILOT_LESSON, RNN_LESSON, PERCEPTION_LESSON, BACKPROP_LESSON, LIBRARY, TRAIN_PICK, LEVEL_SELECT };
 
   void gotoSelect();
   void gotoHome();
@@ -109,6 +110,7 @@ class App {
   screens::ProfileSelectScreen _select;
   screens::ProfileCreateScreen _create;
   screens::HomeScreen _home;
+  screens::LevelSelectScreen _levelSelect;
   screens::GameScreen _game;
   screens::StatsScreen _stats;
   screens::ArenaScreen _arena;

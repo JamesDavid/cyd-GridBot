@@ -457,7 +457,7 @@ void App::tick(uint32_t now) {
     }
     case State::HOME: {
       Signal s = _home.tick(now, tp);
-      if (s == Signal::GOTO_PLAY) gotoIntro(_profile.level);
+      if (s == Signal::GOTO_PLAY) { _levelSelect.begin(&_profile); _levelSelect.enter(); _state = State::LEVEL_SELECT; }
       else if (s == Signal::GOTO_ARENA) {
         _arena.begin(&_profile); _arena.enter(); _state = State::ARENA;
         if (hal::audio.enabled()) hal::audio.startMusic(hal::kArenaMusic, hal::kArenaMusicLen, true);
@@ -469,6 +469,26 @@ void App::tick(uint32_t now) {
       else if (s == Signal::GOTO_STATS) { _stats.begin(&_profile); _stats.enter(); _state = State::STATS; }
       else if (s == Signal::GOTO_MYBOTS) { _library.begin(&_profile); _library.enter(); _state = State::LIBRARY; }
       else if (s == Signal::BACK) { saveProfile(); gotoSelect(); }
+      break;
+    }
+    case State::LEVEL_SELECT: {
+      Signal s = _levelSelect.tick(now, tp);
+      if (s == Signal::GOTO_LEVEL) {
+        uint32_t lvl = _levelSelect.pickedLevel();
+        if (lvl >= 1) {
+          // Reopening a COMPLETED level to revise: pre-load its saved best program into the work
+          // slot so the editor opens with it (trim it for more stars). For the CURRENT level, leave
+          // the work slot alone so an in-progress script still resumes.
+          if (lvl != _profile.level) {
+            gb::Program best;
+            if (store::profiles.loadLevelProgram(_profile.id, lvl, best) && !best.empty()) {
+              _profile.work = best;
+              _profile.workLevel = lvl;
+            }
+          }
+          gotoIntro(lvl);
+        }
+      } else if (s == Signal::BACK) { gotoHome(); }
       break;
     }
     case State::LIBRARY: {
@@ -548,8 +568,9 @@ void App::tick(uint32_t now) {
           else if (_introLesson == 103) { _pilotLesson.begin(); _pilotLesson.enter(); _state = State::PILOT_LESSON; }           // Pilot
           else if (_introLesson == 104) { _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; }                 // Memory
           else { _codeLesson.begin(_introLesson); _codeLesson.enter(); _state = State::CODE_LESSON; }
-        } else if (_backBtn.contains(x, y)) gotoHome();  // back to the hub
-        else gotoGame();                                  // tap the card to start the level
+        } else if (_backBtn.contains(x, y)) {            // back to the level browser we came from
+          _levelSelect.begin(&_profile); _levelSelect.enter(); _state = State::LEVEL_SELECT;
+        } else gotoGame();                                // tap the card to start the level
       }
       break;
     }
@@ -579,20 +600,29 @@ void App::tick(uint32_t now) {
         _challenge.begin(&_profile); _challenge.enter(); _state = State::CHALLENGE;
         break;
       }
-      if (s == Signal::BACK) { saveProfile(); gotoHome(); break; }
+      if (s == Signal::BACK) {  // leave the level -> back to the browser we came from
+        saveProfile();
+        _levelSelect.begin(&_profile); _levelSelect.enter(); _state = State::LEVEL_SELECT;
+        break;
+      }
       if (s == Signal::WON) {
-        _profile.stats.levelsCompleted++;
-        if (_game.lastStars() == 3) _profile.stats.threeStarWins++;
-        if (!_game.program().brains.empty()) _profile.stats.neuroWins++;  // cleared with a brain
-        _profile.level = _introLevel + 1;
-        _profile.unlocks = gb::computeUnlocks(_profile.level);
-        // Carry your winning program into the next level — the whole point of the game is
-        // "write ONE program (e.g. a wall-follower) and watch it solve mazes it's never
-        // seen." A hardcoded path won't fit the new maze (tweak it — that's what motivates
-        // loops/sensing); a general solver just hits RUN and wins. (SPEC §7.1)
-        _profile.work = _game.program();
-        _profile.workLevel = _profile.level;
-        // unlock + celebrate any newly-earned achievements
+        // Replaying an already-cleared level ("go for gold") must NOT advance/regress progress --
+        // only re-record its best (done in GameScreen) and return to the browser. Star/3-star tallies
+        // are credited there too (improvements only). Real progression happens only on your frontier.
+        bool replay = _introLevel < _profile.level;
+        if (!replay) {
+          _profile.stats.levelsCompleted++;
+          if (!_game.program().brains.empty()) _profile.stats.neuroWins++;  // cleared with a brain
+          _profile.level = _introLevel + 1;
+          _profile.unlocks = gb::computeUnlocks(_profile.level);
+          // Carry your winning program into the next level — the whole point of the game is
+          // "write ONE program (e.g. a wall-follower) and watch it solve mazes it's never
+          // seen." A hardcoded path won't fit the new maze (tweak it — that's what motivates
+          // loops/sensing); a general solver just hits RUN and wins. (SPEC §7.1)
+          _profile.work = _game.program();
+          _profile.workLevel = _profile.level;
+        }
+        // unlock + celebrate any newly-earned achievements (revising an old level can earn one too)
         uint32_t want = gb::evaluateAchievements(_profile);
         uint32_t isNew = want & ~_profile.achievements;
         _profile.achievements = want;
@@ -603,7 +633,8 @@ void App::tick(uint32_t now) {
           hal::audio.badge();  // achievement chime
         }
         saveProfile();  // autosave on WIN (SPEC §11)
-        gotoIntro(_profile.level);
+        if (replay) { _levelSelect.begin(&_profile); _levelSelect.enter(); _state = State::LEVEL_SELECT; }
+        else gotoIntro(_profile.level);
       }
       break;
     }
