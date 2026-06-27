@@ -29,32 +29,32 @@
     </div>
   </section>
 
-  <section class="slide" data-note="The recipe bake-off, measured over ~72 games per recipe. Teach (imitate an expert) wins ~83% and crushes evolving from random noise (~33%). Imitate first.">
-    <p class="kicker">Which recipe wins? (over ~72 games)</p>
+  <section class="slide" data-note="The recipe bake-off — one multi-seed run, 72 games per recipe. Teach (imitate an expert) wins ~63% and clearly beats evolving from random noise (~23%). Imitate first. Directional host eval, not a confidence interval.">
+    <p class="kicker">Which recipe wins? (one run, 72 games each)</p>
     <h2>Imitate an expert <span style="color:var(--accent)">first</span> 🏆</h2>
     <table>
       <tr><th>Recipe</th><th>Win-rate</th></tr>
-      <tr><td><b style="color:var(--go)">Teach</b> (copy an expert)</td><td><b style="color:var(--go)">83%</b> — strong, fast</td></tr>
-      <tr><td><b style="color:var(--purple)">Evolve from scratch</b></td><td><b style="color:var(--bad)">33%</b> — much weaker</td></tr>
+      <tr><td><b style="color:var(--go)">Teach</b> (copy an expert)</td><td><b style="color:var(--go)">63%</b> — strong, fast</td></tr>
+      <tr><td><b style="color:var(--purple)">Evolve from scratch</b></td><td><b style="color:var(--bad)">23%</b> — much weaker</td></tr>
     </table>
-    <p class="sub">Copy a good dribbler instead of discovering from nothing. <b>Train well to win soccer:</b> a quick striker only ties a hand-coded bot; a well-trained one wins.</p>
+    <p class="sub">Copy a good dribbler instead of discovering from nothing. <b>Train well to win soccer:</b> hand-coded strikers lose outright; the best recipe here was Teach → Evolve <i>vs the opponent</i> (84%).</p>
   </section>
 
-  <section class="slide" data-note="The honest, counterintuitive lesson: reward-refining a good distilled striker with Q-Learn often DIDN'T help, and refining vs a live moving opponent was the WORST (16%). More training is not automatically better.">
+  <section class="slide" data-note="The honest, counterintuitive lesson: reward-refining a good distilled striker with Q-Learn DIDN'T help — both the cone (37%) and live-opponent (29%) variants landed below Teach's 63%. More training is not automatically better.">
     <p class="kicker">⚠️ More training ≠ better</p>
     <h2>Refining can make it <span style="color:var(--bad)">worse</span></h2>
     <table>
       <tr><th>Take a strong distilled striker, then…</th><th>Win-rate</th></tr>
-      <tr><td>nothing (Teach only)</td><td><b style="color:var(--go)">83%</b></td></tr>
-      <tr><td>Q-Learn (reward-refine)</td><td><b style="color:var(--bad)">66% → 16%</b> 👎</td></tr>
+      <tr><td>nothing (Teach only)</td><td><b style="color:var(--go)">63%</b></td></tr>
+      <tr><td>Q-Learn (reward-refine)</td><td><b style="color:var(--bad)">37% / 29%</b> 👎</td></tr>
     </table>
-    <p class="sub">A solid imitation policy is <b>fragile</b> — a second objective can pull it off its good habits. Keep the version that <b>wins the rematch</b>, not the one that "trained the most."</p>
+    <p class="sub">Both Q-Learn variants (vs a cone / vs the live opponent) landed <b>below</b> Teach. A solid imitation policy is <b>fragile</b> — a second objective can pull it off its good habits. Keep the version that <b>wins the rematch</b>, not the one that "trained the most."</p>
   </section>
 
-  <section class="slide" data-note="The N=1 lesson — and our own mistake. An on-device single match said the opposite (Q-vs-cone bad, live good); over 72 seeds it REVERSED. A deterministic match is reproducible but not representative. Average over seeds. Great science-corrects-itself moment.">
+  <section class="slide" data-note="The N=1 lesson — and our own mistake. An on-device single match told a tidy story (Q-vs-cone bad 0-7, live good 3-3); over 72 games it did NOT reproduce — live-opponent Q-Learn was if anything worse. A deterministic match is reproducible but not representative. Average over seeds.">
     <p class="kicker">🧪 One match isn't an eval</p>
     <h2>Why we don't trust a <span style="color:var(--bad)">single</span> game</h2>
-    <p>An early <b>one-match</b> test on a device said a recipe was bad. Over <b>72 matches</b> it said the <b>opposite</b>.</p>
+    <p>An early <b>one-match</b> test on a device told a tidy story about a recipe. Over <b>72 matches</b> it <b>didn't hold up</b>.</p>
     <p class="callout">The Arena is <b>deterministic</b> — so one match is <i>reproducible</i>. But reproducible <b>≠ representative</b>. <b>Always average over many seeds.</b></p>
   </section>
 
@@ -119,7 +119,7 @@
       <tr><th>Game</th><th>Who wins</th></tr>
       <tr><td>🧩 Maze</td><td>✍️ <b>Hand-coding</b> — a correct rule generalises</td></tr>
       <tr><td>🤖 Battle</td><td>✍️ <b>Hand-coding</b> — clear priorities win</td></tr>
-      <tr><td>⚽ Soccer</td><td>🧠 <b>Learning</b> — <i>if trained well</i> (a quick striker only ties)</td></tr>
+      <tr><td>⚽ Soccer</td><td>🧠 <b>Learning</b> — <i>if trained well</i> (hand-coded bots lose; trained wins ~92%)</td></tr>
     </table>
     <p class="sub"><b>Match the method to the problem.</b></p>
   </section>

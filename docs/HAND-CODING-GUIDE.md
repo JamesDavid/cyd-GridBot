@@ -187,9 +187,9 @@ repeat until goal {
 ```
 
 It scores sometimes… but it shoves the ball **whatever way it's facing**, including into its *own*
-goal — so it gives away cheap own-goals. *(Funnily enough, on the current engine this scrappy chaser
-still does about as well as the tidier "behind" bot below — proof that a sensible-looking rule isn't
-always the better one. The point of "get behind" is the **idea**: stop scoring on yourself.)*
+goal — so it gives away cheap own-goals. *(In our eval this scrappy chaser won only ~4% of games vs
+trained strikers — the "get behind" bot below, which stops scoring on itself, roughly triples that to
+~14%. Still a losing record, but the **idea** clearly helps.)*
 
 ![Soccer chaser, top](img/hc-soccer-1-1.png) ![Soccer chaser, scrolled](img/hc-soccer-1-2.png)
 
@@ -226,24 +226,29 @@ inside`** on the `if ball ^` row to put blocks inside it:
 
 ### How it does
 
-Measured over many seeds (`tools/bot_eval.cpp` — each row aggregates 4 trained opponents × 16
-matches = 64 games), as a **win-rate**:
+Measured in one multi-seed run (`tools/bot_eval.cpp` — each row aggregates 4 trained opponents × 16
+kickoffs = **64 games**), as a **win-rate**:
 
-| Hand-coded bot vs… | a **quick**-trained striker | a **well**-trained striker (distill-20k / Teach→Evolve) |
-|---|---|---|
-| naive **chaser** | ~**50%** (a coin-flip) | **25% / 0%** — loses |
-| **"get behind the ball"** | ~**25%** | **25% / 0%** — loses |
+| Hand-coded bot vs a panel of distilled strikers | Win-rate (64 games) |
+|---|---|
+| naive **chaser** | ~**4%** (3-5-56) |
+| **"get behind the ball"** | ~**14%** (9-0-55) |
 
-So an honest read: a hand-coded soccer bot is **roughly competitive with a *quick* trained striker**
-(it's about a coin-flip), but a **well-trained** one beats it decisively — a Teach→Evolve striker won
-**every one of 64** games. It is **not** a robust win the way the maze and battle bots are.
+So an honest read: **every** hand-coded soccer bot we tried **loses** to trained strikers. The naive
+chaser wins ~4%; getting behind the ball roughly triples that to ~14% — better, but still a clear losing
+record. Against the *strongest* striker (a Teach→Evolve one) the best hand-coded bot won just **7%**
+(5-0-59); against a more moderate one (distill-20k) it managed **23%**. Soccer is **not** a hand-coding
+win the way the maze and battle bots are.
 
-Two honest surprises worth telling the kids: (1) on the current engine the careful **"get behind the
-ball"** bot is **no better than the naive chaser** — sometimes *worse* — so the "correct" idea doesn't
-automatically win (a real lesson: a sensible rule isn't always a winning one). (2) Our **older numbers
-here were a single match each and didn't hold up** — which is exactly why we now average over seeds.
-The "get behind" idea still matters *conceptually* (it's how you avoid shoving the ball into your own
-net); it just isn't a trophy.
+> **Qualify it:** one deterministic host run over fixed seeds vs **distilled strikers** (one opponent
+> class) — reproducible, but not an independent-sample confidence interval. An **older version of this
+> guide reported a "coin-flip" (~50%)**; that came from an eval that accidentally replayed the same
+> match every seed. With the kickoff now varied per seed, the honest result is the losing record above —
+> which is *itself* the lesson on why you average over real seeds.
+
+The lesson worth telling the kids: the careful **"get behind the ball"** idea **does** beat the naive
+chaser (~14% vs ~4%) — a sensible rule helps — but no rule we wrote was enough to *win* soccer. That's
+the perfect moment to open NeuroLab.
 
 **Why?** A trained brain saw thousands of examples and learned *finishing finesse* — aiming at the
 open corner of the net, hitting the exact spot to stand. Reactive blocks can't hold a plan in memory
@@ -260,7 +265,7 @@ Here's the whole lesson on one line each:
 |---|---|---|
 | 🧩 **Maze** | a 3-rule wall-follower solves **8×** more unseen mazes | ✍️ **Hand-coding** — a correct rule generalises |
 | 🤖 **Battle** | the hunter goes **9-5-2** vs trained fighters | ✍️ **Hand-coding** — clear priorities win |
-| ⚽ **Soccer** | the best dribbler is a **coin-flip vs a *quick* trained striker**, but loses to a **well-trained** one (Teach→Evolve **64–0**) | 🧠 **Learning** — *if trained well*; finesse needs practice |
+| ⚽ **Soccer** | the best dribbler **loses** to trained strikers (~4–14% win, 64 games); a well-trained one wins ~92% (Teach→Evolve 59-5) | 🧠 **Learning** — *if trained well*; finesse needs practice |
 
 **That's why machine learning exists.** When a job is easy to describe as rules (find the wall, face
 the foe), *write the rules* — it's clearer, faster, and it generalises. When a job is full of feel and

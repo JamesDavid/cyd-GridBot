@@ -185,10 +185,11 @@ Condensed pages. Same shape as the sample: **Big idea · On screen · Ask · Wat
 > NeuroLab. Have students hand-code a bot for each Arena game and play it against a trained brain —
 > the measured punchline *is* the "match the method" lesson (NeuroLab 17): **Maze & Battle → hand-coding
 > wins** (a 3-rule wall-follower solves **8× more unseen mazes** than a one-maze brain; the priority-rule
-> hunter goes **9-5-2** vs trained fighters), **Soccer → learning wins *if trained well*** (a hand-coded
-> dribbler is a coin-flip vs a *quick* trained striker but loses to a *well*-trained one — Teach→Evolve
-> **64–0**). Kids earn NeuroLab by feeling exactly where rules run out — then open it knowing *what* the
-> brain is trying to learn. Every number is reproducible (multi-seed) from `tools/bot_eval.cpp`.
+> hunter goes **9-5-2** vs trained fighters), **Soccer → learning wins *if trained well*** (every
+> hand-coded dribbler *loses* to trained strikers — ~4–14% win over 64 games — and a *well*-trained one
+> wins ~92%, Teach→Evolve 59-5). Kids earn NeuroLab by feeling exactly where rules run out — then open it
+> knowing *what* the brain is trying to learn. Numbers are one reproducible multi-seed run from
+> `tools/bot_eval.cpp` (deterministic host eval, not a confidence interval).
 
 > **📗 The NeuroLab-side companion — the [AI Coding Guide](AI-CODING-GUIDE.md).** The sequel that does
 > the same three games with a trained **`+brain`** (Teach / Q-Learn / Evolve), with on-device

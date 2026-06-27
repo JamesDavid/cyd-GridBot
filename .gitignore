@@ -7,3 +7,4 @@
 
 # but DO ship the web-flasher firmware
 !docs/firmware/*.bin
+bot_eval.exe

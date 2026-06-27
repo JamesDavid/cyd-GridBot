@@ -127,10 +127,10 @@ rule.)*
 
 ## 5. Soccer — *train a striker* ⚽ (where learning **wins**)
 
-This is the one. A *quick* trained striker only **ties** the best hand-coded bot (~50% — a coin-flip),
-but a **well-trained** one beats it decisively (a Teach→Evolve striker won **64–0** over our test set).
-Soccer rewards *finishing finesse* (aim the open corner, stand in the exact spot) that's hard to write
-as rules but **learnable** — *if you train it well.*
+This is the one. Every hand-coded striker we tried **lost** to a trained one — the best hand-coded bot
+won only **4–14%** of 64 games vs distilled strikers — and a *well*-trained striker (Teach→Evolve) beat
+the best hand-coded bot **~92%** (59-5). Soccer rewards *finishing finesse* (aim the open corner, stand
+in the exact spot) that's hard to write as rules but **learnable** — *if you train it well.*
 
 Open the soccer trainer (**Arena → Train a fighter → Soccer**). The Brain-Cam view shows the *same*
 `10→8→5` net, now sensing the **ball**, the **net**, and the **rival** — and the **zap** output greys
@@ -138,41 +138,48 @@ to `–`, because there's a zap-swap but no sumo zap on the pitch.
 
 ![Training a soccer brain (Brain-Cam)](img/soccer-brain.png)
 
-### Which recipe actually works? (measured over many seeds)
+### Which recipe actually works? (one multi-seed eval)
 
-Each recipe was trained from scratch on several seeds and judged over ~72 matches vs the same strong
-striker it trained on (`tools/bot_eval.cpp`). **Win-rate**, not a single scoreline:
+Each recipe was trained from scratch on 6 seeds and judged over **72 matches** (6 × 12 kickoffs) vs the
+same strong striker it trained on (`tools/bot_eval.cpp`). **Win-rate**, not a single scoreline — but read
+the caveat below:
 
-| Recipe | Win-rate vs a peer striker |
+| Recipe | Win-rate vs a peer striker (72 games) |
 |---|---|
-| **Teach** (imitate an expert dribbler) | **83%** — strong, in seconds |
-| **Teach → Evolve** vs the opponent | **83%** (never *lost* a game; vs hand-coded it's 64–0) |
-| **Teach → Q-Learn** (refine for reward) | **66% → 16%** — *didn't help, and hurt* |
-| **Evolve from scratch** | **33%** — much weaker |
+| **Teach → Evolve** vs the opponent | **84%** — best here |
+| **Teach** (imitate an expert dribbler) | **63%** — strong, in seconds |
+| **Teach → Q-Learn** (refine for reward) | **37% (cone) / 29% (live)** — *didn't help; hurt* |
+| **Evolve from scratch** | **23%** — much weaker |
 
-The takeaways that **hold up across seeds**:
+> **Qualify it:** this is **one deterministic run** over a fixed set of 6 seeds vs **distilled
+> strikers** (one opponent class), tiny `10→8→5` net, seconds of training. It's bit-reproducible but
+> **not** an independent-sample confidence interval — treat these as directional, not exact constants.
 
-1. **Imitate an expert first.** Teach (83%) crushes evolving from random noise (33%) in the same time.
-   If a good expert exists, copy it — don't start from nothing.
+The takeaways from this eval:
+
+1. **Imitate an expert first.** Teach (63%) clearly beats evolving from random noise (23%) in the same
+   time. If a good expert exists, copy it — don't start from nothing.
 2. **More training isn't always better.** Reward-refining a *good* distilled striker with Q-Learn
-   **didn't improve it and often made it worse** — refining against a live moving opponent was the
-   *worst* (16%). A solid imitation policy is fragile; a second objective can perturb it.
-3. **Train well to win soccer.** A lazy trained striker only ties a hand-coded one; a *well*-trained one
-   (more epochs, or Teach→Evolve) wins decisively. Soccer is where the *quality* of training pays off.
+   **didn't improve it** — both cone (37%) and live-opponent (29%) Q-Learn landed *below* Teach (63%).
+   A solid imitation policy is fragile; a second objective can perturb it.
+3. **Train well to win soccer.** Hand-coded strikers lose to trained ones; among recipes, refining a
+   good imitation *against the opponent* (Teach→Evolve, 84%) did best. Soccer is where the *quality* of
+   training pays off.
 
-> **⚠️ A lesson from our own mistake — why one match isn't an eval.** An earlier on-device run found
-> the *opposite* of takeaway 2: Q-Learn-vs-a-cone "regressed 0–7" and training vs the live opponent
-> "fixed it 3–3." That was **one deterministic match**. Re-run over ~72 seeds it **reversed**. The
-> deterministic Arena makes a single match *reproducible*, but reproducible ≠ representative — always
-> average over seeds. (Full before/after in [TRAINING_FINDINGS.md](TRAINING_FINDINGS.md).)
+> **⚠️ A lesson from our own mistake — why one match isn't an eval.** An earlier on-device run found a
+> tidy story: Q-Learn-vs-a-cone "regressed 0–7" and training vs the live opponent "fixed it 3–3." That
+> was **one deterministic match**. Re-run over 72 games it **did not reproduce** (live-opponent Q-Learn,
+> 29%, was if anything worse than the cone, 37%). The deterministic Arena makes a single match
+> *reproducible*, but reproducible ≠ representative — always average over seeds. (Full before/after in
+> [TRAINING_FINDINGS.md](TRAINING_FINDINGS.md).)
 
 The soccer trainer also helps you out: it **penalises a wrong-way push 2×** and **rewards a goalward
 `zap`**, so a trained striker learns to **avoid own-goals** and use the swap — the move the
 hand-coded `if ball^ {zap}` bot could only do blindly.
 
 > **🩺 "My bot got *worse* after I trained it!"** — a real outcome, not a fail (you saw it above: a
-> Q-Learn refinement dropped a strong striker to 16%). When a refinement hurts, **go back to the
-> Teach base and keep it**, or refine more gently — more training is not automatically better.
+> Q-Learn refinement dropped a strong striker from 63% to ~30%). When a refinement hurts, **go back to
+> the Teach base and keep it**, or refine more gently — more training is not automatically better.
 
 ---
 
@@ -230,7 +237,7 @@ Put the two guides side by side and you get the whole course in one table:
 |---|---|---|---|
 | 🧩 **Maze** | wall-follower solves **8 / 16** unseen | needs **lots of varied** mazes to catch up (one-maze brain: **1 / 16**) | ✍️ **Rules** — a correct rule generalises for free |
 | 🤖 **Battle** | hunter goes **9-5-2** vs trained | **Teach beats Vex 6/6**; competitive, *matches* the rule | 🤝 **Tie** — a clear rule is enough; training matches it |
-| ⚽ **Soccer** | best dribbler **ties a quick** striker (~50%) | a **well-trained** striker wins decisively (Teach→Evolve **64–0** vs hand-coded) | 🧠 **Learning** — *if trained well*; finesse needs practice |
+| ⚽ **Soccer** | best dribbler **loses** to trained strikers (**4–14%** win, 64 games) | a **well-trained** striker wins decisively (Teach→Evolve **~92%**, 59-5 vs hand-coded) | 🧠 **Learning** — *if trained well*; finesse needs practice |
 
 **That's why machine learning exists.** When a job is easy to describe as rules (find the wall, face the
 foe), *write the rules* — clearer, faster, generalises. When a job is full of feel that's hard to put

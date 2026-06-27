@@ -13,34 +13,52 @@ the weights* changes.
 
 ---
 
-## ⚖️ Multi-seed reproduction (the honest numbers — `tools/bot_eval.cpp`)
+## ⚖️ Multi-seed reproduction (the verified numbers — `tools/bot_eval.cpp`)
 
-Each recipe is trained **from scratch per seed** and judged over **many matches vs the same strong
-opponent it trained on** (≈72 games each); the soccer-vs-hand-coded rows aggregate 4 opponent seeds ×
-16 matches (64 games). Win-rates, not single scorelines:
+> **How to read these numbers (qualifications).** They come from **one run** of `tools/bot_eval.cpp`
+> over a **fixed set of seeds** on the **host** build. The Arena is deterministic, so the run is
+> bit-reproducible (re-running gives the identical table) — but that is **NOT** a confidence interval
+> over independent training; it's one pass over chosen seeds. Sample sizes are modest (**64 games** per
+> hand-coded-vs-trained row = 4 opponent seeds × 16 kickoffs; **72 games** per recipe = 6 training seeds
+> × 12 kickoffs), opponents are **distilled strikers** (one class of bot, not "all trained bots"), the
+> net is tiny (`10→8→5`, seconds of training), and host floats may differ slightly from the device.
+> Treat the win-rates as **directional, order-of-magnitude** evidence, not precise constants.
+>
+> *(Methodology fix, 2026-06-27: the soccer pitch geometry is fixed, so a match seed alone replayed the
+> SAME game. Both `bot_eval` and the device's `V` eval now vary the kickoff ball per seed, so soccer
+> evals are genuinely multi-seed. An earlier version of this section used the un-varied eval and is
+> superseded.)*
 
-| What | Multi-seed result | vs the on-device N=1 story |
-|---|---|---|
-| 🧩 Maze: wall-follower+jump vs one-maze brain | **8/16 vs 1/16** unseen | ✓ holds |
-| 🤖 Battle: hand-coded hunter vs trained | **9-5-2** | ✓ holds |
-| ⚽ Best hand-coded striker vs a **quick** trained one | ~**50%** (a coin-flip) | — |
-| ⚽ Best hand-coded striker vs a **well-trained** one (distill-20k / Teach→Evolve) | **25% / 0%** (loses) | — |
-| **Teach** (distill) vs a peer striker | **83%** win | ✓ "competent fast" holds |
-| **Evolve from scratch** vs a peer | **33%** win | ✓ "imitate first" holds (much weaker) |
-| **Teach→Evolve** vs a peer | **83%** (no losses; vs *hand-coded* it's 64-0) | ~ partly: it's *robust*, not dramatically stronger than Teach |
-| **Teach→Q-Learn (vs a cone)** | **66%** | ✗ did NOT regress — the on-device 0–7 was a fluke |
-| **Teach→Q-Learn (vs the LIVE opponent)** | **16%** (worst) | ✗ **REVERSED** — live-opponent refinement *hurt* most; the on-device 3–3 "realism fixes it" did not reproduce |
+| What | Result (win-rate / record) |
+|---|---|
+| 🧩 Maze: wall-follower+jump vs a one-maze brain, 16 unseen mazes | **8/16 vs 1/16** |
+| 🤖 Battle: hand-coded hunter vs two trained fighters, 16 rings each | **9-5-2 / 9-5-2** |
+| ⚽ Hand-coded strikers vs distilled strikers (64 games) | chaser **4%**, "get behind" **14%**, commit **14%**, behind+wall **6%** |
+| ⚽ Best hand-coded (chaser) vs a *strongly*-trained striker | distill-20k **23%**, Teach→Evolve **7%** (≈92% loss) |
+| Recipe — **Teach** only, vs a peer striker (72 games) | **63%** |
+| Recipe — **Teach→Evolve** vs the opponent | **84%** |
+| Recipe — **Teach→Q-Learn** (refine vs a cone / vs the live opponent) | **37% / 29%** |
+| Recipe — **Evolve from scratch** | **23%** |
 
-**What survives as a measured claim:** (1) **imitate an expert first** — Teach (83%) crushes
-evolve-from-scratch (33%); (2) **soccer rewards training** — a *well-trained* striker beats the best
-hand-coded bot decisively (Teach→Evolve 64-0), while a *quick* one only ties it; (3) **more training
-isn't better** — reward-refining a good imitation policy (Q-Learn) here *didn't help and often hurt*.
+**What these support (kept qualified):**
+1. **Maze & battle reward a rule** — the 3-rule wall-follower solved 8× more unseen mazes than a
+   one-maze brain (8/16 vs 1/16), and the hand-coded hunter went 9-5-2 vs two trained fighters. *(Within
+   this eval; n=16 each.)*
+2. **Soccer rewards training** — every hand-coded strategy **lost** to distilled strikers (4–14% win over
+   64 games), and a *well*-trained striker (Teach→Evolve) beat the best hand-coded bot **~92%** (59-5).
+   The careful "get behind" dribbler (14%) did modestly better than the naive chaser (4%).
+3. **Imitate first** — Teach (63%) clearly beat evolving from random noise (23%) in the same time.
+4. **Refining against the opponent helped** — Teach→Evolve-vs-the-opponent (84%) was the strongest
+   recipe, clearly above Teach-only (63%) *in this eval*.
+5. **More training isn't automatically better** — reward-refining a good distilled striker with Q-Learn
+   *reduced* its win-rate (cone 37%, live 29%, both well below Teach's 63%).
 
-**What we retract:** the **cone-trap narrative** ("Q-vs-a-cone regresses, training against the live
-opponent fixes it") — over 72 seeds it **reversed** (live-opponent Q-Learn was the worst). It was a
-single deterministic match. *This is the whole reason N=1 isn't an eval, demonstrated on our own
-findings.* The detailed on-device log below is kept as **history** (what we saw, once), not as
-measured law.
+**What we retract:** the **cone-trap narrative** ("Q-vs-a-cone regresses to 0–7, training vs the live
+opponent fixes it to 3–3"). That was a **single deterministic on-device match**; over 72 games the
+direction does not reproduce (live-opponent Q-Learn, 29%, was if anything *worse* than the cone, 37%).
+We keep only the qualified claim that **Q-Learn refinement here tended to hurt**, and the meta-lesson
+that **one reproducible match still isn't a representative eval.** The detailed on-device log below is
+kept as **history** (what we saw, once), not as measured law.
 
 ---
 
