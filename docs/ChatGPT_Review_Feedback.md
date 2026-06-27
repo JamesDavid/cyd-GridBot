@@ -123,5 +123,5 @@ The main risks are doc drift and one small UI data bug. The most important conce
     | 4 | Press Teach, watch practice improve | trainer taxonomy |
     | 5 | Try bots, keep the one that wins | statistical caveats |
 
-- [ ] Scan for and fix any visible "cirriculum" typo.
-  - Use "curriculum" consistently in teaching docs and navigation text.
+- [x] Scan for and fix any visible "cirriculum" typo. **(Done 2026-06-27.)**
+  - Repo-wide case-insensitive scan found no "cirriculum" anywhere in the source/docs (the only occurrence was this checklist's own flag). All 9 files use the correct "curriculum" spelling — nothing to change.
