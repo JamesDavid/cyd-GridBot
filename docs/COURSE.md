@@ -25,6 +25,16 @@ pointer, checkpoint, and bit of background a grown-up needs is right here, in th
 > The shorter [CURRICULUM.md](CURRICULUM.md) is the one-page version of this same plan — print it as a
 > wall chart; teach from *this*.
 
+> ### 📽️ Project it to the class — [the slide decks »](https://jamesdavid.github.io/cyd-GridBot/slides/)
+> Each day has a ready-to-present, full-screen deck with on-device screenshots. Open the day's deck
+> (linked under each **Day** heading below), press **F** for full screen, drive with **→ / Space**, and
+> press **N** to toggle the teacher cue at the bottom of each slide.
+> [Day 1 — Drive](https://jamesdavid.github.io/cyd-GridBot/slides/day1.html) ·
+> [Day 2 — Think](https://jamesdavid.github.io/cyd-GridBot/slides/day2.html) ·
+> [Day 3 — Compete](https://jamesdavid.github.io/cyd-GridBot/slides/day3.html) ·
+> [Day 4 — Learn](https://jamesdavid.github.io/cyd-GridBot/slides/day4.html) ·
+> [Day 5 — Champion](https://jamesdavid.github.io/cyd-GridBot/slides/day5.html)
+
 ---
 
 # Part 1 — Before you start
@@ -108,6 +118,8 @@ live at **Home → Learn**; the game at **Home → Play**. That's the whole setu
 
 ## Day 1 — 🚗 Drive: *make it move*
 
+> ▶ **[Present Day 1 as slides »](https://jamesdavid.github.io/cyd-GridBot/slides/day1.html)** — full-screen, with on-device screenshots (F = full screen, → = next, N = teacher notes).
+
 **Objective:** the robot obeys a list of steps *you* write, and the kid solves a maze by hand.
 
 > **What you need to know.** A program is a **sequence**: steps run top-to-bottom, in order. That's the
@@ -117,11 +129,15 @@ live at **Home → Learn**; the game at **Home → Play**. That's the whole setu
 
 **Do this on the device:**
 1. **Pick a player** (avatar + name) — this saves their progress.
-2. **Learn → CodeLab → "1 · Move".** Tap **Run**; watch forward / turn / forward reach the goal.
-3. **Play → campaign levels 1–9.** Drag command blocks, tap **Run**, *read the failure*, fix **one**
+2. **Make it yours (optional, fun):** **Home → Customize → draw your bot** opens the pixel editor —
+   colour in your own 16×16 robot. Personalising it early is a surprisingly strong hook: it's *their*
+   robot now. *(Comes back on Day 5 when they field it in the tournament.)*
+3. **Learn → CodeLab → "1 · Move".** Tap **Run**; watch forward / turn / forward reach the goal.
+4. **Play → campaign levels 1–9.** Drag command blocks, tap **Run**, *read the failure*, fix **one**
    block, re-run. **Jump unlocks at Level 6** (it gets its own guaranteed-win intro level) — use it to
    clear a pit.
-4. **Star chase:** beat a level, then beat it again with **fewer blocks** for 3 stars.
+5. **Star chase:** beat a level, then beat it again with **fewer blocks** for 3 stars (tap the level
+   browser from **Play** to see every level's stars and jump back in to beat your block count).
 
 **The actions they have today** (one runs per step): `forward`, `turn left`, `turn right`, and from
 Lv 6 `jump` (hops 2 tiles, clears a pit).
@@ -142,6 +158,9 @@ and re-running. That read → change one thing → test loop is the habit the wh
 ---
 
 ## Day 2 — 🧠 Think: *make it solve mazes it's never seen*
+
+> ▶ **[Present Day 2 as slides »](https://jamesdavid.github.io/cyd-GridBot/slides/day2.html)**
+
 
 **Objective:** the leap from *memorising steps* to *a rule that adapts* — the conceptual heart of the
 whole course. **Don't rush this day.**
@@ -216,6 +235,9 @@ hinge — if they get this, the rest of the course clicks.
 ---
 
 ## Day 3 — ⚔️ Compete: *hand-code a fighter and a striker*
+
+> ▶ **[Present Day 3 as slides »](https://jamesdavid.github.io/cyd-GridBot/slides/day3.html)**
+
 
 **Objective:** use sensing to build **Arena** bots by hand — and *feel* where hand-coding starts to
 strain. Today sets up the entire reason for Day 4.
@@ -363,6 +385,9 @@ means making **yours** smarter. Each tweak below can break the tie — try it, s
 
 ## Day 4 — 🤖 Learn: *stop writing the rules, start training them*
 
+> ▶ **[Present Day 4 as slides »](https://jamesdavid.github.io/cyd-GridBot/slides/day4.html)**
+
+
 **Objective:** reach **NeuroBot** and train a brain from **examples** and **reward** — then beat
 yesterday's hand-coded bot with it.
 
@@ -455,6 +480,9 @@ and the kid can name the three trainers and say what each is good at.
 ---
 
 ## Day 5 — 🏆 Champion: *train a striker, then a tournament*
+
+> ▶ **[Present Day 5 as slides »](https://jamesdavid.github.io/cyd-GridBot/slides/day5.html)**
+
 
 **Objective:** refine a real soccer **striker**, then crown a champion across the class.
 
