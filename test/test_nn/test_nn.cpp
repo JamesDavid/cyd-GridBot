@@ -101,6 +101,18 @@ void test_net_multiclass_go_turn_jump() {
   TEST_ASSERT_EQUAL_INT(2, net.argmax(&X[6]));  // (wall,pit)       -> jump
 }
 
+// argmax can be told to skip a forbidden action (e.g. zap in a solo maze) so an untrained output
+// can't win and waste a step -- it falls through to the strongest ALLOWED action.
+void test_argmax_mask_skips_forbidden_action() {
+  Net n; n.config(2, 4, 5, 5);
+  for (int k = 0; k < 5; k++) n.b2[k] = -6.0f;
+  n.b2[4] = 6.0f;   // force the zap output (action 4) highest
+  n.b2[1] = 3.0f;   // turn-left the runner-up
+  float x[2] = {0.f, 0.f};
+  TEST_ASSERT_EQUAL_INT(4, n.argmax(x));                 // unmasked -> zap wins
+  TEST_ASSERT_EQUAL_INT(1, n.argmax(x, ~(1u << 4)));     // zap forbidden -> next best (turn-left)
+}
+
 void test_net_reset_deterministic() {
   Net a, b; a.config(3, 5, 4, 77); b.config(3, 5, 4, 77);
   for (int j = 0; j < 5; j++)
@@ -353,6 +365,7 @@ int main(int, char**) {
   RUN_TEST(test_reset_is_deterministic);
   RUN_TEST(test_net_learns_xor);
   RUN_TEST(test_net_multiclass_go_turn_jump);
+  RUN_TEST(test_argmax_mask_skips_forbidden_action);
   RUN_TEST(test_net_reset_deterministic);
   RUN_TEST(test_neuro_node_drives_robot);
   RUN_TEST(test_brain_copies_with_program);

@@ -27,7 +27,7 @@ struct RNet {
   void config(int in, int hid, int out, uint32_t seed);
   void resetState() const;                         // zero the memory (call at run start)
   void step(const float* x, float* out) const;     // forward one tick; advances the memory
-  int  argmaxStep(const float* x) const;           // step() + index of the strongest output
+  int  argmaxStep(const float* x, uint32_t validMask = 0xFFFFFFFFu) const;  // step() + strongest ALLOWED output
 
   // Backprop-through-time over one episode: X is T*nIn (row-major), act[t] is the target
   // action index at step t. Trains all weights; resets/uses a fresh memory internally.

@@ -241,11 +241,15 @@ Outcome Interpreter::step() {
         } else {
           senseEgo(*_maze, _pose, _enemy, s);
         }
-        int act = useRnn ? _prog->rbrains[n.brainIdx].argmaxStep(s)
-                         : _prog->brains[n.brainIdx].argmax(s);
-        // Soccer has no zap -- a battle-trained brain that fires when it faces its goal would freeze
-        // in place forever. Remap the zap action to a forward step so any brain at least plays (a true
-        // soccer brain never picks zap, so it's unaffected).
+        // In a SOLO maze (no opponent) the zap action (4) is a no-op, so forbid it: an untrained
+        // output mustn't win the argmax and waste a step. Sumo (zap = the attack) and Soccer/Race
+        // keep every action. (kBrainAction[4] = CMD_FIRE.)
+        uint32_t mask = _enemy ? 0xFFFFFFFFu : ~(1u << 4);
+        int act = useRnn ? _prog->rbrains[n.brainIdx].argmaxStep(s, mask)
+                         : _prog->brains[n.brainIdx].argmax(s, mask);
+        // Soccer has no SUMO zap -- a battle-trained brain that fires when it faces its goal would
+        // freeze in place forever. Remap the zap action to a forward step so any brain at least plays
+        // (a true soccer brain never picks zap, so it's unaffected).
         if (_enemy && _enemy->net && act == 4) act = 0;
         _lastCmd = kBrainAction[act];
         Outcome o = execCmd(_lastCmd);

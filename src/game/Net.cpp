@@ -41,12 +41,15 @@ void Net::forward(const float* x, float* out, float* hid) const {
   }
 }
 
-int Net::argmax(const float* x) const {
+int Net::argmax(const float* x, uint32_t validMask) const {
   float out[NET_MAX_OUT];
   forward(x, out);
-  int best = 0;
-  for (int k = 1; k < nOut; k++) if (out[k] > out[best]) best = k;
-  return best;
+  int best = -1;
+  for (int k = 0; k < nOut; k++) {
+    if (!(validMask & (1u << k))) continue;      // action k forbidden in this context
+    if (best < 0 || out[k] > out[best]) best = k;
+  }
+  return best < 0 ? 0 : best;                     // mask cleared everything -> fall back to 0 (forward)
 }
 
 float Net::trainStep(const float* x, const float* target) {

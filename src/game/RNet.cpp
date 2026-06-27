@@ -51,12 +51,15 @@ void RNet::step(const float* x, float* out) const {
   }
 }
 
-int RNet::argmaxStep(const float* x) const {
+int RNet::argmaxStep(const float* x, uint32_t validMask) const {
   float out[RNET_MAX_OUT];
   step(x, out);
-  int best = 0;
-  for (int m = 1; m < nOut; m++) if (out[m] > out[best]) best = m;
-  return best;
+  int best = -1;
+  for (int m = 0; m < nOut; m++) {
+    if (!(validMask & (1u << m))) continue;
+    if (best < 0 || out[m] > out[best]) best = m;
+  }
+  return best < 0 ? 0 : best;
 }
 
 float RNet::trainEpisode(const float* X, const int* act, int T) {

@@ -25,7 +25,10 @@ struct Net {
   // Forward pass. Fills out[0..nOut) with sigmoid activations; hid (optional, size
   // >= nHid) gets the hidden activations for visualization.
   void forward(const float* x, float* out, float* hid = nullptr) const;
-  int  argmax(const float* x) const;         // index of the strongest output (the action)
+  // index of the strongest ALLOWED output (the action). `validMask` bit k = action k is selectable
+  // (default = all). Lets the caller forbid a no-op action (e.g. zap in a solo maze) so an untrained
+  // output can't win the argmax and waste a step.
+  int  argmax(const float* x, uint32_t validMask = 0xFFFFFFFFu) const;
 
   // One backprop step on a single example (target is one-hot or in [0,1] per output).
   // Returns the mean squared error BEFORE the update (so a caller can plot loss).
