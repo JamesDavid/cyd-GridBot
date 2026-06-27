@@ -156,6 +156,67 @@ static void playSumo(const char* name, const Program& mine, const Program& opp, 
   printf("  %-14s W-D-L %2d-%2d-%2d\n", name, w, d, l);
 }
 
+// ---- multi-seed credibility additions ------------------------------------------------------------
+struct Rec { int w = 0, d = 0, l = 0, gf = 0, ga = 0; };
+static Rec playSoccerRec(const Program& mine, const Program& opp, int seeds, uint32_t base = 1000u) {
+  Rec r;
+  for (int s = 0; s < seeds; s++) {
+    uint32_t seed = base + 137u * (uint32_t)s; Maze m; Pose s0, s1, ball, g0, g1;
+    MazeGen::generateSoccerPitch(m, seed, s0, s1, ball, g0, g1);
+    Arena ar; ar.setup(&m, &mine, &opp, s0, s1, MatchType::SOCCER); ar.configSoccer(ball, g0, g1); ar.run();
+    int a = ar.goals(0), b = ar.goals(1); r.gf += a; r.ga += b;
+    if (a > b) r.w++; else if (a < b) r.l++; else r.d++;
+  }
+  return r;
+}
+static Net distillNet(uint32_t seed, int ep) {
+  Net b; b.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, seed); distillSoccer(b, seed, ep); return b;
+}
+// Evolve a seed brain AGAINST the program `opp` it'll be judged on (the findings did this).
+static Net evolveNet(const Net& seedBrain, const Program& opp, uint32_t seed, int gens) {
+  Evolve e; e.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, seed); e.seedFrom(seedBrain, 0.2f);
+  for (int g = 0; g < gens; g++) {
+    uint32_t s = seed + 31u * (uint32_t)g; Maze m; Pose s0, s1, ball, g0, g1;
+    MazeGen::generateSoccerPitch(m, s, s0, s1, ball, g0, g1);
+    e.evaluateArena(m, s0, s1, opp, 220, MatchType::SOCCER, &ball, &g0, &g1); e.breed();
+  }
+  return e.best();
+}
+static void prow(const char* n, Rec r) {
+  int t = r.w + r.d + r.l; printf("  %-24s W-D-L %2d-%2d-%2d  win%% %3d  goals %d-%d\n",
+                                  n, r.w, r.d, r.l, t ? r.w * 100 / t : 0, r.gf, r.ga);
+}
+
+// Does Teach->Evolve-vs-the-opponent actually beat Teach-only? Does Teach->Q-vs-a-cone regress vs
+// Teach->Q-vs-the-live-opponent? Re-derives the TRAINING_FINDINGS claims over many seeds (each recipe
+// trained from scratch per seed, then judged over M matches vs the SAME strong opponent it trained on).
+static void recipeBakeoff(int trainSeeds, int matchSeeds) {
+  printf("\n========= SOCCER RECIPE BAKE-OFF (%d train-seeds x %d matches = %d games each) =========\n",
+         trainSeeds, matchSeeds, trainSeeds * matchSeeds);
+  Rec teach, evo, qcone, qlive, scratch;
+  auto acc = [&](Rec& dst, const Program& p, const Program& O) {
+    Rec x = playSoccerRec(p, O, matchSeeds); dst.w += x.w; dst.d += x.d; dst.l += x.l; dst.gf += x.gf; dst.ga += x.ga;
+  };
+  for (int t = 0; t < trainSeeds; t++) {
+    uint32_t seed = 2000u + 101u * (uint32_t)t;
+    Program O = distilledStriker(seed + 777u, 8000);                 // the strong striker to beat
+    Net base = distillNet(seed, 8000);                               // Teach
+    Net e  = evolveNet(base, O, seed, 60);                           // Teach -> Evolve vs O
+    Net qc = base; qTrainSoccer(qc, seed, 12000, 0, 0, 1.0f, nullptr);  // Teach -> Q vs a cone
+    Net ql = base; qTrainSoccer(ql, seed, 12000, 0, 0, 1.0f, &O);       // Teach -> Q vs the live O
+    Net fresh; fresh.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, seed + 5u);
+    Net es = evolveNet(fresh, O, seed + 5u, 60);                     // Evolve from scratch
+    acc(teach, neuroFighter(base), O); acc(evo, neuroFighter(e), O);
+    acc(qcone, neuroFighter(qc), O);  acc(qlive, neuroFighter(ql), O);
+    acc(scratch, neuroFighter(es), O);
+  }
+  prow("Teach only", teach);
+  prow("Teach -> Evolve vs opp", evo);
+  prow("Teach -> Q vs cone", qcone);
+  prow("Teach -> Q vs live opp", qlive);
+  prow("Evolve from scratch", scratch);
+}
+
 int main() {
   const int N = 16;
 
@@ -170,17 +231,33 @@ int main() {
   playSumo("vs distilled", hunter, dh, N);
   playSumo("vs evolved",   hunter, ef, N);
 
-  printf("\n================ SOCCER ================\n");
-  Program A = socChaser();
-  Program oD5 = distilledStriker(7, 5000), oD5b = distilledStriker(19, 5000),
-          oD20 = distilledStriker(7, 20000), oEvo = evolvedStriker(7, A, 40);
-  struct { const char* n; Program p; } opps[] = {
-    {"distill s7", oD5}, {"distill s19", oD5b}, {"distill-20k", oD20}, {"Teach->Evolve", oEvo}};
+  printf("\n======== SOCCER: hand-coded vs trained strikers (4 opponent seeds x %d matches = %d games) ========\n", N, 4 * N);
   Program socs[] = {socChaser(), socBehind(), socCommit(), socBehindWall()};
   const char* socn[] = {"chaser", "behind", "commit", "behind+wall"};
-  for (auto& o : opps) {
-    printf("vs %s:\n", o.n);
-    for (int i = 0; i < 4; i++) playSoccer(socn[i], socs[i], o.p, N);
+  uint32_t oppSeeds[] = {7u, 19u, 31u, 53u};
+  for (int i = 0; i < 4; i++) {
+    Rec agg;
+    for (uint32_t os : oppSeeds) {
+      Program O = distilledStriker(os, 8000);
+      Rec r = playSoccerRec(socs[i], O, N);
+      agg.w += r.w; agg.d += r.d; agg.l += r.l; agg.gf += r.gf; agg.ga += r.ga;
+    }
+    prow(socn[i], agg);
   }
+
+  printf("  -- best hand-coded (chaser) vs STRONGLY-trained strikers --\n");
+  { Rec a20, aEv;
+    for (uint32_t os : oppSeeds) {
+      Program O20 = distilledStriker(os, 20000);
+      Net base = distillNet(os, 8000); Program OEv = neuroFighter(evolveNet(base, O20, os, 60));
+      Rec r20 = playSoccerRec(socChaser(), O20, N), rEv = playSoccerRec(socChaser(), OEv, N);
+      a20.w+=r20.w;a20.d+=r20.d;a20.l+=r20.l;a20.gf+=r20.gf;a20.ga+=r20.ga;
+      aEv.w+=rEv.w;aEv.d+=rEv.d;aEv.l+=rEv.l;aEv.gf+=rEv.gf;aEv.ga+=rEv.ga;
+    }
+    prow("chaser vs distill-20k", a20);
+    prow("chaser vs Teach->Evolve", aEv);
+  }
+
+  recipeBakeoff(6, 12);   // re-derive the TRAINING_FINDINGS recipe claims over many seeds
   return 0;
 }
