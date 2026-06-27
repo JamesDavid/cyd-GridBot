@@ -19,10 +19,8 @@ This is a working checklist from a read-only review of the codebase, `docs/COURS
 - [x] Update `docs/CURRICULUM.md` Day 5 to match the newer training findings. **(Done 2026-06-27.)**
   - Rewrote Day 5 step 1: lead with Teach (63%, strong in seconds), **keep the Teach base**, and only adopt a refinement if a **rematch proves it's better** — citing the bake-off (Teach→Evolve 84% helped; Q-Learn 44%/26% often hurt). No longer recommends "Teach then Q-Learn to sharpen" by default.
 
-- [ ] Fix the badge hint table length.
-  - `ACH_COUNT` is 17 and includes `Generalist`.
-  - `HINT` in `src/screens/BadgesScreen.cpp` has only 16 entries.
-  - Add a Generalist hint so unearned badge rendering never reads past the initialized hint list.
+- [x] Fix the badge hint table length. **(Done 2026-06-27.)**
+  - Confirmed: `HINT[ACH_COUNT]` is sized 17 but had only 16 initializers, so `HINT[16]` (Generalist) was a value-initialized `nullptr` — and `BadgesScreen::draw` passes `HINT[i]` straight to `label()` for any *unearned* badge, so an unearned Generalist badge would render a null `char*` (crash/garbage). Added the 17th hint, "ace 10 fresh mazes" (matches `GAUNTLET_MAZES = 10`), and fixed the stale `// ... for 16 badges` row-count comment. Firmware builds.
 
 - [ ] Clean up internal "12-input soccer brain" comments.
   - Public docs mostly state the correct `10 -> 8 -> 5` shape.

@@ -13,7 +13,7 @@ static const char* HINT[ACH_COUNT] = {
   "win a level", "earn 3 stars", "use a Jump", "use a Repeat", "use a Function",
   "clear a sense level", "win an arena", "5-win streak", "10-win streak",
   "reach level 10", "reach level 20", "draw a sprite", "earn 50 stars",
-  "train a brain", "win with a brain", "save a fighter"};
+  "train a brain", "win with a brain", "save a fighter", "ace 10 fresh mazes"};
 
 void BadgesScreen::enter() { draw(); }
 
@@ -26,7 +26,7 @@ void BadgesScreen::draw() {
   snprintf(hdr, sizeof(hdr), "Badges %d/%d", achievementCount(mask), ACH_COUNT);
   label(g, 6, 3, hdr, C_ACCENT, textdatum_t::top_left, 2);
 
-  const int rowsPerCol = (ACH_COUNT + 1) / 2;  // 8 rows x 2 cols for 16 badges
+  const int rowsPerCol = (ACH_COUNT + 1) / 2;  // 9 rows x 2 cols for 17 badges
   for (int i = 0; i < ACH_COUNT; i++) {
     bool got = mask & (1u << i);
     int col = i / rowsPerCol, row = i % rowsPerCol;
