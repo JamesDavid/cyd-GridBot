@@ -185,16 +185,16 @@ Condensed pages. Same shape as the sample: **Big idea · On screen · Ask · Wat
 > NeuroLab. Have students hand-code a bot for each Arena game and play it against a trained brain —
 > the measured punchline *is* the "match the method" lesson (NeuroLab 17): **Maze & Battle → hand-coding
 > wins** (a 3-rule wall-follower solves **8× more unseen mazes** than a one-maze brain; the priority-rule
-> hunter goes **9-5-2** vs trained fighters), **Soccer → learning wins** (the best hand-coded dribbler
-> *ties some* trained strikers but loses to others — the strongest wins 80–352; finishing finesse
-> needs practice). Kids earn NeuroLab by feeling
-> exactly where rules run out — then open it knowing *what* the brain is trying to learn. Every number
-> is reproducible from `tools/bot_eval.cpp`.
+> hunter goes **9-5-2** vs trained fighters), **Soccer → learning wins *if trained well*** (a hand-coded
+> dribbler is a coin-flip vs a *quick* trained striker but loses to a *well*-trained one — Teach→Evolve
+> **64–0**). Kids earn NeuroLab by feeling exactly where rules run out — then open it knowing *what* the
+> brain is trying to learn. Every number is reproducible (multi-seed) from `tools/bot_eval.cpp`.
 
 > **📗 The NeuroLab-side companion — the [AI Coding Guide](AI-CODING-GUIDE.md).** The sequel that does
 > the same three games with a trained **`+brain`** (Teach / Q-Learn / Evolve), with on-device
-> screenshots and the measured training results (the championship recipe, the regression trap, and how
-> to train without over-fitting). Pair it with the Hand-Coding Guide for the full "rules vs. learning" arc.
+> screenshots and **multi-seed** training results — including a candid lesson on why a single
+> deterministic match isn't an eval (one of our on-device findings reversed when averaged over seeds).
+> Pair it with the Hand-Coding Guide for the full "rules vs. learning" arc.
 
 ### NeuroLab (train the rules)
 

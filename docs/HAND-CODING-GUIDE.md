@@ -187,7 +187,9 @@ repeat until goal {
 ```
 
 It scores sometimes… but it shoves the ball **whatever way it's facing**, including into its *own*
-goal. Against a real opponent it **loses every time**.
+goal — so it gives away cheap own-goals. *(Funnily enough, on the current engine this scrappy chaser
+still does about as well as the tidier "behind" bot below — proof that a sensible-looking rule isn't
+always the better one. The point of "get behind" is the **idea**: stop scoring on yourself.)*
 
 ![Soccer chaser, top](img/hc-soccer-1-1.png) ![Soccer chaser, scrolled](img/hc-soccer-1-2.png)
 
@@ -224,22 +226,24 @@ inside`** on the `if ball ^` row to put blocks inside it:
 
 ### How it does
 
-Each row is **16 matches** against a different trained neural striker (goals = total over the 16):
+Measured over many seeds (`tools/bot_eval.cpp` — each row aggregates 4 trained opponents × 16
+matches = 64 games), as a **win-rate**:
 
-| Trained-striker opponent | "Get behind the ball" |
-|---|---|
-| Distilled striker **A** | **draw** — 208–208 |
-| Distilled striker **B** *(same recipe, different practice)* | **loses** — 128–320 |
-| **Teach → Evolve** striker | **wins** — 288–208 (16–0) |
-| **Max-trained** striker *(the strongest possible)* | **loses** — 80–352 |
+| Hand-coded bot vs… | a **quick**-trained striker | a **well**-trained striker (distill-20k / Teach→Evolve) |
+|---|---|---|
+| naive **chaser** | ~**50%** (a coin-flip) | **25% / 0%** — loses |
+| **"get behind the ball"** | ~**25%** | **25% / 0%** — loses |
 
-So an honest read: a *well-designed* hand-coded soccer bot is **right at the edge of competitive**. It
-can **tie** one trained striker and even **beat** the evolved one — but it **loses to others**, and the
-strongest brain beats it **clearly** (80–352). It is **not** a robust win the way the maze and battle
-bots are; across the board the trained brains have the edge. We tried *eight* hand-coded strategies
-(including using the `foe` sense to aim away from the keeper — it made things **worse**, and a
-"commit the shot" variant lost every match). The ceiling for simple reactive rules is "can hang with a
-trained striker on a good day, but a notch below the best."
+So an honest read: a hand-coded soccer bot is **roughly competitive with a *quick* trained striker**
+(it's about a coin-flip), but a **well-trained** one beats it decisively — a Teach→Evolve striker won
+**every one of 64** games. It is **not** a robust win the way the maze and battle bots are.
+
+Two honest surprises worth telling the kids: (1) on the current engine the careful **"get behind the
+ball"** bot is **no better than the naive chaser** — sometimes *worse* — so the "correct" idea doesn't
+automatically win (a real lesson: a sensible rule isn't always a winning one). (2) Our **older numbers
+here were a single match each and didn't hold up** — which is exactly why we now average over seeds.
+The "get behind" idea still matters *conceptually* (it's how you avoid shoving the ball into your own
+net); it just isn't a trophy.
 
 **Why?** A trained brain saw thousands of examples and learned *finishing finesse* — aiming at the
 open corner of the net, hitting the exact spot to stand. Reactive blocks can't hold a plan in memory
@@ -256,7 +260,7 @@ Here's the whole lesson on one line each:
 |---|---|---|
 | 🧩 **Maze** | a 3-rule wall-follower solves **8×** more unseen mazes | ✍️ **Hand-coding** — a correct rule generalises |
 | 🤖 **Battle** | the hunter goes **9-5-2** vs trained fighters | ✍️ **Hand-coding** — clear priorities win |
-| ⚽ **Soccer** | the best dribbler **ties some** trained strikers, **loses to others**, and the strongest beats it 80–352 | 🧠 **Learning** — finesse needs practice |
+| ⚽ **Soccer** | the best dribbler is a **coin-flip vs a *quick* trained striker**, but loses to a **well-trained** one (Teach→Evolve **64–0**) | 🧠 **Learning** — *if trained well*; finesse needs practice |
 
 **That's why machine learning exists.** When a job is easy to describe as rules (find the wall, face
 the foe), *write the rules* — it's clearer, faster, and it generalises. When a job is full of feel and

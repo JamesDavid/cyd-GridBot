@@ -2,13 +2,45 @@
 
 *What we learned running real fighters head-to-head across two CYDs over ESP-NOW.*
 
-Everything below is from **actual on-device matches** between two boards (COM3 = profile **AA**,
-blue; COM5 = profile **BB**, red), played in the networked **Room**. The Arena is fully
-deterministic — both boards independently replay the identical Cup from a shared seed and crown the
-**same champion** — so every result here is reproducible, not a lucky run.
+Everything in the "on-device log" below is from **actual matches** between two boards (COM3 = profile
+**AA**, blue; COM5 = profile **BB**, red) in the networked **Room**. The Arena is deterministic, so
+each was *reproducible* — but **each was ONE match (N=1)**, and a single deterministic match is a point
+estimate, not an eval. We later re-ran the claims over many seeds with `tools/bot_eval.cpp`; the
+honest aggregate is up top here, and it **corrects** two of the on-device stories.
 
 The bots are all the same tiny network: **10 senses → 8 hidden → 5 actions**. Only *how we trained
-the weights* changes between the models below.
+the weights* changes.
+
+---
+
+## ⚖️ Multi-seed reproduction (the honest numbers — `tools/bot_eval.cpp`)
+
+Each recipe is trained **from scratch per seed** and judged over **many matches vs the same strong
+opponent it trained on** (≈72 games each); the soccer-vs-hand-coded rows aggregate 4 opponent seeds ×
+16 matches (64 games). Win-rates, not single scorelines:
+
+| What | Multi-seed result | vs the on-device N=1 story |
+|---|---|---|
+| 🧩 Maze: wall-follower+jump vs one-maze brain | **8/16 vs 1/16** unseen | ✓ holds |
+| 🤖 Battle: hand-coded hunter vs trained | **9-5-2** | ✓ holds |
+| ⚽ Best hand-coded striker vs a **quick** trained one | ~**50%** (a coin-flip) | — |
+| ⚽ Best hand-coded striker vs a **well-trained** one (distill-20k / Teach→Evolve) | **25% / 0%** (loses) | — |
+| **Teach** (distill) vs a peer striker | **83%** win | ✓ "competent fast" holds |
+| **Evolve from scratch** vs a peer | **33%** win | ✓ "imitate first" holds (much weaker) |
+| **Teach→Evolve** vs a peer | **83%** (no losses; vs *hand-coded* it's 64-0) | ~ partly: it's *robust*, not dramatically stronger than Teach |
+| **Teach→Q-Learn (vs a cone)** | **66%** | ✗ did NOT regress — the on-device 0–7 was a fluke |
+| **Teach→Q-Learn (vs the LIVE opponent)** | **16%** (worst) | ✗ **REVERSED** — live-opponent refinement *hurt* most; the on-device 3–3 "realism fixes it" did not reproduce |
+
+**What survives as a measured claim:** (1) **imitate an expert first** — Teach (83%) crushes
+evolve-from-scratch (33%); (2) **soccer rewards training** — a *well-trained* striker beats the best
+hand-coded bot decisively (Teach→Evolve 64-0), while a *quick* one only ties it; (3) **more training
+isn't better** — reward-refining a good imitation policy (Q-Learn) here *didn't help and often hurt*.
+
+**What we retract:** the **cone-trap narrative** ("Q-vs-a-cone regresses, training against the live
+opponent fixes it") — over 72 seeds it **reversed** (live-opponent Q-Learn was the worst). It was a
+single deterministic match. *This is the whole reason N=1 isn't an eval, demonstrated on our own
+findings.* The detailed on-device log below is kept as **history** (what we saw, once), not as
+measured law.
 
 ---
 

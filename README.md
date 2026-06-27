@@ -215,10 +215,11 @@ a one-off match, a local **Tournament**, or a multi-device **Room**.
 > the maze **wall-follower**, the battle **hunter**, the soccer **dribbler** — then plays each against
 > a trained neural bot and shows, with measured results, **which jobs hand-coding wins and which need
 > AI**: Maze & Battle reward a clear rule (a 3-rule wall-follower solves **8× more unseen mazes**; the
-> hunter goes **9-5-2** vs trained fighters), while Soccer is where *learning* pulls ahead (the best
-> hand-coded dribbler **ties some** trained strikers but **loses to others**, and the strongest beats
-> it 80–352). It's the hands-on on-ramp from *"I write
+> hunter goes **9-5-2** vs trained fighters), while Soccer is where *learning* pulls ahead *if you train
+> well* — a hand-coded dribbler is a coin-flip vs a **quick** trained striker but loses to a
+> **well-trained** one (Teach→Evolve **64–0**). It's the hands-on on-ramp from *"I write
 > the rules"* to *"I train the rules"* — kids earn NeuroLab by feeling exactly where rules run out.
+> *(All numbers are multi-seed, reproducible from `tools/bot_eval.cpp`.)*
 
 > **📅 Teaching it?** The **[5-Day Curriculum](docs/CURRICULUM.md)** turns all of this into five 1–2 hour
 > sessions — *Drive → Think → Compete → Learn → Champion* — taking a kid from zero to a soccer-player

@@ -29,33 +29,33 @@
     </div>
   </section>
 
-  <section class="slide" data-note="The winning recipe from our real device tests. Teach to get competent, THEN evolve that brain against the actual opponent you must beat. It was the only model that won — 5-2.">
-    <p class="kicker">The recipe that won 🏆</p>
-    <h2>Teach → Evolve <span style="color:var(--accent)">vs the real opponent</span></h2>
-    <p><span class="pill go">Teach</span> get competent fast → <span class="pill pur">Evolve that brain</span> against <b>the exact bot you must beat</b>.</p>
-    <p class="callout">Of every combo we tried on real devices, this was the <b>only one that won — 5–2</b>. Each generation pushes your good brain toward <b>the actual goal</b>.</p>
-  </section>
-
-  <section class="slide" data-note="The trap right next to it — and the most valuable lesson of the week. Same distilled brain, but Q-Learned against a STILL cone (a simpler game than the real match) got WORSE — 0-7. A wrong-target refinement destroys a good brain.">
-    <p class="kicker">⚠️ The trap next to it</p>
-    <h2>Training <span style="color:var(--bad)">more</span> can make it <span style="color:var(--bad)">worse</span></h2>
+  <section class="slide" data-note="The recipe bake-off, measured over ~72 games per recipe. Teach (imitate an expert) wins ~83% and crushes evolving from random noise (~33%). Imitate first.">
+    <p class="kicker">Which recipe wins? (over ~72 games)</p>
+    <h2>Imitate an expert <span style="color:var(--accent)">first</span> 🏆</h2>
     <table>
-      <tr><th>Take a good distilled striker, then…</th><th>Result</th></tr>
-      <tr><td>nothing (Teach only)</td><td>competent — a one-goal game</td></tr>
-      <tr><td><b>Evolve</b> vs the real opponent</td><td><b style="color:var(--go)">wins 5–2</b> ✅</td></tr>
-      <tr><td>Q-Learn vs a <b>still cone</b></td><td><b style="color:var(--bad)">regresses to 0–7</b> ⚠️</td></tr>
+      <tr><th>Recipe</th><th>Win-rate</th></tr>
+      <tr><td><b style="color:var(--go)">Teach</b> (copy an expert)</td><td><b style="color:var(--go)">83%</b> — strong, fast</td></tr>
+      <tr><td><b style="color:var(--purple)">Evolve from scratch</b></td><td><b style="color:var(--bad)">33%</b> — much weaker</td></tr>
     </table>
-    <p class="sub">The cone is a <b>simpler game than the real match</b> — its reward overwrote the good habits.</p>
+    <p class="sub">Copy a good dribbler instead of discovering from nothing. <b>Train well to win soccer:</b> a quick striker only ties a hand-coded bot; a well-trained one wins.</p>
   </section>
 
-  <section class="slide" data-note="The fix wasn't a new algorithm — it was REALISM. The same Q-Learn recipe, run against the real moving opponent, recovered to 3-3. And you must let the reward run FINISH — a half-done pass is mid-regression.">
-    <p class="kicker">🔧 The fix is realism, not a new trick</p>
-    <h2>Train against what you'll <span style="color:var(--accent)">actually face</span></h2>
-    <ul>
-      <li>Q-Learn vs the <b>real moving</b> opponent → recovered <b>0–7 → 3–3</b>.</li>
-      <li><b>Let the reward run finish</b> — a half-done pass is stuck mid-regression. Finished, it flipped a draw into a <b>win</b>.</li>
-    </ul>
-    <p class="sub">Episode count is not a footnote.</p>
+  <section class="slide" data-note="The honest, counterintuitive lesson: reward-refining a good distilled striker with Q-Learn often DIDN'T help, and refining vs a live moving opponent was the WORST (16%). More training is not automatically better.">
+    <p class="kicker">⚠️ More training ≠ better</p>
+    <h2>Refining can make it <span style="color:var(--bad)">worse</span></h2>
+    <table>
+      <tr><th>Take a strong distilled striker, then…</th><th>Win-rate</th></tr>
+      <tr><td>nothing (Teach only)</td><td><b style="color:var(--go)">83%</b></td></tr>
+      <tr><td>Q-Learn (reward-refine)</td><td><b style="color:var(--bad)">66% → 16%</b> 👎</td></tr>
+    </table>
+    <p class="sub">A solid imitation policy is <b>fragile</b> — a second objective can pull it off its good habits. Keep the version that <b>wins the rematch</b>, not the one that "trained the most."</p>
+  </section>
+
+  <section class="slide" data-note="The N=1 lesson — and our own mistake. An on-device single match said the opposite (Q-vs-cone bad, live good); over 72 seeds it REVERSED. A deterministic match is reproducible but not representative. Average over seeds. Great science-corrects-itself moment.">
+    <p class="kicker">🧪 One match isn't an eval</p>
+    <h2>Why we don't trust a <span style="color:var(--bad)">single</span> game</h2>
+    <p>An early <b>one-match</b> test on a device said a recipe was bad. Over <b>72 matches</b> it said the <b>opposite</b>.</p>
+    <p class="callout">The Arena is <b>deterministic</b> — so one match is <i>reproducible</i>. But reproducible <b>≠ representative</b>. <b>Always average over many seeds.</b></p>
   </section>
 
   <section class="slide" data-note="You can WATCH over-fitting. Evolve too long on one fixed pitch and the bot literally 'just stays there' in a real match — it memorised that one board. Fix: vary the board. This is the Day-2 maze lesson again.">
@@ -90,10 +90,10 @@
     <p class="kicker">🩺 “My bot got worse!”</p>
     <h2>That's the best lesson, not a fail</h2>
     <ul>
-      <li>Refined vs a <b>too-easy</b> partner (a still cone)? → use a <b>real moving</b> foe.</li>
-      <li>Stopped the reward run <b>early</b>? → <b>let it finish</b>.</li>
-      <li>Evolved long on <b>one board</b>? → <b>vary the board</b>.</li>
-      <li>Still stuck? → <b>re-Teach</b> a fresh base, then refine.</li>
+      <li>Refining often <b>doesn't help</b> → <b>keep your Teach base</b>; only adopt a refined brain if a rematch proves it's better.</li>
+      <li>Evolved long on <b>one board</b>? → <b>vary the board</b> (over-fitting).</li>
+      <li>Judge a change over <b>many games</b>, not one.</li>
+      <li>Still stuck? → <b>re-Teach</b> a fresh base — more training isn't the fix.</li>
     </ul>
   </section>
 
@@ -119,7 +119,7 @@
       <tr><th>Game</th><th>Who wins</th></tr>
       <tr><td>🧩 Maze</td><td>✍️ <b>Hand-coding</b> — a correct rule generalises</td></tr>
       <tr><td>🤖 Battle</td><td>✍️ <b>Hand-coding</b> — clear priorities win</td></tr>
-      <tr><td>⚽ Soccer</td><td>🧠 <b>Learning</b> — finesse needs practice</td></tr>
+      <tr><td>⚽ Soccer</td><td>🧠 <b>Learning</b> — <i>if trained well</i> (a quick striker only ties)</td></tr>
     </table>
     <p class="sub"><b>Match the method to the problem.</b></p>
   </section>
