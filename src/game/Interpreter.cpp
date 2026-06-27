@@ -247,10 +247,11 @@ Outcome Interpreter::step() {
         uint32_t mask = _enemy ? 0xFFFFFFFFu : ~(1u << 4);
         int act = useRnn ? _prog->rbrains[n.brainIdx].argmaxStep(s, mask)
                          : _prog->brains[n.brainIdx].argmax(s, mask);
-        // Soccer has no SUMO zap -- a battle-trained brain that fires when it faces its goal would
-        // freeze in place forever. Remap the zap action to a forward step so any brain at least plays
-        // (a true soccer brain never picks zap, so it's unaffected).
-        if (_enemy && _enemy->net && act == 4) act = 0;
+        // Soccer KEEPS the zap (action 4 -> CMD_FIRE): the match engine resolves a soccer fire as the
+        // ball-SWAP (Arena §2c), which is exactly what qTrainSoccer/distillSoccer model. So a trained
+        // soccer brain can use the swap it learned -- training and inference agree. (A fire that isn't
+        // facing the ball is a harmless wasted tick, bounded by the match step cap; soccer never deals
+        // sumo damage.)
         _lastCmd = kBrainAction[act];
         Outcome o = execCmd(_lastCmd);
         if (o != OUT_OK) { finish(o); return o; }

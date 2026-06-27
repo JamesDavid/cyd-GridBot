@@ -419,6 +419,8 @@ bool qTrainSoccer(Net& brain, uint32_t seed, int episodes, int globalDone, int g
   Rng rng(seed ^ 0x50cce700u);
   Maze m; Pose ps0, ps1, kick, g0, g1;
   MazeGen::generateSoccerPitch(m, seed, ps0, ps1, kick, g0, g1);
+  // NA=5: soccer keeps ZAP (action 4) -- it's the swap that turns the ball around. qSoccerStep models
+  // the swap and the match interpreter executes it, so training and inference agree.
   const int NA = 5; const float G = 0.92f;
   float in[SENSOR_COUNT], nin[SENSOR_COUNT], out[NET_MAX_OUT], nout[NET_MAX_OUT];
   Interpreter oppIt; EnemyView oppEv;       // a LIVE opponent (if given): its own brain/code moves it
@@ -469,7 +471,7 @@ bool qTrainSoccerRnn(RNet& brain, uint32_t seed, int episodes, int globalDone, i
   Rng rng(seed ^ 0x50cce700u);
   Maze m; Pose ps0, ps1, kick, g0, g1;
   MazeGen::generateSoccerPitch(m, seed, ps0, ps1, kick, g0, g1);
-  const int NA = 5; const float G = 0.92f;
+  const int NA = 5; const float G = 0.92f;        // soccer keeps ZAP (the swap) -- see qTrainSoccer above
   float *rew = gQrew, *qmax = gQmax, *qt = gQt;   // shared scratch (saves DRAM)
   float out[RNET_MAX_OUT];
   for (int e = 0; e < episodes; e++) {

@@ -11,10 +11,10 @@ const char* const BRAIN_INLBL[SENSOR_COUNT_FOR_BRAIN] =
   {"wallF","wallL","wallR","pitF","goalF","goalR","goalD","foeF","foeR","foeD"};
 const char* const BRAIN_OUTLBL[5] = {"fwd","turnL","turnR","jump","zap"};
 // Soccer view: same brain, different senses (ball ego 3-5, net bearing 6-7, rival bearing 8-9);
-// the zap output is a no-op on the pitch (the interpreter remaps it to forward).
+// output 4 is the ball-SWAP -- facing the ball, fire to trade places with it (turn it back to goal).
 const char* const BRAIN_INLBL_SOCCER[SENSOR_COUNT_FOR_BRAIN] =
   {"wallF","wallL","wallR","ballF","ballR","ballD","netF","netR","rivF","rivR"};
-const char* const BRAIN_OUTLBL_SOCCER[5] = {"fwd","turnL","turnR","jump","-"};
+const char* const BRAIN_OUTLBL_SOCCER[5] = {"fwd","turnL","turnR","jump","swap"};
 
 // network geometry (absolute screen coords)
 static const int IX = 92, HX = 178, OX = 252;

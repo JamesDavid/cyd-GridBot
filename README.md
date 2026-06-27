@@ -182,7 +182,7 @@ a one-off match, a local **Tournament**, or a multi-device **Room**.
 
 | ![Soccer brain](docs/img/soccer-brain.png) |
 |:--|
-| **The same brain, re-sensed.** Flip the trainer to its Brain Cam in soccer mode and the `10 → 8 → 5` network is *literally the same one* a maze-solver or a fighter uses — only the **senses are relabelled**: `ballF/ballR/ballD` (where's the ball, relative to me), `netF/netR` (which way's the goal), `rivF/rivR` (the rival). The `zap` output even greys to **`-`**, because there's no zapping on the pitch. It's the clearest on-device proof of *one brain, many jobs* — a maze brain, a brawler, and a striker are the identical shape trained on different objectives. |
+| **The same brain, re-sensed.** Flip the trainer to its Brain Cam in soccer mode and the `10 → 8 → 5` network is *literally the same one* a maze-solver or a fighter uses — only the **senses are relabelled**: `ballF/ballR/ballD` (where's the ball, relative to me), `netF/netR` (which way's the goal), `rivF/rivR` (the rival). The 5th output is relabelled **`swap`** — there's no sumo zap on the pitch, so firing while facing the ball **trades places with it** to turn it back toward goal (a move a trained striker can learn). It's the clearest on-device proof of *one brain, many jobs* — a maze brain, a brawler, and a striker are the identical shape trained on different objectives. |
 
 | ![Radio friend](docs/img/radio.png) |
 |:--|

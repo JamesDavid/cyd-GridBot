@@ -256,7 +256,8 @@ ArenaOutcome Arena::tick() {
   }
 
   // 3) Attacks resolve AFTER moves (SPEC §18.1). A zap shoves the enemy one tile in
-  // the zapper's facing; into a PIT / off-board = out (Sumo, SPEC §18.2). Soccer has no zap.
+  // the zapper's facing; into a PIT / off-board = out (Sumo, SPEC §18.2). Soccer has no SUMO
+  // zap (no damage) -- its zap is the ball-swap, resolved in §2c above, so skip this loop.
   for (int i = 0; _type != MatchType::SOCCER && i < 2; i++) {
     if (!zapping[i] || !_bot[i].alive) continue;
     if (_type == MatchType::SUMO && _bot[i].zapCd > 0) continue;  // still recovering -> fizzle

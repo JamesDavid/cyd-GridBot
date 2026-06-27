@@ -133,8 +133,9 @@ the best hand-coded bot **~92%** (59-5). Soccer rewards *finishing finesse* (aim
 in the exact spot) that's hard to write as rules but **learnable** — *if you train it well.*
 
 Open the soccer trainer (**Arena → Train a fighter → Soccer**). The Brain-Cam view shows the *same*
-`10→8→5` net, now sensing the **ball**, the **net**, and the **rival** — and the **zap** output greys
-to `–`, because there's a zap-swap but no sumo zap on the pitch.
+`10→8→5` net, now sensing the **ball**, the **net**, and the **rival** — and the 5th output is
+relabelled **`swap`**: there's no sumo zap on the pitch, so firing while facing the ball **trades places
+with it** (turning it back toward goal). A trained striker can learn to use it.
 
 ![Training a soccer brain (Brain-Cam)](img/soccer-brain.png)
 
@@ -148,8 +149,8 @@ the caveat below:
 |---|---|
 | **Teach → Evolve** vs the opponent | **84%** — best here |
 | **Teach** (imitate an expert dribbler) | **63%** — strong, in seconds |
-| **Teach → Q-Learn** (refine for reward) | **37% (cone) / 29% (live)** — *didn't help; hurt* |
-| **Evolve from scratch** | **23%** — much weaker |
+| **Teach → Q-Learn** (refine for reward) | **44% (cone) / 26% (live)** — *didn't help; hurt* |
+| **Evolve from scratch** | **13%** — much weaker |
 
 > **Qualify it:** this is **one deterministic run** over a fixed set of 6 seeds vs **distilled
 > strikers** (one opponent class), tiny `10→8→5` net, seconds of training. It's bit-reproducible but
@@ -157,10 +158,10 @@ the caveat below:
 
 The takeaways from this eval:
 
-1. **Imitate an expert first.** Teach (63%) clearly beats evolving from random noise (23%) in the same
+1. **Imitate an expert first.** Teach (63%) clearly beats evolving from random noise (13%) in the same
    time. If a good expert exists, copy it — don't start from nothing.
 2. **More training isn't always better.** Reward-refining a *good* distilled striker with Q-Learn
-   **didn't improve it** — both cone (37%) and live-opponent (29%) Q-Learn landed *below* Teach (63%).
+   **didn't improve it** — both cone (44%) and live-opponent (26%) Q-Learn landed *below* Teach (63%).
    A solid imitation policy is fragile; a second objective can perturb it.
 3. **Train well to win soccer.** Hand-coded strikers lose to trained ones; among recipes, refining a
    good imitation *against the opponent* (Teach→Evolve, 84%) did best. Soccer is where the *quality* of
@@ -169,7 +170,7 @@ The takeaways from this eval:
 > **⚠️ A lesson from our own mistake — why one match isn't an eval.** An earlier on-device run found a
 > tidy story: Q-Learn-vs-a-cone "regressed 0–7" and training vs the live opponent "fixed it 3–3." That
 > was **one deterministic match**. Re-run over 72 games it **did not reproduce** (live-opponent Q-Learn,
-> 29%, was if anything worse than the cone, 37%). The deterministic Arena makes a single match
+> 26%, was worse than the cone, 44%). The deterministic Arena makes a single match
 > *reproducible*, but reproducible ≠ representative — always average over seeds. (Full before/after in
 > [TRAINING_FINDINGS.md](TRAINING_FINDINGS.md).)
 
