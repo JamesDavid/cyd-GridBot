@@ -119,6 +119,10 @@ class GameScreen : public app::IScreen {
   int _pendingNeuro = -1;  // brainIdx the user asked to train (-> Signal::GOTO_NEURO_TRAIN)
   int _scroll = 0;
   bool _followTail = true;  // keep the newest command in view as you add
+  // swipe-to-scroll the program list: a press in the rows becomes a drag (scroll) or, if it didn't
+  // move, a tap-on-release (select). So a swipe never accidentally selects/edits a block.
+  bool _rowPress = false, _dragged = false;
+  int _pressTX = 0, _pressTY = 0, _dragScroll0 = 0, _dragMax = 0;
 
   gb::Pose _drawnPose;          // last drawn character pose (for dirty-rect)
   bool _visited[gb::MAZE_MAX_CELLS] = {false};  // breadcrumb trail

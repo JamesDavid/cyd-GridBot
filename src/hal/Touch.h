@@ -18,6 +18,7 @@ class Touch {
   void recalibrate();           // force the 4-corner routine + persist
   void clearCalibration();      // delete stored calibration (forces re-cal on reboot)
   void inject(int x, int y, int frames = 1);  // synthetic touch held for `frames` reads (1 = a tap)
+  void injectDrag(int x, int y0, int y1, int frames);  // synthetic vertical drag (x fixed) over `frames`
   void setLog(bool on) { _log = on; }
 
  private:
@@ -26,6 +27,8 @@ class Touch {
   void runCalibration();        // draws corners, stores result
 
   int _injX = 0, _injY = 0, _injCount = 0;  // synthetic tap state
+  int _dragX = 0, _dragY0 = 0, _dragY1 = 0, _dragN = 0, _dragI = 0;  // synthetic drag state
+  bool _dragging = false;
   bool _log = false;
   uint32_t _lastLog = 0;
 };

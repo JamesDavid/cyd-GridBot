@@ -1316,11 +1316,41 @@ app::Signal GameScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     return app::Signal::NONE;
   }
 
-  if (tap) {
-    if (_view == V_CODE) handleCodeTap(tx, ty);
-    else if (R_RUNBAR.contains(tx, ty)) startRun();
-    if (_pendingNeuro >= 0) return app::Signal::GOTO_NEURO_TRAIN;  // open the neuro interface
+  // Code list: SWIPE up/down on the program rows to scroll; a press that doesn't drag selects the
+  // row on release. (Tabs + the scrollbar strip stay immediate.) This lets you scroll a long program
+  // with a finger flick instead of only the scrollbar.
+  if (_view == V_CODE) {
+    int sbX = LIST_X + LIST_W - 9;   // the thin scrollbar strip on the right edge
+    if (tap) {
+      bool inRows = tx >= LIST_X && tx < sbX && ty >= listTop() && ty < BOTBAR_Y;
+      if (inRows) {                  // begin a potential drag-or-tap on the rows
+        _rowPress = true; _dragged = false; _pressTX = tx; _pressTY = ty; _dragScroll0 = _scroll;
+        std::vector<Row> rows; flatten(*_editList, 0, rows);
+        int visible = (SCREEN_H - listTop()) / ROW_H;
+        _dragMax = (int)rows.size() > visible ? (int)rows.size() - visible : 0;
+      } else {                       // tabs / scrollbar / save-load: act immediately
+        handleCodeTap(tx, ty);
+        if (_pendingNeuro >= 0) return app::Signal::GOTO_NEURO_TRAIN;
+      }
+    } else if (_rowPress && tp.pressed) {           // dragging -> scroll the list with the finger
+      int dy = tp.y - _pressTY;
+      if (!_dragged && (dy > 10 || dy < -10)) { _dragged = true; _followTail = false; }
+      if (_dragged) {
+        int ns = _dragScroll0 - dy / ROW_H;
+        if (ns < 0) ns = 0; else if (ns > _dragMax) ns = _dragMax;
+        if (ns != _scroll) { _scroll = ns; drawProgramList(); }
+      }
+    } else if (_rowPress && !tp.pressed) {          // released
+      _rowPress = false;
+      if (!_dragged) {                              // didn't drag -> it was a tap: select/edit the row
+        handleCodeTap(_pressTX, _pressTY);
+        if (_pendingNeuro >= 0) return app::Signal::GOTO_NEURO_TRAIN;
+      }
+    }
+    return app::Signal::NONE;
   }
+
+  if (tap && R_RUNBAR.contains(tx, ty)) startRun();  // V_MAZE: the RUN bar
   return app::Signal::NONE;
 }
 

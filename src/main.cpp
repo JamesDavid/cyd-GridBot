@@ -46,6 +46,12 @@ static void handleSerialLine(const String& line) {
       hal::touch.inject(x, y, n >= 3 ? frames : 1);   // 3rd arg = hold N frames (test long-press)
       Serial.printf("TAP %d %d %d\n", x, y, n >= 3 ? frames : 1);
     }
+  } else if (c == 'W') {
+    int x = 0, y0 = 0, y1 = 0, frames = 12;
+    if (sscanf(line.c_str() + 1, "%d %d %d %d", &x, &y0, &y1, &frames) >= 3) {
+      hal::touch.injectDrag(x, y0, y1, frames);   // synthetic swipe (test scroll-by-drag)
+      Serial.printf("DRAG %d %d->%d /%d\n", x, y0, y1, frames);
+    }
   } else if (c == 'L') {
     static bool on = false; on = !on; hal::touch.setLog(on);
     Serial.printf("LOG %s\n", on ? "on" : "off");

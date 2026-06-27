@@ -136,8 +136,24 @@ void Touch::inject(int x, int y, int frames) {
   _injX = x; _injY = y; _injCount = frames < 1 ? 1 : frames;
 }
 
+void Touch::injectDrag(int x, int y0, int y1, int frames) {
+  // A held press that slides y0 -> y1 over `frames` reads, then releases. For testing swipe-to-scroll.
+  _dragX = x; _dragY0 = y0; _dragY1 = y1; _dragN = frames < 1 ? 1 : frames; _dragI = 0; _dragging = true;
+}
+
 TouchPoint Touch::read() {
   TouchPoint p;
+  if (_dragging) {                     // synthetic drag: a moving, held press
+    int i = _dragI++;
+    if (i < _dragN) {
+      p.x = (int16_t)_dragX;
+      p.y = (int16_t)(_dragY0 + (long)(_dragY1 - _dragY0) * i / (_dragN > 1 ? _dragN - 1 : 1));
+      p.pressed = true;
+      return p;
+    }
+    _dragging = false;                 // last frame: release
+    return p;                          // pressed=false
+  }
   if (_injCount > 0) {                 // synthetic tap takes priority
     _injCount--;
     p.x = (int16_t)_injX; p.y = (int16_t)_injY; p.pressed = true;
