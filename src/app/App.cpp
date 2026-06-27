@@ -281,14 +281,14 @@ void App::debugZapDemo() {
   if (_profile.id.empty()) { Serial.println("NOPROFILE"); return; }
   using namespace gb;
   auto ifDo = [](Cond c, Cmd cmd) { Node x = Node::ifCond(c); x.body.push_back(Node::command(cmd)); return x; };
-  Program p;                                            // a net-AWARE zap-swap dribbler. The plain
-  Node loop = Node::repeatUntil(AT_GOAL);               // "always zap" version shoves the ball into its
-  Node onBall = Node::ifCond(BALL_AHEAD);               // own net (the swap pops the ball OPPOSITE your
-  onBall.body.push_back(ifDo(NET_LEFT,  CMD_FIRE));     // facing). Zapping ONLY when the net is off to a
-  onBall.body.push_back(ifDo(NET_RIGHT, CMD_FIRE));     // side means you're facing vertically, so the
-  loop.body.push_back(onBall);                          // ball flips up/down to re-line-up -- never into
-  loop.body.push_back(ifDo(BALL_LEFT,  CMD_TURN_L));    // a goal. Lined up (net ahead) -> just push it in.
-  loop.body.push_back(ifDo(BALL_RIGHT, CMD_TURN_R));
+  Program p;                                            // a zap-swap dribbler that shows off the move:
+  Node loop = Node::repeatUntil(AT_GOAL);               // on the ball with the net off to a side (so I'm
+  Node onBall = Node::ifCond(BALL_AHEAD);               // facing across the pitch, not at a goal), ZAP --
+  onBall.body.push_back(ifDo(NET_LEFT,  CMD_FIRE));     // the swap trades places with the ball AND spins
+  onBall.body.push_back(ifDo(NET_RIGHT, CMD_FIRE));     // me 180, so it's now ahead of me and I keep
+  loop.body.push_back(onBall);                          // working it toward goal. Otherwise just chase the
+  loop.body.push_back(ifDo(BALL_LEFT,  CMD_TURN_L));    // ball (turn toward it) and push. Reliably beats
+  loop.body.push_back(ifDo(BALL_RIGHT, CMD_TURN_R));    // the idle Cone while visibly using the swap.
   loop.body.push_back(Node::command(CMD_FWD));
   p.main.push_back(loop);
   LibEntry cone; cone.name = "Cone"; cone.program = Program{}; cone.source = LIB_CODE;  // idle opponent
