@@ -369,6 +369,7 @@ static float qSoccerStep(const Maze& m, const Pose& me, const Pose& ball, const 
   else if (act == 4) {                                        // ZAP: facing the ball -> SWAP places with it
     if (ar == ball.row && ac == ball.col) {                   // ball is the tile ahead
       nm.row = (int8_t)ar; nm.col = (int8_t)ac;               //   me -> the ball's tile
+      nm.facing = turnAround(me.facing);                      //   turn 180 so the ball is ahead of me again
       nball.row = me.row; nball.col = me.col;                 //   ball -> my old tile (turns it around)
     } else r = -0.03f;                                        // zapped at nothing -> a waste
   }

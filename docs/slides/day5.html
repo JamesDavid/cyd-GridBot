@@ -29,24 +29,24 @@
     </div>
   </section>
 
-  <section class="slide" data-note="The recipe bake-off — one multi-seed run, 72 games per recipe. Teach (imitate an expert) wins ~63% and clearly beats evolving from random noise (~13%). Imitate first. Directional host eval, not a confidence interval.">
+  <section class="slide" data-note="The recipe bake-off — one multi-seed run, 72 games per recipe. Teach (imitate an expert) wins ~63% and clearly beats evolving from random noise (~4%). Imitate first. Directional host eval, not a confidence interval.">
     <p class="kicker">Which recipe wins? (one run, 72 games each)</p>
     <h2>Imitate an expert <span style="color:var(--accent)">first</span> 🏆</h2>
     <table>
       <tr><th>Recipe</th><th>Win-rate</th></tr>
       <tr><td><b style="color:var(--go)">Teach</b> (copy an expert)</td><td><b style="color:var(--go)">63%</b> — strong, fast</td></tr>
-      <tr><td><b style="color:var(--purple)">Evolve from scratch</b></td><td><b style="color:var(--bad)">13%</b> — much weaker</td></tr>
+      <tr><td><b style="color:var(--purple)">Evolve from scratch</b></td><td><b style="color:var(--bad)">4%</b> — much weaker</td></tr>
     </table>
     <p class="sub">Copy a good dribbler instead of discovering from nothing. <b>Train well to win soccer:</b> hand-coded strikers lose outright; the best recipe here was Teach → Evolve <i>vs the opponent</i> (84%).</p>
   </section>
 
-  <section class="slide" data-note="The honest, counterintuitive lesson: reward-refining a good distilled striker with Q-Learn DIDN'T help — both the cone (44%) and live-opponent (26%) variants landed below Teach's 63%. More training is not automatically better.">
+  <section class="slide" data-note="The honest, counterintuitive lesson: reward-refining a good distilled striker with Q-Learn DIDN'T help — both the cone (19%) and live-opponent (36%) variants landed below Teach's 63%. More training is not automatically better.">
     <p class="kicker">⚠️ More training ≠ better</p>
     <h2>Refining can make it <span style="color:var(--bad)">worse</span></h2>
     <table>
       <tr><th>Take a strong distilled striker, then…</th><th>Win-rate</th></tr>
       <tr><td>nothing (Teach only)</td><td><b style="color:var(--go)">63%</b></td></tr>
-      <tr><td>Q-Learn (reward-refine)</td><td><b style="color:var(--bad)">44% / 26%</b> 👎</td></tr>
+      <tr><td>Q-Learn (reward-refine)</td><td><b style="color:var(--bad)">19% / 36%</b> 👎</td></tr>
     </table>
     <p class="sub">Both Q-Learn variants (vs a cone / vs the live opponent) landed <b>below</b> Teach. A solid imitation policy is <b>fragile</b> — a second objective can pull it off its good habits. Keep the version that <b>wins the rematch</b>, not the one that "trained the most."</p>
   </section>

@@ -236,10 +236,11 @@ ArenaOutcome Arena::tick() {
     else _ballStall = 0;
   }
 
-  // 2c) SOCCER zap: fire while FACING the ball -> SWAP places with it. The ball pops to where you
-  // stood (one tile "behind" your facing) and you take its tile -- a one-move way to get on the
-  // ball's far side and turn it back toward goal, instead of slowly circling (which is what lets a
-  // bot shove it into its own net). A short cooldown stops spam-oscillating it.
+  // 2c) SOCCER zap: fire while FACING the ball -> SWAP places with it AND turn 180. The ball pops to
+  // where you stood (one tile "behind" your old facing) and you take its tile; flipping your facing
+  // leaves the ball directly AHEAD of you again, so a single forward drives it back the way you came.
+  // That's the whole point -- turn a ball you were shoving the wrong way around in one move, instead
+  // of slowly circling it. A short cooldown stops spam-oscillating it.
   if (_type == MatchType::SOCCER) {
     for (int i = 0; i < 2; i++) {
       if (!zapping[i] || !_bot[i].alive || _bot[i].zapCd > 0) continue;
@@ -247,6 +248,7 @@ ArenaOutcome Arena::tick() {
       Pose bp = _bot[i].it.pose();
       if (bp.row + dr == _ball.row && bp.col + dc == _ball.col) {   // ball is the tile ahead -> swap
         Pose np = bp; np.row = _ball.row; np.col = _ball.col;
+        np.facing = turnAround(bp.facing);                         // 180: the ball is now ahead of me
         _bot[i].it.setPose(np);
         _ball.row = bp.row; _ball.col = bp.col;
         _bot[i].zapCd = SUMO_ZAP_COOLDOWN;

@@ -450,6 +450,26 @@ void test_soccer_push_into_goal() {
   TEST_ASSERT_EQUAL(0, ar.goals(1));                     // idle bot scored none
 }
 
+// SOCCER zap-swap: firing while facing the ball trades places with it AND turns the bot 180, so the
+// ball ends up directly AHEAD again (a single forward then drives it back the way you came).
+void test_soccer_zap_swaps_and_turns() {
+  Maze m; m.reset(1, 5); m.fill(FLOOR); m.clearGoal();
+  Pose s0; s0.row = 0; s0.col = 1; s0.facing = EAST;     // me, just left of the ball, facing it
+  Pose s1; s1.row = 0; s1.col = 4; s1.facing = WEST;     // idle opponent at the far end
+  Program zap; zap.main.push_back(Node::command(CMD_FIRE));
+  Program idle;
+  Arena ar;
+  ar.setup(&m, &zap, &idle, s0, s1, MatchType::SOCCER, 1);   // one tick: just the zap
+  Pose ball; ball.row = 0; ball.col = 2;                  // ball one tile ahead (east) of me
+  Pose g0; g0.row = 0; g0.col = 4;
+  Pose g1; g1.row = 0; g1.col = 0;
+  ar.configSoccer(ball, g0, g1);
+  ar.run();
+  TEST_ASSERT_EQUAL(2, ar.pose(0).col);                  // I took the ball's old tile
+  TEST_ASSERT_EQUAL((int)WEST, (int)ar.pose(0).facing);  // turned 180 (was EAST)
+  TEST_ASSERT_EQUAL(1, ar.ball().col);                   // ball popped to my old tile -- now directly AHEAD of me
+}
+
 void test_soccer_deterministic() {
   Program a = dashProgram(), b = dashProgram();
   uint32_t h[2];
@@ -633,6 +653,7 @@ int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_super_players_roundrobin);
   RUN_TEST(test_soccer_push_into_goal);
+  RUN_TEST(test_soccer_zap_swaps_and_turns);
   RUN_TEST(test_soccer_two_bots_match_resolves);
   RUN_TEST(test_soccer_two_bots_scramble_and_resolve);
   RUN_TEST(test_soccer_qlearn_ff_scores);

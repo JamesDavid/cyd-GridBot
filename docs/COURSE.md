@@ -460,7 +460,7 @@ is about combining them well. Teach this table before anyone touches a knob:
 
 > **A result worth showing (one multi-seed run, 72 games each):** a **Teach**-distilled striker won
 > **~63%** of games vs a peer; an **Evolve-from-scratch** brain — same time, but starting from random
-> noise — won only **~13%**. **If a good expert exists, imitate it first; don't evolve from nothing.**
+> noise — won only **~4%**. **If a good expert exists, imitate it first; don't evolve from nothing.**
 > *(One deterministic host run over fixed seeds vs a distilled-striker opponent — directional, not a
 > confidence interval. Full numbers + caveats in [TRAINING_FINDINGS.md](TRAINING_FINDINGS.md).)*
 
@@ -508,29 +508,31 @@ Win-rates, not single scorelines — with the caveat after the table:
 |---|---|
 | **Teach → Evolve** vs the opponent | **84%** — best here |
 | nothing (**Teach** only) | **63%** — strong, in seconds |
-| **Teach → Q-Learn** (reward-refine) | **44% (cone) / 26% (live)** — *didn't help; hurt* |
-| **Evolve from scratch** | **13%** — much weaker |
+| **Teach → Q-Learn** (reward-refine) | **19% (cone) / 36% (live)** — *didn't help; hurt* |
+| **Evolve from scratch** | **4%** — much weaker |
 
 > **Qualify it:** one deterministic host run over a fixed set of 6 seeds vs **distilled strikers** (one
 > opponent class), tiny `10→8→5` net, seconds of training — reproducible, but **not** an
 > independent-sample confidence interval. Read as directional.
 
-**✅ Imitate an expert first.** Teach (63%) clearly beats evolving from random noise (13%) in the same
+**✅ Imitate an expert first.** Teach (63%) clearly beats evolving from random noise (4%) in the same
 time — copying a good dribbler beats discovering from nothing. **Train well to win soccer:** hand-coded
 strikers lose outright, and refining a good imitation *against the opponent* (Teach→Evolve, 84%) did
 best in this eval.
 
 **⚠️ More training isn't automatically better.** Reward-refining a *good* distilled striker with
-Q-Learn **didn't improve it** — both the cone (44%) and live-opponent (26%) variants landed *below*
+Q-Learn **didn't improve it** — both the cone (19%) and live-opponent (36%) variants landed *below*
 Teach (63%). A solid imitation policy is fragile; a second objective can perturb it.
 
 **🧪 A lesson from our own mistake — why one match isn't an eval.** An earlier on-device run found a tidy
 story: Q-Learn-vs-a-cone "regressed 0–7" while training vs the live opponent "fixed it 3–3." That was
-**one deterministic match**; re-run over 72 games it **did not reproduce** (live-opponent Q-Learn, 26%,
-was *worse* than the cone, 44%). The Arena is deterministic, so a single match is
-*reproducible* — but reproducible ≠ representative. **Always average over seeds.** (The full before/after
-is in [TRAINING_FINDINGS.md](TRAINING_FINDINGS.md) — a genuinely good thing to show kids about how
-science corrects itself.)
+**one deterministic match**, and the strong version **didn't hold up**: over 72 games *both* Q-Learn
+variants land well below Teach (cone 19%, live 36%), so neither "fixes" anything — and which one looks
+better even **flips** when you tweak a rule. The Arena is deterministic, so a single match is
+*reproducible* — but reproducible ≠ representative, and a close call between two weak options may not be
+settleable at all. **Always average over seeds.** (The full before/after is in
+[TRAINING_FINDINGS.md](TRAINING_FINDINGS.md) — a genuinely good thing to show kids about how science
+corrects itself.)
 
 > **Watch over-fitting happen.** Evolve a brain on **one fixed pitch** for too long (we ran 256
 > generations) and in a real match it literally **"just stays there"** — it memorised that one board so

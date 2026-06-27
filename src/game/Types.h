@@ -78,6 +78,7 @@ inline void facingDelta(Facing f, int& dr, int& dc) {
 
 inline Facing turnRight(Facing f) { return (Facing)((f + 1) & 3); }
 inline Facing turnLeft(Facing f)  { return (Facing)((f + 3) & 3); }
+inline Facing turnAround(Facing f) { return (Facing)((f + 2) & 3); }   // 180 (e.g. after a ball-swap)
 
 // Soccer goal mouth: the END-column rows that count as a goal -- a 4-tile mouth centred on the pitch
 // The mouth spans the FULL playable height (goalRow-3 .. goalRow+2 = the 6 interior rows), so the
