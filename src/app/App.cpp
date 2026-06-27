@@ -411,16 +411,47 @@ void App::drawNametag() {
   label(g, SCREEN_W / 2, 226, "tap to wake", C_DIM, textdatum_t::middle_center);
 }
 
+// Repaint the current screen (after dismissing the Menu/Sound modal or the screensaver). The modal
+// can open over almost any screen, so this must cover every state -- a missing case leaves the modal
+// painted on top with live taps leaking through to invisible buttons underneath.
 void App::wake() {
   switch (_state) {
-    case State::HOME:         _home.enter(); break;
-    case State::STATS:        _stats.enter(); break;
-    case State::BADGES:       _badges.enter(); break;
-    case State::SHOP:         _shop.enter(); break;
-    case State::LIBRARY:      _library.enter(); break;
-    case State::NEURO_HUB:    _lessonHub.enter(); break;
-    case State::LESSONS_MENU: _lessonsMenu.enter(); break;
-    default: break;
+    case State::SELECT:            _select.enter(); break;
+    case State::CREATE:            _create.enter(); break;
+    case State::HOME:              _home.enter(); break;
+    case State::INTRO:             drawIntro(); break;
+    case State::GAME:              _game.resumeCode(); break;  // editor view (enter() restarts the preview)
+    case State::STATS:             _stats.enter(); break;
+    case State::ARENA:             _arena.enter(); break;
+    case State::RADIO:             _radio.enter(); break;
+    case State::DRAW:              _pixed.enter(); break;
+    case State::BADGES:            _badges.enter(); break;
+    case State::SHOP:              _shop.enter(); break;
+    case State::PUZZLE:            _puzzle.enter(); break;
+    case State::CHALLENGE:         _challenge.enter(); break;
+    case State::NEURO_HUB:         _lessonHub.enter(); break;
+    case State::NEURO_LESSON:      _neuro.enter(); break;
+    case State::Q_LESSON:          _qLesson.enter(); break;
+    case State::TUNE_LESSON:       if (_tuneLesson) _tuneLesson->enter(); break;
+    case State::TUNENET_LESSON:    if (_tuneNetLesson) _tuneNetLesson->enter(); break;
+    case State::SELFPLAY_LESSON:   if (_selfPlayLesson) _selfPlayLesson->enter(); break;
+    case State::METHOD_LESSON:     _methodLesson.enter(); break;
+    case State::EVO_LESSON:        _evoLesson.enter(); break;
+    case State::NEURO_TRAIN:       _neuroTrain.enter(); break;
+    case State::ARENA_TRAIN:       _arenaTrain.enter(); break;
+    case State::LESSONS_MENU:      _lessonsMenu.enter(); break;
+    case State::CODE_LAB:          _codeLab.enter(); break;
+    case State::CODE_LESSON:       _codeLesson.enter(); break;
+    case State::TRANSFER_LESSON:   _transferLesson.enter(); break;
+    case State::BRAIN_VIEW:        _brainView.enter(); break;
+    case State::BRAIN_MAP:         _brainMap.enter(); break;
+    case State::PILOT_LESSON:      _pilotLesson.enter(); break;
+    case State::RNN_LESSON:        _rnnLesson.enter(); break;
+    case State::PERCEPTION_LESSON: _perceptionLesson.enter(); break;
+    case State::BACKPROP_LESSON:   _backpropLesson.enter(); break;
+    case State::LIBRARY:           _library.enter(); break;
+    case State::TRAIN_PICK:        drawTrainPick(); break;
+    case State::LEVEL_SELECT:      _levelSelect.enter(); break;
   }
 }
 
@@ -908,9 +939,9 @@ void App::tick(uint32_t now) {
 
 // ----- long-press Menu modal + the Sound modal it opens -------------------------------------
 static const ui::Rect SND_VOL_DN = {52, 78, 40, 32}, SND_VOL_UP = {228, 78, 40, 32};
-static const ui::Rect SND_MUSIC = {52, 120, 216, 28};
-static const ui::Rect SND_SFX   = {52, 154, 216, 28};
-static const ui::Rect SND_DONE  = {110, 190, 100, 28};
+static const ui::Rect SND_MUSIC = {52, 120, 102, 28};   // Music + SFX side by side to save vertical space
+static const ui::Rect SND_SFX   = {166, 120, 102, 28};
+static const ui::Rect SND_DONE  = {96, 154, 120, 30};
 
 // The Menu modal (held-anywhere): Home / Back on top, Sound + Close below.
 static const ui::Rect MENU_HOME  = {54, 78, 96, 34};
@@ -933,8 +964,8 @@ void App::drawMenuModal() {
 
 void App::drawSoundModal() {
   auto& g = hal::display.gfx();
-  g.fillRoundRect(34, 38, 252, 174, 12, C_PANEL);
-  g.drawRoundRect(34, 38, 252, 174, 12, C_ACCENT);
+  g.fillRoundRect(34, 38, 252, 150, 12, C_PANEL);
+  g.drawRoundRect(34, 38, 252, 150, 12, C_ACCENT);
   ui::label(g, SCREEN_W / 2, 50, "Sound", C_ACCENT, textdatum_t::top_center, 2);
   // volume row: [-]  ||||  [+]
   ui::button(g, SND_VOL_DN, "-", C_INK, C_PANEL_HI);
@@ -944,9 +975,9 @@ void App::drawSoundModal() {
     bool on = hal::audio.volume() > i;
     g.fillRoundRect(120 + i * 24, 92, 18, 18, 3, on ? C_GO : C_PANEL_HI);
   }
-  ui::button(g, SND_MUSIC, hal::audio.musicOn() ? "Music: ON" : "Music: muted",
+  ui::button(g, SND_MUSIC, hal::audio.musicOn() ? "Music: ON" : "Music: off",
              hal::audio.musicOn() ? C_GO : C_DIM, C_PANEL_HI);
-  ui::button(g, SND_SFX, hal::audio.sfxOn() ? "Sound FX: ON" : "Sound FX: muted",
+  ui::button(g, SND_SFX, hal::audio.sfxOn() ? "SFX: ON" : "SFX: off",
              hal::audio.sfxOn() ? C_GO : C_DIM, C_PANEL_HI);
   ui::button(g, SND_DONE, "Done", C_GO, C_PANEL_HI);
 }
