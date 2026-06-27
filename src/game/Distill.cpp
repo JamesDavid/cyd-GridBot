@@ -303,7 +303,7 @@ bool distillSoccer(Net& brain, uint32_t seed, int epochs) {
     me.facing = (Facing)rng.below(4);
     if (ball.row == goal.row && ball.col == goal.col) continue;
     for (int step = 0; step < 36 && trained < epochs; step++) {
-      senseSoccer(m, me, &ball, &rival, &goal, in);     // walls + ball + RIVAL + net (12 inputs)
+      senseSoccer(m, me, &ball, &rival, &goal, in);     // walls + ball + RIVAL + net (same 10 slots)
       int act = idealSoccerActionVs(m, me, ball, goal, rival);
       float tg[NET_MAX_OUT] = {0}; tg[act] = 1.0f;
       // Oversample the decisive ball-contact push (it's a small fraction of states) so the net

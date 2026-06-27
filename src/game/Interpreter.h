@@ -17,10 +17,10 @@ constexpr int MAX_FRAME_DEPTH  = 64;   // bounds call-stack growth (recursive F1
 struct EnemyView {
   const Pose* pose = nullptr;
   int nearDist = 3;
-  // Soccer wiring (the richer 12-input brain): `target` = the BALL, `pose` = the RIVAL bot, and
-  // `net` = the goal to score on. When `net` is set the brain reads senseSoccer (walls+ball+rival+
-  // net) instead of the 10-input vector. Null `net` = not soccer (Race/Sumo/Pilot use `target` as a
-  // goal-bearing override and `pose` as the foe, as before).
+  // Soccer wiring (same 10-input brain, re-meaned): `target` = the BALL, `pose` = the RIVAL bot, and
+  // `net` = the goal to score on. When `net` is set the brain reads senseSoccer, which fills the SAME
+  // 10 sense slots with walls+ball+rival+net. Null `net` = not soccer (Race/Sumo/Pilot use `target`
+  // as a goal-bearing override and `pose` as the foe, as before).
   const Pose* target = nullptr;
   const Pose* net = nullptr;
 };

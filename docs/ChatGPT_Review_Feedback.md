@@ -22,10 +22,8 @@ This is a working checklist from a read-only review of the codebase, `docs/COURS
 - [x] Fix the badge hint table length. **(Done 2026-06-27.)**
   - Confirmed: `HINT[ACH_COUNT]` is sized 17 but had only 16 initializers, so `HINT[16]` (Generalist) was a value-initialized `nullptr` — and `BadgesScreen::draw` passes `HINT[i]` straight to `label()` for any *unearned* badge, so an unearned Generalist badge would render a null `char*` (crash/garbage). Added the 17th hint, "ace 10 fresh mazes" (matches `GAUNTLET_MAZES = 10`), and fixed the stale `// ... for 16 badges` row-count comment. Firmware builds.
 
-- [ ] Clean up internal "12-input soccer brain" comments.
-  - Public docs mostly state the correct `10 -> 8 -> 5` shape.
-  - Comments in `src/game/Interpreter.h` and `src/game/Interpreter.cpp` call soccer a richer "12-input" brain.
-  - `src/game/Sensors.h` correctly says soccer reuses the same 10 slots with different meanings.
+- [x] Clean up internal "12-input soccer brain" comments. **(Done 2026-06-27.)**
+  - Fixed all three stale spots — `src/game/Interpreter.h:20`, `src/game/Interpreter.cpp:239`, and `src/game/Distill.cpp:306` — to say soccer reuses the **same 10 sense slots**, re-meaned (matching `Sensors.h` and the public `10 -> 8 -> 5` shape). Comment-only.
 
 - [ ] Re-run or rebuild `tools/bot_eval.cpp` and capture current output.
   - The checked-in `bot_eval.exe` exited non-zero with no stdout/stderr in the review environment.

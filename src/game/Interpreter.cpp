@@ -236,7 +236,7 @@ Outcome Interpreter::step() {
           if (_wpIdx < _wpN) { tr = _wp[_wpIdx] / _maze->cols(); tc = _wp[_wpIdx] % _maze->cols(); }
           senseEgoTo(*_maze, _pose, _enemy, tr, tc, s);
         } else if (_enemy && _enemy->net) {
-          // Soccer: the richer 12-input vector -- ball (target), rival (pose), and the net.
+          // Soccer: the same 10 sense slots, re-meaned as ball (target), rival (pose), and the net.
           senseSoccer(*_maze, _pose, _enemy->target, _enemy->pose, _enemy->net, s);
         } else {
           senseEgo(*_maze, _pose, _enemy, s);
