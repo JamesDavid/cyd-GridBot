@@ -328,12 +328,12 @@ Note the **nested `if`** — the net checks live *inside* the `if ball ^` block.
 **`+ add inside`** on the `if ball ^` row to indent blocks under it.
 ![top](img/hc-soccer-2-1.png) ![scrolled](img/hc-soccer-2-2.png)
 
-> **⚽ Pro move — the `zap`-swap.** Caught on the *wrong* side of the ball (it's between you and the net
-> you're attacking)? Circling around is slow and is how bots accidentally shove it into their *own* net.
-> Instead, **face the ball and `zap`** — your robot and the ball **swap places**, popping the ball one
-> tile *past* you toward goal and leaving you neatly behind it. So `if ball ^ { zap }` is a one-block
-> way to "turn the ball around." Each bot's facing arrow is tinted to **match the net it attacks**
-> (green / red), so own-goals are easy to spot.
+> **⚽ Pro move — the `zap`-swap.** Heading the *wrong* way with the ball (about to shove it toward your
+> *own* net)? Circling around is slow. Instead, **face the ball and `zap`** — your robot and the ball
+> **swap places and you spin 180°**, so the ball lands **directly in front of you, pointing back the way
+> you came**; one `forward` then drives it the *other* direction. So `if ball ^ { zap }` then `forward`
+> is a two-block way to "turn the ball around and take it." Each bot's facing arrow is tinted to **match
+> the net it attacks** (green / red), so own-goals are easy to spot.
 
 **How it does** — one multi-seed run (`tools/bot_eval.cpp`, **64 games** per row = 4 trained opponents
 × 16 kickoffs), as a win-rate:

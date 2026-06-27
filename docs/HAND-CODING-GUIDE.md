@@ -217,12 +217,12 @@ inside`** on the `if ball ^` row to put blocks inside it:
 
 ![Soccer dribbler, top](img/hc-soccer-2-1.png) ![Soccer dribbler, scrolled](img/hc-soccer-2-2.png)
 
-> **⚽ Pro move — the `zap`-swap.** Caught on the *wrong* side of the ball (it's between you and the
-> net you're attacking)? Circling around is slow and is how robots accidentally shove it into their
-> *own* net. Instead, face the ball and **`zap`** — your robot and the ball **swap places**, popping
-> the ball one tile *past* you toward goal and leaving you neatly behind it. So `if ball ^ { zap }`
-> is a one-block way to "turn the ball around." (A trained brain can learn this too — the soccer
-> trainer now rewards a zap that moves the ball goalward.)
+> **⚽ Pro move — the `zap`-swap.** Heading the *wrong* way with the ball (about to shove it toward your
+> *own* net)? Circling around to the other side is slow. Instead, face the ball and **`zap`** — your
+> robot and the ball **swap places and you spin 180°**, so the ball lands **directly in front of you,
+> pointing back the way you came**. One `forward` then drives it the *other* direction. So
+> `if ball ^ { zap }` followed by `forward` is a two-block way to **turn the ball around and take it**.
+> (A trained brain can learn this too — the soccer trainer rewards a zap that moves the ball goalward.)
 
 ### How it does
 
