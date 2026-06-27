@@ -163,6 +163,10 @@ static Rec playSoccerRec(const Program& mine, const Program& opp, int seeds, uin
   for (int s = 0; s < seeds; s++) {
     uint32_t seed = base + 137u * (uint32_t)s; Maze m; Pose s0, s1, ball, g0, g1;
     MazeGen::generateSoccerPitch(m, seed, s0, s1, ball, g0, g1);
+    // Pitch geometry is fixed -> vary the KICKOFF ball per seed so matches actually differ.
+    uint32_t hh = seed * 2654435761u; int rows = m.rows(), cols = m.cols();
+    ball.row = (int8_t)(1 + (int)(hh % (uint32_t)(rows - 2)));
+    ball.col = (int8_t)(2 + (int)((hh >> 9) % (uint32_t)(cols - 4)));
     Arena ar; ar.setup(&m, &mine, &opp, s0, s1, MatchType::SOCCER); ar.configSoccer(ball, g0, g1); ar.run();
     int a = ar.goals(0), b = ar.goals(1); r.gf += a; r.ga += b;
     if (a > b) r.w++; else if (a < b) r.l++; else r.d++;

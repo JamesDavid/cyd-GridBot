@@ -16,6 +16,8 @@
 using namespace ui;
 using namespace gb;
 
+bool g_trainTelemetry = false;   // serial 'Y' toggles streaming a training CSV line each step
+
 namespace screens {
 
 static const Rect R_OPP   = {6,   (int16_t)(BAND_Y + 2), 84,  18}; // tap to change sparring partner
@@ -311,6 +313,9 @@ void ArenaTrainScreen::evaluateAndTrace() {
 void ArenaTrainScreen::pushCurve() {
   if (_curveLen < CURVE_N) _curve[_curveLen++] = _score;
   else { for (int i = 1; i < CURVE_N; i++) _curve[i - 1] = _curve[i]; _curve[CURVE_N - 1] = _score; }
+  if (g_trainTelemetry)   // CSV for an external plotter: which step, this score, the running best
+    Serial.printf("TRAIN teach=%u q=%u evo=%u score=%.3f best=%.3f beats=%d\n",
+                  (unsigned)_teachN, (unsigned)_qN, (unsigned)_evoN, _score, _bestScore, (int)_beatsAI);
 }
 
 // ---- keep-best checkpoint ------------------------------------------------------------------------

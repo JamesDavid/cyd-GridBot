@@ -98,6 +98,19 @@ static void handleSerialLine(const String& line) {
   } else if (c == 'R') {
     int lvl = -1, stars = 0; sscanf(line.c_str() + 1, "%d %d", &lvl, &stars);
     gApp.debugLevelRecs(lvl, stars);          // 'R' dumps level records; 'R lvl stars' force-records one
+  } else if (c == 'J') {                       // brain weights: 'J' list, 'J i' dump, 'J i <hex>' load
+    const char* a = line.c_str() + 1;
+    int idx = -1; sscanf(a, "%d", &idx);
+    while (*a == ' ') a++; while (*a && *a != ' ') a++; while (*a == ' ') a++;   // skip the index -> rest is hex
+    gApp.debugBrain(idx, *a ? a : nullptr);
+  } else if (c == 'V') {                       // headless eval: 'V a b [seeds] [type:1=battle,else soccer]'
+    int a = -1, b = -1, n = 8, t = 2; sscanf(line.c_str() + 1, "%d %d %d %d", &a, &b, &n, &t);
+    gApp.debugEval(a, b, n, t);
+  } else if (c == 'I') {                       // device stats (heap / profile)
+    gApp.debugStats();
+  } else if (c == 'Y') {                       // toggle training telemetry CSV (TRAIN ... lines)
+    extern bool g_trainTelemetry; g_trainTelemetry = !g_trainTelemetry;
+    Serial.printf("TELEMETRY %s\n", g_trainTelemetry ? "on" : "off");
   } else if (c == 'M') {
     gApp.debugDumpMaze();
   } else if (c == '?' || c == 'h') {
@@ -141,7 +154,7 @@ void loop() {
   while (Serial.available()) {
     char ch = (char)Serial.read();
     if (ch == '\n' || ch == '\r') { handleSerialLine(line); line = ""; }
-    else if (line.length() < 40) line += ch;
+    else if (line.length() < 4200) line += ch;   // long enough for a 'J i <hex>' brain-load line
   }
   gApp.tick(millis());
   delay(6);

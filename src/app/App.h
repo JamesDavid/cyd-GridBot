@@ -58,6 +58,9 @@ class App {
   void debugZapDemo();                    // field a hand-coded zap-swap soccer bot vs Strika ('K')
   void debugFightLib(int a, int b);       // list the library ('F'), or field lib[a] vs lib[b] in soccer ('F a b')
   void debugLevelRecs(int lvl, int stars); // dump per-level records ('R'); 'R lvl stars' force-records one
+  void debugBrain(int idx, const char* hex);  // 'J' lists brains; 'J i' dumps lib[i]'s weights as hex; 'J i <hex>' loads
+  void debugEval(int a, int b, int seeds, int type); // 'V a b n t' plays lib[a] vs lib[b] over n seeds (repro hashes)
+  void debugStats();                       // 'I' prints heap / profile stats
 
  private:
   enum class State : uint8_t { SELECT, CREATE, HOME, INTRO, GAME, STATS, ARENA, RADIO, DRAW, BADGES, SHOP, PUZZLE, CHALLENGE,

@@ -8,6 +8,8 @@
 #include "ui/UI.h"
 #include "store/ProfileStore.h"
 #include "game/MazeGen.h"
+#include "game/Arena.h"
+#include <string.h>
 #include "game/Score.h"
 #include "game/Bots.h"
 #include "game/Interpreter.h"
@@ -333,6 +335,90 @@ void App::debugLevelRecs(int lvl, int stars) {
     if (r.stars || r.bestBlocks)
       Serial.printf("  L%u: %u* best=%u par=%u\n", (unsigned)(i + 1), r.stars, r.bestBlocks, r.par);
   }
+}
+
+// ---- serial ML tools (SELFTEST) -----------------------------------------------------------------
+// Export/import a saved brain's weights as hex so you can pull it onto a laptop, train it in PyTorch,
+// and push it back. Order: w1[hid][in], b1[hid], w2[out][hid], b2[out]; each float = 8 hex (its IEEE bits).
+void App::debugBrain(int idx, const char* hex) {
+  if (_profile.id.empty()) { Serial.println("NOPROFILE"); return; }
+  int n = (int)_profile.library.size();
+  if (idx < 0) {                                  // 'J' alone -> list which saved bots carry a brain
+    Serial.printf("BRAINS in '%s' (%d bots):\n", _profile.name.c_str(), n);
+    for (int i = 0; i < n; i++) {
+      const auto& e = _profile.library[i];
+      Serial.printf("  [%d] %-16s ff=%d rnn=%d\n", i, e.name.c_str(),
+                    (int)e.program.brains.size(), (int)e.program.rbrains.size());
+    }
+    return;
+  }
+  if (idx >= n || _profile.library[idx].program.brains.empty()) { Serial.println("NOBRAIN (idx / no feedforward brain)"); return; }
+  gb::Net& b = _profile.library[idx].program.brains[0];
+  if (!hex || !*hex) {                            // 'J i' -> dump
+    Serial.printf("BRAIN %d in=%d hid=%d out=%d\n", idx, b.nIn, b.nHid, b.nOut);
+    auto hf = [&](float f) { uint32_t u; memcpy(&u, &f, 4); Serial.printf("%08x", (unsigned)u); };
+    for (int h = 0; h < b.nHid; h++) for (int i = 0; i < b.nIn; i++) hf(b.w1[h][i]);
+    for (int h = 0; h < b.nHid; h++) hf(b.b1[h]);
+    for (int o = 0; o < b.nOut; o++) for (int h = 0; h < b.nHid; h++) hf(b.w2[o][h]);
+    for (int o = 0; o < b.nOut; o++) hf(b.b2[o]);
+    Serial.println("\nBREND");
+    return;
+  }
+  int need = b.nHid * b.nIn + b.nHid + b.nOut * b.nHid + b.nOut;   // 'J i <hex>' -> load (dims must match)
+  if ((int)(strlen(hex) / 8) < need) { Serial.printf("SHORT need %d floats, got %d\n", need, (int)(strlen(hex) / 8)); return; }
+  const char* p = hex;
+  auto rf = [&]() -> float { char c[9]; memcpy(c, p, 8); c[8] = 0; p += 8;
+                             uint32_t u = (uint32_t)strtoul(c, nullptr, 16); float f; memcpy(&f, &u, 4); return f; };
+  for (int h = 0; h < b.nHid; h++) for (int i = 0; i < b.nIn; i++) b.w1[h][i] = rf();
+  for (int h = 0; h < b.nHid; h++) b.b1[h] = rf();
+  for (int o = 0; o < b.nOut; o++) for (int h = 0; h < b.nHid; h++) b.w2[o][h] = rf();
+  for (int o = 0; o < b.nOut; o++) b.b2[o] = rf();
+  saveProfile();
+  Serial.printf("LOADED %d floats into [%d] %s\n", need, idx, _profile.library[idx].name.c_str());
+}
+
+// Headless multi-seed head-to-head between two saved bots -> win-rate, with a per-match seed + log
+// hash so any result is exactly reproducible. The on-device bot_eval (the "average over seeds" tool).
+void App::debugEval(int a, int b, int seeds, int type) {
+  if (_profile.id.empty()) { Serial.println("NOPROFILE"); return; }
+  int n = (int)_profile.library.size();
+  if (a < 0 || b < 0 || a >= n || b >= n) { Serial.printf("BADIDX (have %d)\n", n); return; }
+  if (seeds < 1) seeds = 8;
+  gb::MatchType mt = (type == 1) ? gb::MatchType::SUMO : gb::MatchType::SOCCER;   // 1 = battle, else soccer
+  gb::Program& A = _profile.library[a].program; gb::Program& B = _profile.library[b].program;
+  Serial.printf("EVAL %s vs %s  %s  %d seeds\n", _profile.library[a].name.c_str(),
+                _profile.library[b].name.c_str(), mt == gb::MatchType::SUMO ? "battle" : "soccer", seeds);
+  int w = 0, d = 0, l = 0, gf = 0, ga = 0;
+  for (int s = 0; s < seeds; s++) {
+    uint32_t seed = 4000u + 137u * (uint32_t)s;
+    gb::Maze m; gb::Pose s0, s1, ball, g0, g1; gb::Arena ar; int res, x = 0, y = 0;
+    if (mt == gb::MatchType::SOCCER) {
+      gb::MazeGen::generateSoccerPitch(m, seed, s0, s1, ball, g0, g1);
+      // The pitch geometry is fixed, so the seed alone gives the SAME match -- vary the kickoff ball
+      // per seed (like the Evolve trainer does) so matches actually differ and the eval is real.
+      uint32_t hh = seed * 2654435761u; int rows = m.rows(), cols = m.cols();
+      ball.row = (int8_t)(1 + (int)(hh % (uint32_t)(rows - 2)));
+      ball.col = (int8_t)(2 + (int)((hh >> 9) % (uint32_t)(cols - 4)));   // clear of the goal columns
+      ar.setup(&m, &A, &B, s0, s1, mt); ar.configSoccer(ball, g0, g1); ar.run();
+      x = ar.goals(0); y = ar.goals(1); gf += x; ga += y; res = (x > y) ? 1 : (x < y) ? -1 : 0;
+    } else {
+      gb::MazeGen::generateArena(m, seed, s0, s1);
+      ar.setup(&m, &A, &B, s0, s1, mt); ar.run();
+      gb::ArenaOutcome o = ar.outcome(); res = (o == gb::ArenaOutcome::BOT0) ? 1 : (o == gb::ArenaOutcome::BOT1) ? -1 : 0;
+    }
+    if (res > 0) w++; else if (res < 0) l++; else d++;
+    Serial.printf("  seed %u  %d-%d  hash=%08x\n", (unsigned)seed, x, y, (unsigned)ar.logHash());
+  }
+  int t = w + d + l;
+  Serial.printf("RESULT W-D-L %d-%d-%d  win%% %d  goals %d-%d\n", w, d, l, t ? w * 100 / t : 0, gf, ga);
+}
+
+void App::debugStats() {
+  Serial.printf("HEAP free=%u min=%u total=%u\n",
+                (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMinFreeHeap(), (unsigned)ESP.getHeapSize());
+  Serial.printf("PROFILE %s  lib=%d/%d  levelRecs=%d  level=%u\n", _profile.name.c_str(),
+                (int)_profile.library.size(), (int)gb::LIBRARY_MAX, (int)_profile.levelRecs.size(),
+                (unsigned)_profile.level);
 }
 
 void App::debugNeuroLesson() {
