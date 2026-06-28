@@ -79,6 +79,7 @@ class Arena {
   int8_t _ownGoals[2] = {0, 0};  // own goals committed by each bot (pushed into its DEFENDED net)
   bool _justScored = false;   // a goal landed this tick (one-frame flag for the "GOAL!" burst)
   int16_t _ballStall = 0;     // soccer: ticks the ball has sat untouched (a "loose ball" timer)
+  int32_t _pressure = 0;      // soccer tie-break: +1/tick the ball is nearer P1's net, -1 nearer P2's
   void refDriftBall();        // drop a long-stalled ball at a fresh (deterministic) spot to scramble for
 
   const Maze* _maze = nullptr;

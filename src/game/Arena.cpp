@@ -8,6 +8,7 @@ void Arena::setup(const Maze* maze, const Program* p0, const Program* p1,
   _type = type;
   _stepCap = stepCap;
   _ticks = 0;
+  _pressure = 0;
   _outcome = ArenaOutcome::RUNNING;
   _hash = 2166136261u;
 
@@ -329,6 +330,16 @@ ArenaOutcome Arena::tick() {
   }
   if (_outcome != ArenaOutcome::RUNNING) return _outcome;
 
+  // Soccer tie-break fuel: every tick, credit the side whose target net the ball is nearer to (it's
+  // pressing). Summed over the whole match this is almost never an exact tie, so a level scoreline
+  // still produces a winner instead of a draw.
+  if (_type == MatchType::SOCCER) {
+    auto bd = [&](int i) { int dr = _ball.row - _goal[i].row, dc = _ball.col - _goal[i].col;
+                           return (dr < 0 ? -dr : dr) + (dc < 0 ? -dc : dc); };
+    _pressure += bd(1) - bd(0);   // >0: ball nearer P1's target net all match (P1 pressed). Magnitude,
+                                  // not just sign -> a sustained bias almost never cancels to an exact tie.
+  }
+
   // Time's up (or neither can move). Race draws; Sumo breaks the tie by RING CONTROL -- the
   // bot nearer the arena centre wins (real sumo never just stops at a draw). Exact tie -> draw.
   bool active0 = _bot[0].alive && !_bot[0].done && !_bot[0].it.finished();
@@ -336,10 +347,13 @@ ArenaOutcome Arena::tick() {
   bool over = (!active0 && !active1) || _ticks >= _stepCap;
   if (over && _outcome == ArenaOutcome::RUNNING) {
     if (_type == MatchType::SOCCER) {
-      // Full time: higher SCORE wins. Level on goals -> the side whose goal the ball is nearer to
-      // (it was pressing); dead level -> draw.
+      // Full time: higher SCORE wins. Level on goals -> the side that PRESSED more all match (the
+      // accumulated tie-break above); still exactly level -> the final ball position; only then a draw.
       if (_goals[0] != _goals[1]) {
         int w = _goals[0] > _goals[1] ? 0 : 1;
+        _bot[w].won = true; _outcome = w ? ArenaOutcome::BOT1 : ArenaOutcome::BOT0;
+      } else if (_pressure != 0) {
+        int w = _pressure > 0 ? 0 : 1;
         _bot[w].won = true; _outcome = w ? ArenaOutcome::BOT1 : ArenaOutcome::BOT0;
       } else {
         auto bd = [&](int i) {

@@ -168,8 +168,9 @@ static Rec playSoccerRec(const Program& mine, const Program& opp, int seeds, uin
     ball.row = (int8_t)(1 + (int)(hh % (uint32_t)(rows - 2)));
     ball.col = (int8_t)(2 + (int)((hh >> 9) % (uint32_t)(cols - 4)));
     Arena ar; ar.setup(&m, &mine, &opp, s0, s1, MatchType::SOCCER); ar.configSoccer(ball, g0, g1); ar.run();
-    int a = ar.goals(0), b = ar.goals(1); r.gf += a; r.ga += b;
-    if (a > b) r.w++; else if (a < b) r.l++; else r.d++;
+    r.gf += ar.goals(0); r.ga += ar.goals(1);
+    ArenaOutcome o = ar.outcome();   // count the real result (the tie-breaker resolves a level scoreline)
+    if (o == ArenaOutcome::BOT0) r.w++; else if (o == ArenaOutcome::BOT1) r.l++; else r.d++;
   }
   return r;
 }
