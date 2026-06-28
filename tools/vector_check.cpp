@@ -30,21 +30,22 @@ static void probe(const char* label, Net& brain, const Maze& m, Pose bot, Pose b
 }
 
 int main() {
-  Net b; b.config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 11); distillSoccer(b, 11, 8000);   // a house-strength striker
   Maze m; Pose s0, s1, kick, g0, g1;
   MazeGen::generateSoccerPitch(m, 1, s0, s1, kick, g0, g1);   // g0 = right net (bot0 attacks), g1 = left
   int r = m.rows() / 2;
-  printf("Pitch %dx%d. bot0 ATTACKS goal0 at col %d (right). Own net = goal1 at col %d (left).\n\n",
+  printf("Pitch %dx%d. bot0 ATTACKS goal0 at col %d (right). Own net = goal1 at col %d (left).\n",
          m.rows(), m.cols(), g0.col, g1.col);
 
-  // 1) Bot BEHIND the ball (to its west), facing the attack net. A forward pushes the ball goalward.
-  { Pose bot; bot.row=r; bot.col=4; bot.facing=EAST;  Pose ball; ball.row=r; ball.col=5;
-    probe("behind ball, facing attack net", b, m, bot, ball, g0); }
-  // 2) Bot on the WRONG side (east of the ball), facing its own net. A forward would own-goal.
-  { Pose bot; bot.row=r; bot.col=5; bot.facing=WEST;  Pose ball; ball.row=r; ball.col=4;
-    probe("wrong side, facing OWN net", b, m, bot, ball, g0); }
-  // 3) Bot below the ball, facing the attack net (ball is to its... let me face EAST with ball east).
-  { Pose bot; bot.row=r+1; bot.col=4; bot.facing=EAST; Pose ball; ball.row=r; ball.col=5;
-    probe("below+behind, facing attack net", b, m, bot, ball, g0); }
+  // Compare hidden=8 (current) vs hidden=12 (max) on the three setups, incl. the decisive wrong-side one.
+  for (int hid : {8, 12}) {
+    Net b; b.config(SENSOR_COUNT_FOR_BRAIN, hid, 5, 11); distillSoccer(b, 11, 8000);
+    printf("\n--- hidden = %d ---\n", hid);
+    { Pose bot; bot.row=r; bot.col=4; bot.facing=EAST;  Pose ball; ball.row=r; ball.col=5;
+      probe("behind ball, facing attack net", b, m, bot, ball, g0); }
+    { Pose bot; bot.row=r; bot.col=5; bot.facing=WEST;  Pose ball; ball.row=r; ball.col=4;
+      probe("wrong side, facing OWN net <<< KEY", b, m, bot, ball, g0); }
+    { Pose bot; bot.row=r+1; bot.col=4; bot.facing=EAST; Pose ball; ball.row=r; ball.col=5;
+      probe("below+behind, facing attack net", b, m, bot, ball, g0); }
+  }
   return 0;
 }
