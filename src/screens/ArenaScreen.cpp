@@ -86,6 +86,10 @@ static const Rect R_SPREV = {150, (int16_t)(BOTBAR_Y + 2), 78, 26};
 static const Rect R_SNEXT = {234, (int16_t)(BOTBAR_Y + 2), 80, 26};
 static constexpr int TPER_PAGE = 5;
 static constexpr int PICK_ROWH = 26, PICK_TOP = BAND_Y + 4;  // pick-list geometry (shared by PICK + TPICK)
+// Pick-screen bottom bar: Back (reuse R_BACK, left) + big scroll buttons so you scroll WITHOUT
+// risking an accidental pick (tapping a row is the only way to select).
+static const Rect R_PICK_UP = {SCREEN_W - 108, (int16_t)(BOTBAR_Y + 2), 50, 26};
+static const Rect R_PICK_DN = {SCREEN_W - 54,  (int16_t)(BOTBAR_Y + 2), 50, 26};
 
 static Program dashProgram() {
   Program p;
@@ -723,13 +727,20 @@ void ArenaScreen::drawPick(int player) {
     label(g, r.x + 30, r.y + 2, c.name.c_str(), c.neuro ? ui::rgb(120, 230, 245) : c.house ? C_INK : C_GO);
     label(g, r.x + 110, r.y + 5, c.style.c_str(), C_DIM);
   }
-  // scrollbar (tap top/bottom half to page) when the roster overflows
+  // scrollbar thumb (visual only) when the roster overflows
   if (n > vis) {
     int trackX = SCREEN_W - 8, trackH = vis * PICK_ROWH;
     g.fillRect(trackX, PICK_TOP, 4, trackH, C_PANEL_HI);
     int thumbH = trackH * vis / n; if (thumbH < 10) thumbH = 10;
     int thumbY = PICK_TOP + (trackH - thumbH) * _pickScroll / (n - vis);
     g.fillRect(trackX, thumbY, 4, thumbH, C_ACCENT);
+  }
+  // bottom bar: a real Back, and big scroll arrows (so scrolling never risks a pick)
+  g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
+  button(g, R_BACK, "< Back", C_INK, C_PANEL);
+  if (n > vis) {
+    button(g, R_PICK_UP, "^ up",  _pickScroll > 0 ? C_ACCENT : C_DIM, C_PANEL);
+    button(g, R_PICK_DN, "v dn",  _pickScroll < n - vis ? C_ACCENT : C_DIM, C_PANEL);
   }
 }
 
@@ -928,9 +939,17 @@ void ArenaScreen::drawScore() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   if (_type == MatchType::SOCCER) {
     // Live scoreline: "P0 name  G0 - G1  P1 name".
-    const char* n0 = _hotseat ? "P1" : (_cup ? _cands[_pick0].name.c_str() : "You");
-    const char* n1 = _hotseat ? "P2" : _cands[_pick1].name.c_str();
-    char nm0[12], nm1[12]; snprintf(nm0, sizeof(nm0), "%.10s", n0); snprintf(nm1, sizeof(nm1), "%.10s", n1);
+    char nm0[20], nm1[20];   // show the actual fighter on each side, not just "You"/"P1"/"P2"
+    if (_hotseat) {
+      snprintf(nm0, sizeof(nm0), "P1 (%.8s)", _cands[_pick0].name.c_str());
+      snprintf(nm1, sizeof(nm1), "P2 (%.8s)", _cands[_pick1].name.c_str());
+    } else if (_cup) {
+      snprintf(nm0, sizeof(nm0), "%.12s", _cands[_pick0].name.c_str());
+      snprintf(nm1, sizeof(nm1), "%.12s", _cands[_pick1].name.c_str());
+    } else {
+      snprintf(nm0, sizeof(nm0), "You (%.8s)", _cands[_pick0].name.c_str());
+      snprintf(nm1, sizeof(nm1), "%.12s", _cands[_pick1].name.c_str());
+    }
     label(g, 6, 6, nm0, C_GO);
     char sc[12]; snprintf(sc, sizeof(sc), "%d - %d", _arena.goals(0), _arena.goals(1));
     label(g, SCREEN_W / 2, 6, sc, C_ACCENT, textdatum_t::top_center);
@@ -1254,13 +1273,15 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         else if (R_CUP_EXIT.contains(tx, ty)) { _cup = false; drawGameType(); }  // Quit
       }
       break;
-    case Phase::PICK1:
+    case Phase::PICK1: {
+      int n = (int)_cands.size(), vis = pickVisible();
+      if (R_BACK.contains(tx, ty)) { drawGameType(); break; }                 // back to the game menu
+      if (R_PICK_UP.contains(tx, ty)) { _pickScroll -= (vis - 1); if (_pickScroll < 0) _pickScroll = 0; drawPick(0); break; }
+      if (R_PICK_DN.contains(tx, ty)) { _pickScroll += (vis - 1); if (_pickScroll > n - vis) _pickScroll = (n > vis) ? n - vis : 0; drawPick(0); break; }
       if (pickScrollTap(tx, ty)) { drawPick(0); break; }
-      for (int i = 0; i < (int)_cands.size(); i++) {
+      for (int i = _pickScroll; i < n && i < _pickScroll + vis; i++) {        // ONLY visible rows are pickable
         if (pickRowRect(i).contains(tx, ty)) {
           _pick0 = i; hal::audio.blip();
-          // Hotseat: hand off to Player 2. vs-Computer: now choose WHO to fight (was auto-Vex) --
-          // a default lands on Vex/Bolt so it's still one extra tap, not a chore.
           if (_hotseat) { drawHandoff(); }
           else {
             bool sumo = (_type == MatchType::SUMO);
@@ -1273,15 +1294,21 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         }
       }
       break;
+    }
     case Phase::HANDOFF:
       if (R_READY.contains(tx, ty)) { _pickScroll = 0; _phase = Phase::PICK2; drawPick(1); }
       break;
-    case Phase::PICK2:
+    case Phase::PICK2: {
+      int n = (int)_cands.size(), vis = pickVisible();
+      if (R_BACK.contains(tx, ty)) { _pickScroll = 0; _phase = Phase::PICK1; drawPick(0); break; }   // back to your-bot
+      if (R_PICK_UP.contains(tx, ty)) { _pickScroll -= (vis - 1); if (_pickScroll < 0) _pickScroll = 0; drawPick(1); break; }
+      if (R_PICK_DN.contains(tx, ty)) { _pickScroll += (vis - 1); if (_pickScroll > n - vis) _pickScroll = (n > vis) ? n - vis : 0; drawPick(1); break; }
       if (pickScrollTap(tx, ty)) { drawPick(1); break; }
-      for (int i = 0; i < (int)_cands.size(); i++) {
+      for (int i = _pickScroll; i < n && i < _pickScroll + vis; i++) {        // ONLY visible rows are pickable
         if (pickRowRect(i).contains(tx, ty)) { _pick1 = i; hal::audio.blip(); startMatch(); return app::Signal::NONE; }
       }
       break;
+    }
     case Phase::BOARD:
       if (R_BACK.contains(tx, ty)) { hal::led.off(); return app::Signal::BACK; }
       break;

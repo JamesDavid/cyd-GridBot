@@ -37,15 +37,31 @@ static constexpr int N_HOUSE_OPP = 8;  // Bolt, Coil, Spin, Vex, Ace, Neura, Cor
 static const char* const HOUSE_OPP[N_HOUSE_OPP] = {"Bolt", "Coil", "Spin", "Vex", "Ace", "Neura", "Cortex", "Self"};
 static constexpr int OPP_SELF = 7;     // spar your own evolving champion (self-play)
 
+// SOCCER trainer roster: the soccer HOUSE TEAM (the very dribblers you meet in vs-Computer soccer,
+// each distilled the same way from its avatar seed) then Self -- so a kid who just lost to Strika
+// can spar Strika right here and level up against it. Avatars match ArenaScreen's house team.
+struct SoccerOpp { const char* name; uint8_t avatar; };
+static const SoccerOpp SOCCER_OPP[] = {{"Strika",7},{"Dribbla",2},{"Volley",4},{"Nutmeg",1},{"Boots",3}};
+static constexpr int N_SOCCER_HOUSE = 5;          // + Self
+static constexpr int N_SOCCER_OPP   = N_SOCCER_HOUSE + 1;
+
 // The sparring roster = house bots + every bot in your library (incl. radio-traded
 // friends' bots and fighters you saved). Train against code OR neuro opponents.
+int ArenaTrainScreen::houseOppN() const {        // soccer fields its own team; battle/race use HOUSE_OPP
+  return _matchType == MatchType::SOCCER ? N_SOCCER_OPP : N_HOUSE_OPP;
+}
+
 int ArenaTrainScreen::oppCount() const {
-  return N_HOUSE_OPP + (_profile ? (int)_profile->library.size() : 0);
+  return houseOppN() + (_profile ? (int)_profile->library.size() : 0);
 }
 
 std::string ArenaTrainScreen::oppNameFor(int idx) const {
-  if (idx >= 0 && idx < N_HOUSE_OPP) return HOUSE_OPP[idx];
-  int li = idx - N_HOUSE_OPP;
+  int nh = houseOppN();
+  if (idx >= 0 && idx < nh) {
+    if (_matchType == MatchType::SOCCER) return idx < N_SOCCER_HOUSE ? SOCCER_OPP[idx].name : "Self";
+    return HOUSE_OPP[idx];
+  }
+  int li = idx - nh;
   if (_profile && li >= 0 && li < (int)_profile->library.size()) return _profile->library[li].name;
   return "Ace";
 }
@@ -60,6 +76,23 @@ std::string ArenaTrainScreen::nextFighterName() const {
 
 void ArenaTrainScreen::buildOpponent(int idx) {
   _ai.clear();
+  int nh = houseOppN();
+  if (idx >= nh) {                 // YOUR library (any mode): code OR neuro, incl. radio-traded bots
+    int li = idx - nh;
+    if (_profile && li >= 0 && li < (int)_profile->library.size()) {
+      _oppName = _profile->library[li].name; _ai = _profile->library[li].program;
+    } else _oppName = "Ace";
+    return;
+  }
+  if (_matchType == MatchType::SOCCER) {           // the soccer HOUSE TEAM, then Self
+    if (idx >= N_SOCCER_HOUSE) { _oppName = "Self"; setSelfOpponent(_brain); return; }
+    uint8_t av = SOCCER_OPP[idx].avatar; _oppName = SOCCER_OPP[idx].name;
+    uint32_t sd = 11u + (uint32_t)av * 13u;        // SAME seed as the vs-Computer Strika et al
+    uint8_t bi = _ai.addBrain(sd);
+    distillSoccer(_ai.brains[bi], sd, 8000);       // a real dribbler -- the very foe you just lost to
+    Node loop = Node::repeatUntil(AT_GOAL); loop.body.push_back(Node::neuro(bi)); _ai.main.push_back(loop);
+    return;
+  }
   // Ordered EASY -> HARD so a kid's first Teach reliably beats the default (Bolt), for the
   // satisfying "I taught it and it WINS!"; cycle up through navigators and a hunter to Ace
   // (a perfect solver) for a real challenge — five named partners before your own library.
@@ -92,13 +125,7 @@ void ArenaTrainScreen::buildOpponent(int idx) {
   } else if (idx == OPP_SELF) {    // "Self": spar a copy of YOUR current brain (self-play). Evolve
     _oppName = "Self";             // refreshes this to the champion each generation (an arms race).
     setSelfOpponent(_brain);
-  } else {                         // your library: code OR neuro, incl. radio-traded bots
-    int li = idx - N_HOUSE_OPP;
-    if (_profile && li >= 0 && li < (int)_profile->library.size()) {
-      _oppName = _profile->library[li].name;
-      _ai = _profile->library[li].program;
-    } else { _oppName = "Ace"; }
-  }
+  }                                // (library handled up top, mode-agnostic)
 }
 
 void ArenaTrainScreen::setSelfOpponent(const gb::Net& b) {
@@ -125,12 +152,16 @@ void ArenaTrainScreen::drawOppList() {
   int n = oppCount();
   for (int i = 0; i < n; i++) {
     Rect r = oppRowRect(i);
-    bool sel = (i == _oppIdx), house = (i < N_HOUSE_OPP);
+    int nh = houseOppN();
+    bool sel = (i == _oppIdx), house = (i < nh);
     g.fillRoundRect(r.x, r.y, r.w, r.h, 4, sel ? C_PANEL_HI : C_PANEL);
     g.drawRoundRect(r.x, r.y, r.w, r.h, 4, sel ? C_ACCENT : (house ? C_PANEL_HI : C_GO));
     int ty = r.y + (r.h - 8) / 2;
     label(g, r.x + 8, ty, oppNameFor(i).c_str(), house ? C_INK : C_GO);
-    const char* tag = (i <= 2) ? "code" : (i == 3) ? "hunts & zaps" : (i == 4) ? "maze solver"
+    const char* tag;
+    if (i >= nh) tag = "your bot";
+    else if (_matchType == MatchType::SOCCER) tag = (i < N_SOCCER_HOUSE) ? "house dribbler" : "self-play (Evolve)";
+    else tag = (i <= 2) ? "code" : (i == 3) ? "hunts & zaps" : (i == 4) ? "maze solver"
                       : (i == 5 || i == 6) ? "neural brain" : (i == OPP_SELF) ? "self-play (Evolve)" : "your bot";
     label(g, r.x + r.w - 8, ty, tag, C_DIM, textdatum_t::top_right);
   }
@@ -215,6 +246,7 @@ void ArenaTrainScreen::setMode(MatchType t) {
   _matchType = t;
   _animating = false; _qLearning = false;
   setupBoard();
+  if (_oppIdx >= oppCount()) _oppIdx = 0;   // roster size/meaning differs per mode -> keep it in range
   buildOpponent(_oppIdx);
   _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
   if (_rnn) rbrain().config(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);  // fresh brain of the current type

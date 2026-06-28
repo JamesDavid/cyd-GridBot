@@ -35,6 +35,7 @@ class ArenaTrainScreen : public app::IScreen {
   void mazeGeom(int& tile, int& ox, int& oy) const;
   void evaluateAndTrace();
   int  oppCount() const;        // sparring roster size (house bots + your library)
+  int  houseOppN() const;       // house-bot count for the current mode (soccer team vs battle roster)
   void buildOpponent(int idx);  // load opponent `idx` into _ai (+ name into _oppName)
   void setSelfOpponent(const gb::Net& b);  // _ai := a copy of brain `b` (self-play sparring partner)
   std::string oppNameFor(int idx) const;  // display name for a roster slot (no side effects)

@@ -251,12 +251,16 @@ ArenaOutcome Arena::tick() {
         if (!pushBall(i, &squeezed) || squeezed) _bot[i].it.setPose(before[i]);
       }
     }
-    // Loose-ball "referee": if nobody touches the ball for a good while (a true midfield deadlock),
-    // it's dropped at a fresh spot so both bots scramble for it again -- never nudged toward a goal,
-    // so the ref never scores; goals stay bot-driven. Now that the bots sense the rival and
-    // out-maneuver, this is a rare last resort. (A goal kicks off, so ballWas != _ball -> no stall.)
-    if (_ball == ballWas) { if (++_ballStall >= 28) { refDriftBall(); _ballStall = 0; } }
-    else _ballStall = 0;
+    // Loose-ball "referee": a stuck ball is dropped at a fresh spot so both bots scramble for it again
+    // (never nudged toward a goal -- the ref never scores). A true midfield loose ball gets a long
+    // fuse; but a DEADLOCK -- both bots jammed against the ball (often pinning it on a wall) -- pops
+    // free fast so players don't sit stuck waiting for the respawn. (A goal kicks off -> no stall.)
+    if (_ball == ballWas) {
+      auto onOrNextTo = [&](int i) { int dr = _bot[i].it.pose().row - _ball.row, dc = _bot[i].it.pose().col - _ball.col;
+                                     return dr * dr + dc * dc <= 1; };
+      bool deadlock = _bot[0].alive && _bot[1].alive && onOrNextTo(0) && onOrNextTo(1);
+      if (++_ballStall >= (deadlock ? 8 : 28)) { refDriftBall(); _ballStall = 0; }
+    } else _ballStall = 0;
   }
 
   // 2c) SOCCER zap: fire while FACING the ball -> SWAP places with it AND turn 180. The ball pops to
