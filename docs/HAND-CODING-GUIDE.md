@@ -170,9 +170,11 @@ competitive here.
 
 ## 4. Soccer — *the dribbler* ⚽ (where AI starts to win)
 
-**Goal:** push the ball into the **net**. This is the hard one to hand-code, and that's the point.
-Pushing a ball is tricky: you have to get **behind** it (on the far side from the net) so that when
-you shove, it goes *toward* goal — not into your own net.
+**Goal:** push the ball into the **opponent's net**. This is the hard one to hand-code, and that's the
+point. Pushing a ball is tricky: you have to get **behind** it (on the far side from their net) so that
+when you shove, it goes *toward* their goal. (You can't score on yourself — shove the ball toward the
+net you defend and your robot **auto-turns around with it** — but you still have to get behind it to
+actually score.)
 
 ### First try (and why it's not enough)
 
@@ -186,10 +188,12 @@ repeat until goal {
 }
 ```
 
-It scores sometimes… but it shoves the ball **whatever way it's facing**, including into its *own*
-goal — so it gives away cheap own-goals. *(In our eval this scrappy chaser won only ~4% of games vs
-trained strikers — the "get behind" bot below, which stops scoring on itself, roughly triples that to
-~14%. Still a losing record, but the **idea** clearly helps.)*
+It scores sometimes… but it shoves the ball **whatever way it's facing**. It *can't* own-goal anymore —
+shove the ball toward your own net and the game turns your robot around with it — but pushing the wrong
+way still **wastes time**, so it loses to a trained striker. The **"get behind" bot below**, which aims
+every shove at the goal, scores far more reliably. *(Both still lose to a well-trained striker — soccer
+is where training pays off — but getting behind the ball is the difference between a bot that plays and
+one that flails.)*
 
 ![Soccer chaser, top](img/hc-soccer-1-1.png) ![Soccer chaser, scrolled](img/hc-soccer-1-2.png)
 

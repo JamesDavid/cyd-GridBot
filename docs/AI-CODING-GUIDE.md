@@ -175,9 +175,11 @@ The takeaways from this eval:
 > reproducible ≠ representative, and a close call between two weak options may not be settleable at all.
 > (Full before/after in [TRAINING_FINDINGS.md](TRAINING_FINDINGS.md).)
 
-The soccer trainer also helps you out: it **penalises a wrong-way push 2×** and **rewards a goalward
-`zap`**, so a trained striker learns to **avoid own-goals** and use the swap — the move the
-hand-coded `if ball^ {zap}` bot could only do blindly.
+The game also has the striker's back: **you can't score in your own net.** Shove the ball toward the
+net you defend and your robot **automatically turns around with it** (a zap-swap, applied for you), so
+**own-goals are impossible** — a bot caught on the wrong side recovers instead of scoring on itself. So
+training is about *finishing* (getting behind the ball and burying it in the opponent's net), not about
+avoiding own-goals.
 
 > **🩺 "My bot got *worse* after I trained it!"** — a real outcome, not a fail (you saw it above: a
 > Q-Learn refinement dropped a strong striker from 63% to ~30%). When a refinement hurts, **go back to

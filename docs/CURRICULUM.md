@@ -77,8 +77,10 @@ Work from the **[Hand-Coding Guide](HAND-CODING-GUIDE.md)** (it has on-device sc
    pit; turn to face the foe; otherwise close in.* Fight **vs Computer** and win. **Reorder the rules**
    (put `forward` first) and watch it get dumb — *order is the whole lesson.*
 2. **Soccer:** build the **dribbler** — `if ball^` (touching the ball) check the **net** and circle
-   behind it before pushing, so you don't shove it into your *own* goal. Try the **`zap`-swap**:
-   `if ball^ { zap }` makes your robot **trade places with the ball** to turn it around.
+   behind it before pushing, so a shove sends the ball toward the *opponent's* goal. (You can't score
+   on yourself — shove it the wrong way and your robot auto-turns around with it — but you still have to
+   get behind it to score.) You can also flip the ball on demand with the **`zap`-swap**: `if ball^ {
+   zap }` makes your robot **trade places with the ball** to turn it around.
 3. **The honest moment:** the hand-coded striker *plays*, but a good opponent beats it. Hand-coding
    nailed the maze and the fight; soccer needs **finesse** that's hard to write down.
 
@@ -114,9 +116,9 @@ rewarded changes.) **Checkpoint:** a trained brain that out-plays the hand-coded
 1. **Train a striker properly:** **Teach** a dribbler first — it's strong in seconds. *Keep that Teach
    base* and only adopt a refinement if a **rematch proves it's better**: in our measured bake-off,
    Teach (63%) was already strong, refining **against the real opponent** (Teach→Evolve, 84%) helped,
-   while **Q-Learn often *hurt*** (44%/26%, below Teach). The trainer **penalises pushing the ball the
-   wrong way (toward your own net) 2×** and **rewards a goalward zap**, so the brain learns to **avoid
-   own-goals** and use the **swap**. **Save** your striker.
+   while **Q-Learn often *hurt*** (44%/26%, below Teach). (No own-goals to train away: shove the ball
+   toward your own net and the game auto-turns your robot around with it, so training is purely about
+   *scoring on the opponent*.) **Save** your striker.
    *(Tune the **Knobs** — learning rate, rounds, explore — and watch the loss fall, or thrash.)*
 2. **Level-up loop:** lost a match? **Save foes** (copy the winner into your library), train against
    *it*, and **rematch**. Because the Arena is **deterministic**, a rematch is exact — so improvements

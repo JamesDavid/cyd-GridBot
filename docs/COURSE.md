@@ -299,7 +299,8 @@ stuck on a wall; otherwise close the distance."* It **hunts.** Six rules, so the
 ### 3.2 Soccer — *the dribbler* (where AI starts to win)
 
 Pushing a ball is tricky: you have to get **behind** it (the far side from the net) so a shove sends it
-*toward* goal, not into your own net. The naïve chaser —
+*toward* the opponent's goal. (You can't score on yourself — shove it the wrong way and your robot
+auto-turns around with it — but you still have to get behind it to actually score.) The naïve chaser —
 
 ```
 repeat until goal {
@@ -328,13 +329,12 @@ Note the **nested `if`** — the net checks live *inside* the `if ball ^` block.
 **`+ add inside`** on the `if ball ^` row to indent blocks under it.
 ![top](img/hc-soccer-2-1.png) ![scrolled](img/hc-soccer-2-2.png)
 
-> **⚽ Pro move — the `zap`-swap.** Heading the *wrong* way with the ball (about to shove it toward your
-> *own* net)? Circling around is slow. Instead, **face the ball and `zap`** — your robot and the ball
-> **swap places and you spin 180°**, so the ball lands **directly in front of you, pointing back the way
-> you came**; one `forward` then drives it the *other* direction. So `if ball ^ { zap }` then `forward`
-> is a two-block way to "turn the ball around and take it." Each goal mouth wears its **defender's**
-> colour (you score in the *other* colour — the opponent's end, like real soccer), so an own-goal
-> (ball into your own colour) is easy to spot.
+> **⚽ The `zap`-swap (mostly automatic now).** **You can't score in your own net.** If you shove the
+> ball toward the net you defend, your robot and the ball **swap places and you spin 180°** — the ball
+> lands **directly in front of you, pointing the right way** — *automatically*, so **own-goals are
+> impossible**; a bot caught on the wrong side just turns around with the ball. You can also trigger the
+> same move yourself: **face the ball and `zap`** to flip it around on demand. Each goal mouth wears its
+> **defender's** colour — you score in the *other* colour (the opponent's end, like real soccer).
 
 **How it does** — one multi-seed run (`tools/bot_eval.cpp`, **64 games** per row = 4 trained opponents
 × 16 kickoffs), as a win-rate:
@@ -494,10 +494,9 @@ and the kid can name the three trainers and say what each is good at.
 
 > **What you need to know.** Today is about **iterating with evidence.** Because the Arena is
 > **deterministic** — no hidden dice — a rematch is *exact*, so any improvement you see is **real, not
-> luck.** That's what makes "train → save → rematch" a genuine engineering loop instead of gambling. The
-> soccer trainer is tuned to teach good habits: it **penalises pushing the ball the wrong way (toward
-> your own net) 2×** and **rewards a goalward `zap`**, so the brain learns to **avoid own-goals** and
-> use the **swap**.
+> luck.** That's what makes "train → save → rematch" a genuine engineering loop instead of gambling.
+> (And the game itself prevents own-goals: shove the ball toward your own net and your robot
+> auto-turns around with it — so training is purely about *scoring on the opponent*, not self-defence.)
 
 ### The championship recipe (and the trap next to it)
 
@@ -548,8 +547,8 @@ corrects itself.)
    thing that scrambles it). If you refine, prefer **Evolve against the real opponent you'll face** —
    but **keep your Teach base** and only swap to the refined brain if a rematch shows it's actually
    better (in our tests, reward-refining a good striker often *didn't* help). **Save** your striker.
-   *(The soccer trainer also helps: it **penalises a wrong-way push 2×** and **rewards a goalward
-   `zap`**, so the brain learns to avoid own-goals and use the swap.)* ![Train a striker](img/soccer-brain.png)
+   *(No own-goals to worry about — shove the ball the wrong way and the game auto-turns your robot
+   around with it — so training is all about finishing on the opponent.)* ![Train a striker](img/soccer-brain.png)
 2. **The loser-levels-up loop:** lost a match? **Save the foe** — it copies the winner into your library
    as `«owner» «fighter»` (e.g. *AA fighter v4*) — train against **that exact bot**, and **rematch.**
    Because the Arena is **deterministic**, a rematch is *exact*: any improvement you see is **real, not
