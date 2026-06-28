@@ -939,16 +939,16 @@ void ArenaScreen::drawScore() {
   g.fillRect(0, 0, SCREEN_W, TOPBAR_H, C_PANEL);
   if (_type == MatchType::SOCCER) {
     // Live scoreline: "P0 name  G0 - G1  P1 name".
-    char nm0[20], nm1[20];   // show the actual fighter on each side, not just "You"/"P1"/"P2"
+    char nm0[24], nm1[24];   // show the actual fighter on each side, not just "You"/"P1"/"P2"
     if (_hotseat) {
-      snprintf(nm0, sizeof(nm0), "P1 (%.8s)", _cands[_pick0].name.c_str());
-      snprintf(nm1, sizeof(nm1), "P2 (%.8s)", _cands[_pick1].name.c_str());
+      snprintf(nm0, sizeof(nm0), "P1 (%.11s)", _cands[_pick0].name.c_str());
+      snprintf(nm1, sizeof(nm1), "P2 (%.11s)", _cands[_pick1].name.c_str());
     } else if (_cup) {
-      snprintf(nm0, sizeof(nm0), "%.12s", _cands[_pick0].name.c_str());
-      snprintf(nm1, sizeof(nm1), "%.12s", _cands[_pick1].name.c_str());
+      snprintf(nm0, sizeof(nm0), "%.13s", _cands[_pick0].name.c_str());
+      snprintf(nm1, sizeof(nm1), "%.13s", _cands[_pick1].name.c_str());
     } else {
-      snprintf(nm0, sizeof(nm0), "You (%.8s)", _cands[_pick0].name.c_str());
-      snprintf(nm1, sizeof(nm1), "%.12s", _cands[_pick1].name.c_str());
+      snprintf(nm0, sizeof(nm0), "You (%.11s)", _cands[_pick0].name.c_str());
+      snprintf(nm1, sizeof(nm1), "%.13s", _cands[_pick1].name.c_str());
     }
     label(g, 6, 6, nm0, C_GO);
     char sc[12]; snprintf(sc, sizeof(sc), "%d - %d", _arena.goals(0), _arena.goals(1));
