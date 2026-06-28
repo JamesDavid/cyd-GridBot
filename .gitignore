@@ -9,3 +9,4 @@
 !docs/firmware/*.bin
 bot_eval.exe
 owngoal_check.exe
+vector_check.exe
