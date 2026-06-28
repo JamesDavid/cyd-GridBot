@@ -301,6 +301,25 @@ void App::debugZapDemo() {
   Serial.println("ZAPDEMO Zappy vs Cone");
 }
 
+// Controlled zap-swap demo for the gif: a SCRIPTED striker (zap, then drive) placed facing its own
+// net with the ball ahead. Its first tick is a visible swap that flips the ball goalward; the rest
+// drive it into the (red) opponent net. Step it with 'N' and screenshot each tick.
+void App::debugSwapDemo() {
+  if (_profile.id.empty()) { Serial.println("NOPROFILE"); return; }
+  using namespace gb;
+  Program p;                                        // flat sequence (no loop): one zap, then drive
+  p.main.push_back(Node::command(CMD_FIRE));        // ZAP -> swap places with the ball + spin 180
+  for (int i = 0; i < 6; i++) p.main.push_back(Node::command(CMD_FWD));   // drive it into the net
+  LibEntry cone; cone.name = "Cone"; cone.program = Program{}; cone.source = LIB_CODE;  // idle opponent
+  _profile.library.push_back(cone);
+  LibEntry e; e.name = "Swappy"; e.program = p; e.source = LIB_CODE;
+  int idx = (int)_profile.library.size();
+  _profile.library.push_back(e);                    // in-memory only (not saved -> gone on reboot)
+  _arena.beginSwapDemo(&_profile, idx, "Cone");
+  _state = State::ARENA;
+  Serial.println("SWAPDEMO Swappy vs Cone");
+}
+
 void App::debugFightLib(int a, int b) {
   if (_profile.id.empty()) { Serial.println("NOPROFILE"); return; }
   int n = (int)_profile.library.size();

@@ -115,7 +115,7 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
       team with soccer names — **Strika / Dribbla / Volley / Nutmeg / Boots**. Trainers: Teach
       (`distillSoccer`/`distillSoccerRnn`), Evolve (soccer fitness), Q-Learn
       (`qTrainSoccer`/`qTrainSoccerRnn`). Wired into **vs-Computer, Hotseat, Tournament
-      (Cup/Ladder), and the networked Room**. Demo GIF: `docs/soccer.gif`.
+      (Cup/Ladder), and the networked Room**. Demo GIF: `docs/img/soccer.gif`.
 - [x] **Networked tournament (Room) — VERIFIED on two boards (COM3 + COM5).** ESP-NOW
       multi-device Cup: every board broadcasts its fighter, all ingest into a uuid-sorted
       roster (identical order, no central authority), the host broadcasts a shared SEED, and

@@ -92,6 +92,8 @@ static void handleSerialLine(const String& line) {
     gApp.debugLoadProg((uint32_t)n);
   } else if (c == 'K') {
     gApp.debugZapDemo();
+  } else if (c == 'U') {
+    gApp.debugSwapDemo();
   } else if (c == 'F') {
     int a = -1, b = -1; sscanf(line.c_str() + 1, "%d %d", &a, &b);
     gApp.debugFightLib(a, b);                 // 'F' lists the library; 'F a b' fields lib a vs b in soccer

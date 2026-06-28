@@ -481,6 +481,39 @@ void ArenaScreen::beginQuickBattle(Profile* profile, int libIdx, const char* opp
   startMatch();                                // sets up the board + starts animating (BOARD phase)
 }
 
+// Controlled zap-swap scenario (capture aid for the demo gif). Unlike beginQuickBattle, we place the
+// ball + striker by hand: the striker faces its OWN net (WEST, toward green) with the ball one tile
+// ahead, so a forward would own-goal. Its scripted program zaps FIRST -- the swap trades places and
+// spins it 180, leaving the ball ahead pointing at the red net -- then drives it in. One unmistakable
+// swap, then a clean goal. The opponent is parked off the lane so it never interferes.
+void ArenaScreen::beginSwapDemo(Profile* profile, int libIdx, const char* oppName) {
+  _profile = profile;
+  _hotseat = false;
+  _type = MatchType::SOCCER;
+  buildCandidates(true);
+  int nlib = _profile ? (int)_profile->library.size() : 0;
+  _pick0 = (libIdx >= 0 && libIdx < nlib) ? libIdx : 0;
+  _pick1 = -1;
+  for (int i = 0; i < (int)_cands.size(); i++) if (_cands[i].name == oppName) { _pick1 = i; break; }
+  if (_pick1 < 0) _pick1 = _pick0;
+  gb::MazeGen::generateSoccerPitch(_maze, 1, _s0, _s1, _ball, _goal0, _goal1);  // green=left(g1), red=right(g0)
+  int rmid = _maze.rows() / 2;
+  _ball.row = (int8_t)rmid;       _ball.col = 4;                       // ball just LEFT of the striker
+  _s0.row   = (int8_t)rmid;       _s0.col   = 5; _s0.facing = gb::WEST; // striker faces its OWN (green) net
+  _s1.row   = 1;                  _s1.col   = 8; _s1.facing = gb::WEST; // idle opponent parked off the lane
+  const Program& p0 = _cands[_pick0].prog;
+  const Program& p1 = _cands[_pick1].prog;
+  _arena.setup(&_maze, &p0, &p1, _s0, _s1, MatchType::SOCCER, 220);
+  _arena.configSoccer(_ball, _goal0, _goal1);
+  _ballPrev = _arena.ball();
+  _lastMatchSeed = 1;
+  _phase = Phase::BOARD;
+  _running = false;   // start PAUSED: the scripted striker scores in ~5 ticks, so let 'N'/debugStep
+  _last = 0;          // drive it one frame at a time (otherwise the auto-run finishes before capture)
+  _goalHoldUntil = 0;
+  drawBoard();
+}
+
 // ---- menus ----------------------------------------------------------------
 // Two levels: pick WHO you play (Computer / Hotseat / Radio), then WHICH game.
 void ArenaScreen::drawMenu() {
@@ -821,11 +854,15 @@ void ArenaScreen::drawCell(int r, int c) {
     g.fillCircle(x + tile / 2, y + tile / 2, tile / 3, C_ACCENT);
     label(g, x + tile / 2, y + tile / 2, "G", C_BG, textdatum_t::middle_center);
   }
-  if (_type == MatchType::SOCCER) {   // tint the open goal mouths (4 tiles tall) -- yours green, foe red
-    bool m0 = (c == _goal0.col && inGoalMouth(r, _goal0.row));
-    bool m1 = (c == _goal1.col && inGoalMouth(r, _goal1.row));
+  if (_type == MatchType::SOCCER) {
+    // Tint each goal mouth by the team that DEFENDS it (the end on its own side), so you SCORE by
+    // putting the ball in the OTHER colour -- the opponent's net, like real soccer. goal0 is P1's
+    // ATTACK target (far end), so it wears P2's red; goal1 (P2's target) wears P1's green. An own
+    // goal is then "ball into your own colour", which is exactly what it looks like.
+    bool m0 = (c == _goal0.col && inGoalMouth(r, _goal0.row));   // P1 attacks here -> defended by P2 (red)
+    bool m1 = (c == _goal1.col && inGoalMouth(r, _goal1.row));   // P2 attacks here -> defended by P1 (green)
     if (m0 || m1) {
-      g.fillRect(x, y, tile - 1, tile - 1, m0 ? ui::rgb(20, 90, 50) : ui::rgb(110, 30, 30));
+      g.fillRect(x, y, tile - 1, tile - 1, m0 ? ui::rgb(110, 30, 30) : ui::rgb(20, 90, 50));
       g.drawRect(x, y, tile - 1, tile - 1, C_INK);
     }
   }

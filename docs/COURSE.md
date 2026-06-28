@@ -332,8 +332,9 @@ Note the **nested `if`** — the net checks live *inside* the `if ball ^` block.
 > *own* net)? Circling around is slow. Instead, **face the ball and `zap`** — your robot and the ball
 > **swap places and you spin 180°**, so the ball lands **directly in front of you, pointing back the way
 > you came**; one `forward` then drives it the *other* direction. So `if ball ^ { zap }` then `forward`
-> is a two-block way to "turn the ball around and take it." Each bot's facing arrow is tinted to **match
-> the net it attacks** (green / red), so own-goals are easy to spot.
+> is a two-block way to "turn the ball around and take it." Each goal mouth wears its **defender's**
+> colour (you score in the *other* colour — the opponent's end, like real soccer), so an own-goal
+> (ball into your own colour) is easy to spot.
 
 **How it does** — one multi-seed run (`tools/bot_eval.cpp`, **64 games** per row = 4 trained opponents
 × 16 kickoffs), as a win-rate:
