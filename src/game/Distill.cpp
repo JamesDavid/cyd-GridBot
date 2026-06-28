@@ -371,7 +371,11 @@ static float qSoccerStep(const Maze& m, const Pose& me, const Pose& ball, const 
       nm.row = (int8_t)ar; nm.col = (int8_t)ac;               //   me -> the ball's tile
       nm.facing = turnAround(me.facing);                      //   turn 180 so the ball is ahead of me again
       nball.row = me.row; nball.col = me.col;                 //   ball -> my old tile (turns it around)
-    } else r = -0.03f;                                        // zapped at nothing -> a waste
+      // GREATLY reward the escape swap: caught facing your own net, a zap flips the ball GOALWARD and
+      // leaves you pointed at the goal -- exactly the move that beats the own-goal trap. Pay a big bonus
+      // when the swap moves the ball toward goal (a swap the WRONG way still eats the 2x penalty below).
+      if (ballGoalDist(ball, goal) - ballGoalDist(nball, goal) > 0) r += 0.30f;
+    } else r = -0.05f;                                        // zapped at nothing -> a clear waste
   }
   else {                                                      // FORWARD
     if (!m.inBounds(ar, ac) || !m.isWalkable(ar, ac) || (ar == rival.row && ac == rival.col)) { r = -0.05f; }  // wall/rival -> bonk
@@ -385,7 +389,7 @@ static float qSoccerStep(const Maze& m, const Pose& me, const Pose& ball, const 
   }
   if (!terminal) {
     int dd = oldD - ballGoalDist(nball, goal);            // + = ball moved toward the goal we attack
-    r += 0.05f * (float)(dd >= 0 ? dd : 2 * dd);          // 2x penalty for shoving it the WRONG way (own-goal-ward)
+    r += 0.05f * (float)(dd >= 0 ? dd : 3 * dd);          // 3x penalty for shoving it the WRONG way (own-goal-ward)
   }
   return r;
 }
