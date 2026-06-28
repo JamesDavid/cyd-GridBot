@@ -101,15 +101,21 @@ bool Arena::pushBall(int mover, bool* squeezed) {
   bool blockedByWall = !canLand(nr, nc);
   if (!blockedByBot && !blockedByWall) return land(nr, nc);
 
-  // Jammed -- the ball is pressed into a WALL, or two bots are squeezing it from opposite sides.
-  // Either way pop it out SIDEWAYS so it never sticks: try the two tiles perpendicular to the push.
-  // Which side is tried first comes from a deterministic hash (tick + ball pos + push dir), so it's
-  // unpredictable yet replays byte-identically on every device. If that side is blocked, try the
-  // other; only if boxed in on both perpendiculars too does the ball stay put.
+  // Jammed -- the ball is pressed into a WALL or a bot in the lane. Pop it out SIDEWAYS so it never
+  // sticks: try the two tiles perpendicular to the push. Bias the side toward the GOAL the pusher is
+  // attacking, so a ball shoved into a defender rounds it GOALWARD (an effective diagonal: forward ->
+  // deflect goal-side -> forward) -- and a blocked ball drifts away from your OWN net, not into it. A
+  // deterministic hash only breaks ties, so it still replays byte-identically. If the goalward side is
+  // blocked too, try the other; only if boxed in on both perpendiculars does the ball stay put.
   uint32_t h = (uint32_t)_ticks * 2654435761u
              ^ (uint32_t)_ball.row * 73856093u ^ (uint32_t)_ball.col * 19349663u
              ^ (uint32_t)(dr + 2) * 83492791u ^ (uint32_t)(dc + 2) * 2971215073u;
-  int s = (h & 1u) ? 1 : -1;                       // which perpendicular to try first
+  const Pose& tgt = _goal[mover];                  // the net `mover` attacks -> deflect toward it
+  int rp = _ball.row - dc, cp = _ball.col + dr;    // the s=+1 perpendicular tile
+  int rm = _ball.row + dc, cm = _ball.col - dr;    // the s=-1 perpendicular tile
+  int dp = (rp - tgt.row) * (rp - tgt.row) + (cp - tgt.col) * (cp - tgt.col);
+  int dm = (rm - tgt.row) * (rm - tgt.row) + (cm - tgt.col) * (cm - tgt.col);
+  int s = (dp < dm) ? 1 : (dm < dp) ? -1 : ((h & 1u) ? 1 : -1);   // goalward side first; hash breaks ties
   for (int k = 0; k < 2; k++, s = -s) {
     int pr = _ball.row + s * (-dc);                // (-dc, dr) and (dc, -dr) are the two perpendiculars
     int pc = _ball.col + s * (dr);
