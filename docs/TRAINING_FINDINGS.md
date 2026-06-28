@@ -24,45 +24,46 @@ the weights* changes.
 > net is tiny (`10→8→5`, seconds of training), and host floats may differ slightly from the device.
 > Treat the win-rates as **directional, order-of-magnitude** evidence, not precise constants.
 >
-> *(Methodology fixes, 2026-06-27: **(a)** the soccer pitch geometry is fixed, so a match seed alone
-> replayed the SAME game — both `bot_eval` and the device's `V` eval now vary the kickoff ball per seed,
-> so soccer evals are genuinely multi-seed. **(b)** Neural soccer `zap` (the ball-swap) was previously
-> nullified at match time and now executes — and the swap was changed to also turn the bot 180° so the
-> ball ends up ahead of it. Each of these tweaks **re-shuffled the two reward-refined recipes** (Teach→Q
-> and evolve-from-scratch) by 10–25 points and even flipped the cone-vs-live order — while leaving every
-> *conclusion* below intact. That volatility is the point: the exact recipe percentages are soft.
-> Earlier versions of this section are superseded.)*
+> *(The soccer physics evolved a lot — kickoff is varied per seed, the neural zap-swap executes and
+> turns the bot 180°, a blocked ball deflects goalward, **own-goals are now impossible** (a shove toward
+> your own net auto-turns the bot around), and a whole-match tie-break resolves level scorelines so
+> there are no draws. The big one is own-goals: they used to pad **most** scores, so removing them
+> **slashed every soccer win-rate** — hand-coded bots now win **0%** (they only ever "won" off the
+> opponent's own-goals), and the recipes dropped hard (Teach 63%→**20%**, Teach→Evolve 84%→**47%**).
+> The **ordering is unchanged** — imitate-first, Teach→Evolve best, Q-Learn/evolve-from-scratch weak —
+> but the magnitudes are far lower now that every goal must be legitimately earned. Earlier versions of
+> this section are superseded; treat the exact percentages as soft and physics-dependent.)*
 
 | What | Result (win-rate / record) |
 |---|---|
 | 🧩 Maze: wall-follower+jump vs a one-maze brain, 16 unseen mazes | **8/16 vs 1/16** |
 | 🤖 Battle: hand-coded hunter vs two trained fighters, 16 rings each | **9-5-2 / 9-5-2** |
-| ⚽ Hand-coded strikers vs distilled strikers (64 games) | chaser **4%**, "get behind" **14%**, commit **14%**, behind+wall **6%** |
-| ⚽ Best hand-coded (chaser) vs a *strongly*-trained striker | distill-20k **23%**, Teach→Evolve **7%** (≈92% loss) |
-| Recipe — **Teach** only, vs a peer striker (72 games) | **63%** |
-| Recipe — **Teach→Evolve** vs the opponent | **84%** |
-| Recipe — **Teach→Q-Learn** (refine vs a cone / vs the live opponent) | **19% / 36%** |
-| Recipe — **Evolve from scratch** | **4%** |
+| ⚽ Hand-coded strikers vs distilled strikers (64 games) | chaser **0%**, "get behind" **0%**, commit **0%**, behind+wall **0%** |
+| ⚽ Best hand-coded (chaser) vs a *strongly*-trained striker | distill-20k **6%**, Teach→Evolve **0%** |
+| Recipe — **Teach** only, vs a peer striker (72 games) | **20%** |
+| Recipe — **Teach→Evolve** vs the opponent | **47%** |
+| Recipe — **Teach→Q-Learn** (refine vs a cone / vs the live opponent) | **0% / 4%** |
+| Recipe — **Evolve from scratch** | **0%** |
 
 **What these support (kept qualified):**
 1. **Maze & battle reward a rule** — the 3-rule wall-follower solved 8× more unseen mazes than a
    one-maze brain (8/16 vs 1/16), and the hand-coded hunter went 9-5-2 vs two trained fighters. *(Within
    this eval; n=16 each.)*
-2. **Soccer rewards training** — every hand-coded strategy **lost** to distilled strikers (4–14% win over
-   64 games), and a *well*-trained striker (Teach→Evolve) beat the best hand-coded bot **~92%** (59-5).
-   The careful "get behind" dribbler (14%) did modestly better than the naive chaser (4%).
-3. **Imitate first** — Teach (63%) clearly beat evolving from random noise (4%) in the same time.
-4. **Refining against the opponent helped** — Teach→Evolve-vs-the-opponent (84%) was the strongest
-   recipe, clearly above Teach-only (63%) *in this eval*.
+2. **Soccer rewards training** — every hand-coded strategy now wins **0%** vs distilled strikers. Without
+   own-goals to exploit, a reactive hand-coded bot simply can't beat a trained one; soccer is the clearest
+   "learning wins" case in the whole course.
+3. **Imitate first** — Teach (20%) clearly beat evolving from random noise (0%) in the same time.
+4. **Refining against the opponent helped** — Teach→Evolve-vs-the-opponent (47%) was the strongest
+   recipe, clearly above Teach-only (20%) *in this eval*.
 5. **More training isn't automatically better** — reward-refining a good distilled striker with Q-Learn
-   *reduced* its win-rate (cone 19%, live 36%, both well below Teach's 63%).
+   *reduced* its win-rate (cone 0%, live 4%, both well below Teach's 20%).
 
 **What we retract:** the **cone-trap narrative** ("Q-vs-a-cone regresses to 0–7, training vs the live
-opponent fixes it to 3–3"). That was a **single deterministic on-device match**, and the strong version
-doesn't hold up: over 72 games **both** Q-Learn variants land well below Teach (cone 19%, live 36%), so
-neither "fixes" anything. Worse, their **relative order is not stable** — small rule changes (kickoff
-variance, the zap-swap, the swap's 180° turn) have flipped cone-vs-live more than once, so we claim it in
-*neither* direction. The robust, repeatable finding is just **Q-Learn refinement here tended to hurt**;
+opponent fixes it to 3–3"). That was a **single deterministic on-device match**, and it doesn't hold up:
+over 72 games **both** Q-Learn variants land at the bottom (cone 0%, live 4%), well below Teach (20%), so
+neither "fixes" anything. Their **relative order isn't stable** either — small rule changes have flipped
+cone-vs-live more than once across the physics revisions, so we claim it in *neither* direction. The
+robust, repeatable finding is just **Q-Learn refinement here tended to hurt**;
 the meta-lesson is that **one reproducible match isn't a representative eval — and even a 72-game eval
 can't settle a close call between two weak options.** The detailed on-device log below is
 kept as **history** (what we saw, once), not as measured law.

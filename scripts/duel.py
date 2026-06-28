@@ -62,6 +62,9 @@ def main():
     tap(a, 240, 72);  tap(b, 240, 72); time.sleep(1.1)     # Arena
     tap(a, 160, 143); tap(b, 160, 143); time.sleep(1.1)    # Radio
     tap(a, 160, 159); tap(b, 160, 159); time.sleep(1.4)    # Room -> lobby
+    # field the SOCCER striker (index 8 on both: COM3 "player", COM5 "player v2") -- cycle 8x from 0
+    for _ in range(8): tap(a, 160, 183); time.sleep(0.3)
+    for _ in range(8): tap(b, 160, 183); time.sleep(0.3)
     shot(a, ".pio/net/match_a_lobby.png"); shot(b, ".pio/net/match_b_lobby.png")
 
     tap(a, 160, 91); time.sleep(2.0)                       # A hosts
@@ -69,8 +72,10 @@ def main():
     shot(a, ".pio/net/match_a_paired.png")                 # host should now show "2 in"
 
     tap(a, 263, 219); time.sleep(1.0)                      # host: discipline Sumo->Soccer (1 tap)
-    tap(a, 160, 219); time.sleep(3.0)                      # host: START (needs >=2 players)
-    shot(a, ".pio/net/match_a_play.png"); shot(b, ".pio/net/match_b_play.png")
+    tap(a, 160, 219); time.sleep(2.0)                      # host: START (needs >=2 players)
+    # capture the match PLAYING over time -- each shot takes ~13s, so these are ~13s apart
+    for i in range(5): shot(a, f".pio/net/play_a_{i}.png")
+    shot(b, ".pio/net/play_b.png")
     a.close(); b.close()
 
 

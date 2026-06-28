@@ -115,8 +115,8 @@ rewarded changes.) **Checkpoint:** a trained brain that out-plays the hand-coded
 
 1. **Train a striker properly:** **Teach** a dribbler first — it's strong in seconds. *Keep that Teach
    base* and only adopt a refinement if a **rematch proves it's better**: in our measured bake-off,
-   Teach (63%) was already strong, refining **against the real opponent** (Teach→Evolve, 84%) helped,
-   while **Q-Learn often *hurt*** (44%/26%, below Teach). (No own-goals to train away: shove the ball
+   Teach (20%) was the strong base, refining **against the real opponent** (Teach→Evolve, 47%) helped
+   most, while **Q-Learn *hurt*** (0%/4%, below Teach). (No own-goals to train away: shove the ball
    toward your own net and the game auto-turns your robot around with it, so training is purely about
    *scoring on the opponent*.) **Save** your striker.
    *(Tune the **Knobs** — learning rate, rounds, explore — and watch the loss fall, or thrash.)*

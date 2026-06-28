@@ -235,24 +235,24 @@ kickoffs = **64 games**), as a **win-rate**:
 
 | Hand-coded bot vs a panel of distilled strikers | Win-rate (64 games) |
 |---|---|
-| naive **chaser** | ~**4%** (3-5-56) |
-| **"get behind the ball"** | ~**14%** (9-0-55) |
+| naive **chaser** | **0%** (0-0-64) |
+| **"get behind the ball"** | **0%** (0-0-64) |
 
-So an honest read: **every** hand-coded soccer bot we tried **loses** to trained strikers. The naive
-chaser wins ~4%; getting behind the ball roughly triples that to ~14% — better, but still a clear losing
-record. Against the *strongest* striker (a Teach→Evolve one) the best hand-coded bot won just **7%**
-(5-0-59); against a more moderate one (distill-20k) it managed **23%**. Soccer is **not** a hand-coding
-win the way the maze and battle bots are.
+So an honest read: **every** hand-coded soccer bot we tried wins **0%** vs trained strikers — including
+the careful "get behind the ball" version. No rule we wrote was enough to beat a trained net even once.
+(Now that own-goals are impossible, there are no cheap goals to scrape: you have to legitimately
+out-finish the opponent, and a reactive rule can't.) Soccer is **not** a hand-coding win the way the maze
+and battle bots are — it's the *opposite*.
 
 > **Qualify it:** one deterministic host run over fixed seeds vs **distilled strikers** (one opponent
-> class) — reproducible, but not an independent-sample confidence interval. An **older version of this
-> guide reported a "coin-flip" (~50%)**; that came from an eval that accidentally replayed the same
-> match every seed. With the kickoff now varied per seed, the honest result is the losing record above —
-> which is *itself* the lesson on why you average over real seeds.
+> class) — reproducible, but not an independent-sample confidence interval. Earlier versions of this
+> guide reported small hand-coded win-rates (and once a "coin-flip ~50%"); those came from eval/physics
+> bugs since fixed (a replayed match, and the opponent own-goaling). The honest result now is a clean
+> **0%**.
 
-The lesson worth telling the kids: the careful **"get behind the ball"** idea **does** beat the naive
-chaser (~14% vs ~4%) — a sensible rule helps — but no rule we wrote was enough to *win* soccer. That's
-the perfect moment to open NeuroLab.
+The lesson worth telling the kids: getting behind the ball is still **better soccer** (it aims your
+shove at the goal instead of flailing), but no hand-coded rule is enough to *win* against a trained
+striker. That's the perfect moment to open NeuroLab.
 
 **Why?** A trained brain saw thousands of examples and learned *finishing finesse* — aiming at the
 open corner of the net, hitting the exact spot to stand. Reactive blocks can't hold a plan in memory
@@ -269,7 +269,7 @@ Here's the whole lesson on one line each:
 |---|---|---|
 | 🧩 **Maze** | a 3-rule wall-follower solves **8×** more unseen mazes | ✍️ **Hand-coding** — a correct rule generalises |
 | 🤖 **Battle** | the hunter goes **9-5-2** vs trained fighters | ✍️ **Hand-coding** — clear priorities win |
-| ⚽ **Soccer** | the best dribbler **loses** to trained strikers (~4–14% win, 64 games); a well-trained one wins ~92% (Teach→Evolve 59-5) | 🧠 **Learning** — *if trained well*; finesse needs practice |
+| ⚽ **Soccer** | the best dribbler **loses** to trained strikers (**0%** win, 64 games); a trained striker wins outright | 🧠 **Learning** — *if trained well*; finesse needs practice |
 
 **That's why machine learning exists.** When a job is easy to describe as rules (find the wall, face
 the foe), *write the rules* — it's clearer, faster, and it generalises. When a job is full of feel and
