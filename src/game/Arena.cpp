@@ -81,11 +81,26 @@ bool Arena::pushBall(int mover, bool* squeezed) {
   // A goal is the END column +/- one row of the mouth centre (a 3-tile-tall mouth on the pitch;
   // a single tile elsewhere). Anything in the mouth column at those rows counts as a score.
   auto inGoal = [&](int i, int r, int c) { return c == _goal[i].col && inGoalMouth(r, _goal[i].row); };
-  auto land = [&](int r, int c) {
-    // A goal in net `i` was caused by `mover`. mover ATTACKS _goal[mover], so scoring in any other
-    // net (i != mover) means mover shoved it into the net it defends -- an own goal.
-    if (inGoal(0, r, c))      { _goals[0]++; if (mover != 0) _ownGoals[mover]++; _justScored = true; kickoff(); }
-    else if (inGoal(1, r, c)) { _goals[1]++; if (mover != 1) _ownGoals[mover]++; _justScored = true; kickoff(); }
+  // Own-goal guard -> automatic zap-swap. A shove that would put the ball in the net THIS bot DEFENDS
+  // never scores; instead the bot turns 180 (now facing its ATTACK net) and the ball pops to the tile
+  // it just came from, so the ball ends up directly AHEAD of the bot pointing the RIGHT way. The bot
+  // simply "turns around" with the ball -- the same move a striker can do with a manual zap. No own
+  // goals are possible, so a bot caught on the wrong side recovers instead of scoring on itself.
+  if (inGoal(1 - mover, nr, nc)) {
+    int oj = 1 - mover;
+    int br = _ball.row - dr, bc = _ball.col - dc;   // one tile back toward the ATTACK net
+    bool clear = _maze->inBounds(br, bc) && _maze->isWalkable(br, bc) &&
+                 !(_bot[oj].alive && _bot[oj].it.pose().row == br && _bot[oj].it.pose().col == bc);
+    if (!clear) return false;                       // can't reposition -> bounce back (still no own goal)
+    _ball.row = (int8_t)br; _ball.col = (int8_t)bc;
+    Pose bp = _bot[mover].it.pose(); bp.facing = turnAround(bp.facing);
+    _bot[mover].it.setPose(bp);
+    _ballStall = 0;
+    return true;
+  }
+  auto land = [&](int r, int c) {                   // own net already handled above -> only the attack goal scores
+    if (inGoal(0, r, c))      { _goals[0]++; _justScored = true; kickoff(); }
+    else if (inGoal(1, r, c)) { _goals[1]++; _justScored = true; kickoff(); }
     else { _ball.row = (int8_t)r; _ball.col = (int8_t)c; }
     return true;
   };
