@@ -315,9 +315,27 @@ void App::debugSwapDemo() {
   LibEntry e; e.name = "Swappy"; e.program = p; e.source = LIB_CODE;
   int idx = (int)_profile.library.size();
   _profile.library.push_back(e);                    // in-memory only (not saved -> gone on reboot)
-  _arena.beginSwapDemo(&_profile, idx, "Cone");
+  _arena.beginScriptedDemo(&_profile, idx, "Cone", 0);
   _state = State::ARENA;
   Serial.println("SWAPDEMO Swappy vs Cone");
+}
+
+// Controlled soccer demo for the gif: a scripted striker placed behind the ball, facing the red net,
+// dribbles it straight in past a parked defender -- a clean goal into the OPPONENT's colour (no
+// own-goal, unlike the trained fighters which sometimes shove it the wrong way). Step with 'N'.
+void App::debugSoccerDemo() {
+  if (_profile.id.empty()) { Serial.println("NOPROFILE"); return; }
+  using namespace gb;
+  Program p;                                        // flat sequence: just dribble forward to the net
+  for (int i = 0; i < 8; i++) p.main.push_back(Node::command(CMD_FWD));
+  LibEntry def; def.name = "Keeper"; def.program = Program{}; def.source = LIB_CODE;  // parked defender
+  _profile.library.push_back(def);
+  LibEntry e; e.name = "Striker"; e.program = p; e.source = LIB_CODE;
+  int idx = (int)_profile.library.size();
+  _profile.library.push_back(e);                    // in-memory only (not saved -> gone on reboot)
+  _arena.beginScriptedDemo(&_profile, idx, "Keeper", 1);
+  _state = State::ARENA;
+  Serial.println("SOCCERDEMO Striker vs Keeper");
 }
 
 void App::debugFightLib(int a, int b) {

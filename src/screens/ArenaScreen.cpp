@@ -481,12 +481,12 @@ void ArenaScreen::beginQuickBattle(Profile* profile, int libIdx, const char* opp
   startMatch();                                // sets up the board + starts animating (BOARD phase)
 }
 
-// Controlled zap-swap scenario (capture aid for the demo gif). Unlike beginQuickBattle, we place the
-// ball + striker by hand: the striker faces its OWN net (WEST, toward green) with the ball one tile
-// ahead, so a forward would own-goal. Its scripted program zaps FIRST -- the swap trades places and
-// spins it 180, leaving the ball ahead pointing at the red net -- then drives it in. One unmistakable
-// swap, then a clean goal. The opponent is parked off the lane so it never interferes.
-void ArenaScreen::beginSwapDemo(Profile* profile, int libIdx, const char* oppName) {
+// Controlled demo scenario (capture aid for the gifs). Unlike beginQuickBattle, we place the ball +
+// bots by hand so the play is clean. scenario 0 = SWAP: the striker faces its OWN (green) net with the
+// ball one tile ahead, so a forward would own-goal -- its scripted program zaps FIRST, the swap trades
+// places + spins it 180, then it drives the ball into the red net. scenario 1 = DRIBBLE: the striker
+// starts BEHIND the ball facing the red net and walks it straight in, past a parked defender.
+void ArenaScreen::beginScriptedDemo(Profile* profile, int libIdx, const char* oppName, int scenario) {
   _profile = profile;
   _hotseat = false;
   _type = MatchType::SOCCER;
@@ -498,9 +498,15 @@ void ArenaScreen::beginSwapDemo(Profile* profile, int libIdx, const char* oppNam
   if (_pick1 < 0) _pick1 = _pick0;
   gb::MazeGen::generateSoccerPitch(_maze, 1, _s0, _s1, _ball, _goal0, _goal1);  // green=left(g1), red=right(g0)
   int rmid = _maze.rows() / 2;
-  _ball.row = (int8_t)rmid;       _ball.col = 4;                       // ball just LEFT of the striker
-  _s0.row   = (int8_t)rmid;       _s0.col   = 5; _s0.facing = gb::WEST; // striker faces its OWN (green) net
-  _s1.row   = 1;                  _s1.col   = 8; _s1.facing = gb::WEST; // idle opponent parked off the lane
+  if (scenario == 0) {                                                   // SWAP
+    _ball.row = (int8_t)rmid; _ball.col = 4;                             // ball just LEFT of the striker
+    _s0.row = (int8_t)rmid;   _s0.col = 5; _s0.facing = gb::WEST;        // striker faces its OWN (green) net
+    _s1.row = 1;              _s1.col = 8; _s1.facing = gb::WEST;        // opponent parked off the lane
+  } else {                                                              // DRIBBLE straight to goal
+    _ball.row = (int8_t)rmid;     _ball.col = 3;                         // ball ahead of the striker
+    _s0.row = (int8_t)rmid;       _s0.col = 2; _s0.facing = gb::EAST;    // striker behind it, facing the red net
+    _s1.row = (int8_t)(rmid + 1); _s1.col = 8; _s1.facing = gb::WEST;    // a defender parked by the red net
+  }
   const Program& p0 = _cands[_pick0].prog;
   const Program& p1 = _cands[_pick1].prog;
   _arena.setup(&_maze, &p0, &p1, _s0, _s1, MatchType::SOCCER, 220);
@@ -891,6 +897,15 @@ void ArenaScreen::eraseBotAt(int r, int c) {
     }
 }
 
+// Display colour for bot i. If both bots picked the same avatar, nudge P2 to a different one so the
+// two robots are tellable apart -- and apply it on EVERY redraw path (full + incremental) so a
+// stationary bot doesn't flip colour between a full board redraw and a per-tick patch.
+int ArenaScreen::botAvatar(int i) const {
+  int a = _cands[_pick1 < 0 ? _pick0 : (i == 0 ? _pick0 : _pick1)].avatar;
+  if (i == 1 && _pick1 >= 0 && _cands[_pick1].avatar == _cands[_pick0].avatar) a = (a + 4) % 8;
+  return a;
+}
+
 void ArenaScreen::drawBot(int i, const Pose& p, int avatar) {
   auto& g = hal::display.gfx();
   int tile, ox, oy; mazeGeometry(tile, ox, oy);
@@ -969,9 +984,8 @@ void ArenaScreen::drawBoard() {
   drawScore();
   for (int r = 0; r < _maze.rows(); r++)
     for (int c = 0; c < _maze.cols(); c++) drawCell(r, c);
-  drawBot(0, _arena.pose(0), _cands[_pick0].avatar);
-  drawBot(1, _arena.pose(1), _cands[_pick1].avatar == _cands[_pick0].avatar
-                                ? (_cands[_pick1].avatar + 4) % 8 : _cands[_pick1].avatar);
+  drawBot(0, _arena.pose(0), botAvatar(0));
+  drawBot(1, _arena.pose(1), botAvatar(1));
   if (_type == MatchType::SOCCER) { drawBall(); _ballPrev = _arena.ball(); }
   g.fillRect(0, BOTBAR_Y, SCREEN_W, BOTBAR_H, C_BG);
   button(g, R_BACK, "< Back", C_INK, C_PANEL);
@@ -1024,8 +1038,8 @@ void ArenaScreen::debugStep() {
   } else {
     eraseBotAt(b0.row, b0.col); eraseBotAt(b1.row, b1.col);
     if (_type == MatchType::SOCCER) eraseBotAt(_ballPrev.row, _ballPrev.col);
-    if (_arena.alive(0)) drawBot(0, _arena.pose(0), _cands[_pick0].avatar);
-    if (_arena.alive(1)) drawBot(1, _arena.pose(1), _cands[_pick1].avatar);
+    if (_arena.alive(0)) drawBot(0, _arena.pose(0), botAvatar(0));
+    if (_arena.alive(1)) drawBot(1, _arena.pose(1), botAvatar(1));
     if (_type == MatchType::SOCCER) { drawBall(); _ballPrev = _arena.ball(); }
   }
   if (o != ArenaOutcome::RUNNING) onMatchEnd();
@@ -1061,8 +1075,8 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     } else {
       eraseBotAt(b0.row, b0.col); eraseBotAt(b1.row, b1.col);
       if (_type == MatchType::SOCCER) eraseBotAt(_ballPrev.row, _ballPrev.col);  // wipe the ball's old tile
-      if (_arena.alive(0)) drawBot(0, _arena.pose(0), _cands[_pick0].avatar);
-      if (_arena.alive(1)) drawBot(1, _arena.pose(1), _cands[_pick1].avatar);
+      if (_arena.alive(0)) drawBot(0, _arena.pose(0), botAvatar(0));
+      if (_arena.alive(1)) drawBot(1, _arena.pose(1), botAvatar(1));
       if (_type == MatchType::SOCCER) { drawBall(); _ballPrev = _arena.ball(); }
       if (_type == MatchType::SUMO) {
         drawScore();                                  // refresh the big HP strip (it just changed)

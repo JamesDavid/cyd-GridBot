@@ -26,10 +26,12 @@ class ArenaScreen : public app::IScreen {
   // Jump straight into a battle (skip the menus): field library fighter `libIdx` vs the named
   // opponent. Used by the trainer's "Fight! >" so training flows directly into a match.
   void beginQuickBattle(gb::Profile* profile, int libIdx, const char* oppName, gb::MatchType type);
-  // Capture aid: a CONTROLLED soccer scenario for the zap-swap demo gif. Fields library fighter
-  // `libIdx` (a scripted "zap then drive" striker) facing its OWN net with the ball ahead, so its
-  // first move is a visible swap that flips the ball goalward; opponent is parked out of the lane.
-  void beginSwapDemo(gb::Profile* profile, int libIdx, const char* oppName);
+  // Capture aid: a CONTROLLED soccer scenario for the demo gifs. Fields scripted library fighter
+  // `libIdx` with the ball + bots placed by hand so the play is clean and repeatable. scenario 0 =
+  // SWAP (striker faces its own net, ball ahead -> first move is a visible zap-swap to goalward);
+  // scenario 1 = DRIBBLE (striker behind the ball, drives it straight into the opponent's net past a
+  // parked defender). Starts paused -> step it with 'N'/debugStep.
+  void beginScriptedDemo(gb::Profile* profile, int libIdx, const char* oppName, int scenario);
 
  private:
   enum class Phase : uint8_t { MENU, GAMETYPE, PICK1, HANDOFF, PICK2, BOARD, DONE, TOURNEY,
@@ -58,6 +60,7 @@ class ArenaScreen : public app::IScreen {
   void eraseBotAt(int r, int c);   // clear a vacated cell + its neighbours (the facing arrow over-
                                    // hangs into the next tile, so redrawing one cell leaves artifacts)
   void drawBot(int i, const gb::Pose& p, int avatar);
+  int  botAvatar(int i) const;   // display colour for bot i; nudges P2 if it shares P1's avatar
   void drawBall();                 // Soccer: the ball at its current tile (white disc)
   void drawScore();                                  // big HP/score strip in the top bar (Battle)
   void drawHit(int i, const char* txt, uint16_t col);// burst over bot i when it's zapped/knocked
