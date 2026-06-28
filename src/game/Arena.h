@@ -48,6 +48,7 @@ class Arena {
   int hp(int i) const { return _bot[i].hp; }   // Sumo health (for the health bar)
   bool won(int i) const { return _bot[i].won; }
   int goals(int i) const { return _goals[i]; }  // Soccer: goals scored by bot i (the scoreline)
+  int ownGoals(int i) const { return _ownGoals[i]; }  // goals bot i shoved into the net it DEFENDS
   bool justScored() const { return _justScored; }  // a goal landed THIS tick (for a "GOAL!" burst)
   ArenaOutcome outcome() const { return _outcome; }
   int ticks() const { return _ticks; }
@@ -75,6 +76,7 @@ class Arena {
   Pose _kickoff;              // the centre kickoff tile (ball returns here after each goal)
   Pose _goal[2];              // goal[i] = the tile bot i is trying to push the ball onto
   int8_t _goals[2] = {0, 0};  // goals scored by each bot (the scoreline)
+  int8_t _ownGoals[2] = {0, 0};  // own goals committed by each bot (pushed into its DEFENDED net)
   bool _justScored = false;   // a goal landed this tick (one-frame flag for the "GOAL!" burst)
   int16_t _ballStall = 0;     // soccer: ticks the ball has sat untouched (a "loose ball" timer)
   void refDriftBall();        // drop a long-stalled ball at a fresh (deterministic) spot to scramble for

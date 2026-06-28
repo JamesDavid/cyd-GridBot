@@ -82,8 +82,10 @@ bool Arena::pushBall(int mover, bool* squeezed) {
   // a single tile elsewhere). Anything in the mouth column at those rows counts as a score.
   auto inGoal = [&](int i, int r, int c) { return c == _goal[i].col && inGoalMouth(r, _goal[i].row); };
   auto land = [&](int r, int c) {
-    if (inGoal(0, r, c))      { _goals[0]++; _justScored = true; kickoff(); }   // tally + re-kickoff
-    else if (inGoal(1, r, c)) { _goals[1]++; _justScored = true; kickoff(); }
+    // A goal in net `i` was caused by `mover`. mover ATTACKS _goal[mover], so scoring in any other
+    // net (i != mover) means mover shoved it into the net it defends -- an own goal.
+    if (inGoal(0, r, c))      { _goals[0]++; if (mover != 0) _ownGoals[mover]++; _justScored = true; kickoff(); }
+    else if (inGoal(1, r, c)) { _goals[1]++; if (mover != 1) _ownGoals[mover]++; _justScored = true; kickoff(); }
     else { _ball.row = (int8_t)r; _ball.col = (int8_t)c; }
     return true;
   };
