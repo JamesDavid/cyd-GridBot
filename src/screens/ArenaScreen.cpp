@@ -1136,8 +1136,10 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
       if (R_OPP_RADIO.contains(tx, ty)) return app::Signal::GOTO_RADIO;  // radio screen has its own battle/trade
       else if (R_OPP_AI.contains(tx, ty))  { _hotseat = false; drawGameType(); }
       else if (R_OPP_HOT.contains(tx, ty)) { _hotseat = true;  drawGameType(); }
-      else if (R_OPP_ROOM.contains(tx, ty) && _profile && _profile->unlocks.neuro)
+      else if (R_OPP_ROOM.contains(tx, ty) && _profile && _profile->unlocks.neuro) {
+        _pendTrainFromMatch = false;            // general "Train a fighter" -> trainer's own default
         return app::Signal::GOTO_ARENA_TRAIN;   // the "Train a fighter" slot (Room moved to Radio)
+      }
       break;
     case Phase::NETLOBBY: {
       net::TourneyNet& tn = net::tourney();
@@ -1176,6 +1178,7 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
           _type = MatchType::SUMO; buildCandidates(true);
           _pickScroll = 0; _phase = Phase::PICK1; drawPick(0);
         } else if (_profile->unlocks.neuro) {    // no bot yet, but can train one -> the NeuroBot trainer
+          _pendTrainFromMatch = true; _pendTrainType = MatchType::SUMO; _pendTrainOpp = "";
           return app::Signal::GOTO_ARENA_TRAIN;
         } else {                                 // pre-NeuroBot: make a coded seeker first
           hal::audio.fail();
@@ -1320,7 +1323,11 @@ app::Signal ArenaScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
         else { _pickScroll = 0; _phase = Phase::PICK1; drawPick(0); }
       } else if (R_TRAIN3.contains(tx, ty)) {
         hal::led.off();
-        if (canTrain) return app::Signal::GOTO_ARENA_TRAIN;   // "Train >"
+        if (canTrain) {                                       // "Train >" -> pre-set to THIS sport + foe
+          _pendTrainFromMatch = true; _pendTrainType = _type;
+          _pendTrainOpp = (_pick1 >= 0 && _pick1 < (int)_cands.size()) ? _cands[_pick1].name : "";
+          return app::Signal::GOTO_ARENA_TRAIN;
+        }
         if (_pick0 >= 0 && _pick1 >= 0) startMatch(false);    // "New": a fresh match (new board)
         else { _pickScroll = 0; _phase = Phase::PICK1; drawPick(0); }
       } else if (R_EXIT3.contains(tx, ty) || R_BACK.contains(tx, ty)) {

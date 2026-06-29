@@ -16,6 +16,8 @@ namespace screens {
 class ArenaTrainScreen : public app::IScreen {
  public:
   void begin(gb::Profile* profile);
+  // Opened by "Train" after a match: land pre-set to that sport + sparring the same opponent.
+  void beginVs(gb::Profile* profile, gb::MatchType type, const char* oppName);
   // Opened from the code editor's "train brain >" -> Arena: seed the trainer with an existing
   // program brain and write the trained result straight back into that program node on exit.
   void beginEditBrain(gb::Profile* profile, gb::Program* prog, int brainIdx);
@@ -80,6 +82,7 @@ class ArenaTrainScreen : public app::IScreen {
   uint16_t _soccerGen = 0;   // counter: varies the kickoff ball each Evolve gen (board generalization)
   int _oppIdx = 0;            // which roster opponent we spar against
   std::string _oppName;      // its display name
+  char _baseLabel[20] = "a fresh brain";   // what the training BUILDS ON (fresh vs your code's brain)
   bool _beatsAI = false, _taught = false, _saved = false;
   bool _didTrain = false;       // a Teach/Evolve/Q-Learn pass actually ran this visit (-> brainsTrained)
   int _savedIdx = -1;         // library slot this session's fighter went to (-1 = not saved yet)

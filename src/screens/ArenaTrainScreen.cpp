@@ -197,7 +197,20 @@ void ArenaTrainScreen::begin(Profile* profile) {
   _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, 23);
   _rnn = false; _qLearning = false;   // RNN brain (rbrain()) is allocated lazily on first toggle
   _taught = false; _saved = false; _savedIdx = -1; _curveLen = 0; _didTrain = false;
+  snprintf(_baseLabel, sizeof(_baseLabel), "a fresh brain");   // begin() starts from random noise
   resetBest();
+  evaluateAndTrace();
+}
+
+// Open the trainer pre-set to a specific sport + opponent -- used by "Train" after a match so you land
+// ready to level up against the exact foe you just faced (lose at Soccer to Nutmeg -> Soccer vs Nutmeg).
+void ArenaTrainScreen::beginVs(Profile* profile, MatchType type, const char* oppName) {
+  begin(profile);                 // standard fresh setup, then override the sport + sparring partner
+  setMode(type);                  // switch to the match's discipline (rebuilds the board + clamps oppIdx)
+  if (oppName && *oppName)
+    for (int i = 0; i < oppCount(); i++)
+      if (oppNameFor(i) == oppName) { _oppIdx = i; break; }   // spar the very foe from the match
+  buildOpponent(_oppIdx);
   evaluateAndTrace();
 }
 
@@ -231,6 +244,7 @@ void ArenaTrainScreen::beginEditBrain(Profile* profile, Program* prog, int brain
     if (prog && brainIdx < (int)prog->brains.size()) _brain = prog->brains[brainIdx];
     _taught = true;                 // seeded FF brain -> don't let evaluateAndTrace overwrite it
   }
+  snprintf(_baseLabel, sizeof(_baseLabel), "your code's brain");   // loaded from the editor's +brain block
   evaluateAndTrace();
 }
 
@@ -519,11 +533,10 @@ void ArenaTrainScreen::draw() {
     else if (_restored && !_animating)
       snprintf(leg, sizeof(leg), "kept your best: %s", _bestStage);   // refining got worse -> restored
     else if (firstFighter() && !_animating)
-      snprintf(leg, sizeof(leg), "Tap EVOLVE to train, then SAVE to %s!",
-               _matchType == gb::MatchType::SOCCER ? "play" : _matchType == gb::MatchType::RACE ? "race" : "battle");
+      snprintf(leg, sizeof(leg), "base: %s - Teach/Evolve, then SAVE!", _baseLabel);
     else if (_bestStage[0] && !_animating)
       snprintf(leg, sizeof(leg), "best so far: %s", _bestStage);
-    else snprintf(leg, sizeof(leg), "you  vs  %s", _oppName.c_str());
+    else snprintf(leg, sizeof(leg), "base: %s   vs  %s", _baseLabel, _oppName.c_str());
     label(g, SCREEN_W / 2, BOTBAR_Y - 9, leg,
           _saved ? C_GO : (_restored ? C_ACCENT : (firstFighter() ? C_ACCENT : C_DIM)), textdatum_t::bottom_center);
     if (_curveLen >= 1 && ox > 50) drawCurve(4, oy, ox - 8, 44);   // learning curve in the left margin
@@ -732,6 +745,7 @@ app::Signal ArenaTrainScreen::tick(uint32_t now, const hal::TouchPoint& tp) {
     if (_rnn) rbrain().config(SENSOR_COUNT_FOR_BRAIN, 8, 5, s);
     else      _evo.init(SENSOR_COUNT_FOR_BRAIN, 8, 5, s);
     _taught = false; _saved = false; _savedIdx = -1; _qLearning = false; _animating = false; _curveLen = 0;
+    snprintf(_baseLabel, sizeof(_baseLabel), "a fresh brain");   // scrambled back to random noise
     evaluateAndTrace(); hal::audio.fail(); draw();
   } else if (R_VIEW.contains(tx, ty)) {
     _netView = !_netView; hal::audio.blip(); draw();

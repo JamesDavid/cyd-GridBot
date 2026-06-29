@@ -865,7 +865,11 @@ void App::tick(uint32_t now) {
         _puzzle.begin(&_profile); _puzzle.enter(); _state = State::PUZZLE;
       }
       else if (s == Signal::GOTO_ARENA_TRAIN) {
-        _arenaTrain.begin(&_profile); _arenaTrain.enter(); _state = State::ARENA_TRAIN;
+        if (_arena.pendTrainFromMatch())   // "Train" after a match -> same sport + same opponent
+          _arenaTrain.beginVs(&_profile, _arena.pendTrainType(), _arena.pendTrainOpp());
+        else
+          _arenaTrain.begin(&_profile);
+        _arenaTrain.enter(); _state = State::ARENA_TRAIN;
       }
       else if (s == Signal::GOTO_CHALLENGE) {
         _challenge.begin(&_profile); _challenge.enter(); _state = State::CHALLENGE;

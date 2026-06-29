@@ -32,8 +32,16 @@ class ArenaScreen : public app::IScreen {
   // scenario 1 = DRIBBLE (striker behind the ball, drives it straight into the opponent's net past a
   // parked defender). Starts paused -> step it with 'N'/debugStep.
   void beginScriptedDemo(gb::Profile* profile, int libIdx, const char* oppName, int scenario);
+  // After a match, "Train >" carries the match context so the trainer can open on the SAME sport vs
+  // the SAME foe (the loser-levels-up loop). False for the generic "Train a fighter" menu entry.
+  bool pendTrainFromMatch() const { return _pendTrainFromMatch; }
+  gb::MatchType pendTrainType() const { return _pendTrainType; }
+  const char* pendTrainOpp() const { return _pendTrainOpp.c_str(); }
 
  private:
+  bool _pendTrainFromMatch = false;
+  gb::MatchType _pendTrainType = gb::MatchType::SUMO;
+  std::string _pendTrainOpp;
   enum class Phase : uint8_t { MENU, GAMETYPE, PICK1, HANDOFF, PICK2, BOARD, DONE, TOURNEY,
                                TDISC,     // tournament: pick discipline (Maze race vs Battle)
                                TPICK,     // tournament: pick which fighters take part (checklist + all)
