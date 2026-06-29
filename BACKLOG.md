@@ -105,17 +105,32 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [x] **Soccer match type** — a walled pitch (`MazeGen::generateSoccerPitch`) with a
       **symmetric 4-tile goal mouth** at each end; bots shove a ball one tile when they step
       onto it; **timed multi-goal matches** with a live **scoreline** (most goals at the cap
-      wins; level → ball-position tiebreak → draw). Fully deterministic (ball + score folded
-      into the match hash): a random-scatter **referee** rehomes a long-stalled loose ball and
-      a **random kickoff** after each goal breaks bot-vs-bot deadlocks. Sensing reuses the
+      wins; level → **pressure-accumulator tie-break → no draws**: `_pressure` sums ball-to-net
+      progress each tick and decides a level scoreline). **Own-goals are impossible**: a push
+      that would put the ball in the mover's OWN net auto-triggers a **zap-swap** (bot turns
+      180°, ball repositioned goalward) and a jammed ball deflects toward the attacker's goal —
+      verified 0% own-goals across the roster (`tools/owngoal_check`). Fully deterministic (ball
+      + score folded into the match hash): a random-scatter **referee** rehomes a long-stalled
+      loose ball, a **random kickoff** after each goal, and **faster deadlock resolution**
+      (8-tick rehome when both bots pin the ball to a wall, vs 28 otherwise) break bot-vs-bot
+      deadlocks. Sensing reuses the
       10-input brain layout via `EnemyView.target` — the brain senses the **ball** as its
       objective (aheadness/rightness/distance), its **goal** bearing, and the **rival**
       bearing — so no net-shape or saved-brain change. Hand-codeable too: **`BALL_*`/`NET_*`
       conditions** + **AND/OR compound `if`s** (`if A & B` / `if A | B`). A pre-trained house
       team with soccer names — **Strika / Dribbla / Volley / Nutmeg / Boots**. Trainers: Teach
       (`distillSoccer`/`distillSoccerRnn`), Evolve (soccer fitness), Q-Learn
-      (`qTrainSoccer`/`qTrainSoccerRnn`). Wired into **vs-Computer, Hotseat, Tournament
-      (Cup/Ladder), and the networked Room**. Demo GIF: `docs/img/soccer.gif`.
+      (`qTrainSoccer`/`qTrainSoccerRnn`, with own-goal-penalising reward shaping). Wired into
+      **vs-Computer, Hotseat, Tournament (Cup/Ladder), and the networked Room**, with **fighter
+      names shown in the match header** (`P1 (Strika) / P2 (player v4)`, `You (…)` vs-CPU).
+      Demo GIF: `docs/img/soccer.gif`.
+- [x] **Loser-levels-up loop.** After a match, **Train** opens the trainer pre-set to the SAME
+      sport sparring the SAME opponent (`beginVs` / `_pendTrain*`), the **soccer house team is
+      sparrable** in the trainer roster (mode-aware `SOCCER_OPP`), and each trainer screen shows
+      a **base-brain label** (`base: a fresh brain / your code's brain  vs  Strika`) so it's
+      clear what the training builds on.
+- [x] **Pick-screen UX** — the bot/foe pickers got a **Back button + scroll arrows** and
+      tap-guards (visible-rows-only, buttons checked first) so scrolling no longer mis-selects.
 - [x] **Networked tournament (Room) — VERIFIED on two boards (COM3 + COM5).** ESP-NOW
       multi-device Cup: every board broadcasts its fighter, all ingest into a uuid-sorted
       roster (identical order, no central authority), the host broadcasts a shared SEED, and
@@ -169,6 +184,11 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
 - [ ] 4" ST7796 and ESP32-S3 CrowPanel targets (extra envs).
 
 ## Tooling (PIO_DEBUG loop)
+- [x] **`tools/bot_eval.cpp` host harness + captured output.** Hand-coded vs trained bots across
+      maze/battle/soccer + the soccer recipe bake-off, on the real Arena engine. Deterministic;
+      the committed run lives in **`docs/bot_eval_output.txt`** (with a reproduce-me header) so the
+      eval numbers the docs quote can't silently drift — regenerate after any brain/recipe/physics
+      change. (The `.exe` is gitignored; build with MSYS2 g++, see the file header.)
 - [x] USB-serial PIO_DEBUG loop: `scripts/shot.py` (screenshot via panel readback ->
       PNG), `scripts/drive.py` (tap + screenshot driver), serial commands S/T/L/X in
       firmware. Verified on the real CYD over COM3 — no WiFi needed.

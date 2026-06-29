@@ -10,7 +10,9 @@ teach straight from**. You should not need to open another file: every program, 
 pointer, checkpoint, and bit of background a grown-up needs is right here, in the order you'll use it.
 
 - **Audience:** kids ~7–13, one per **$10 CYD** touchscreen (or pairs sharing one). A grown-up
-  (parent or teacher) alongside — **no coding or AI experience required.**
+  (parent or teacher) alongside — **no coding or AI experience required.** **Younger kid (~6–8)?** The
+  **[Younger Kids Path](YOUNGER-KIDS-PATH.md)** is a gentler prequel/parallel route — the same five days as
+  one big idea each, in 15-minute chunks, with the exact sentences to say and a Parent Rescue Guide.
 - **Time:** **5 sessions of 1–2 hours** (≈ 7–10 hours). Self-paced; a session can split across days.
 - **Setup:** none. It's all on the device — no internet, no accounts, nothing leaves the room. Two
   devices in the same room unlock the optional multiplayer activities (never required).

@@ -4,7 +4,9 @@ A week-long (or five-session) plan that takes a kid with **no coding experience*
 **trained themselves** to play soccer — and, just as importantly, an understanding of *when to write
 the rules and when to let the robot learn them*.
 
-- **Audience:** ages ~7–13, one kid per **$10 CYD** (or pairs sharing one).
+- **Audience:** ages ~7–13, one kid per **$10 CYD** (or pairs sharing one). **Got a younger kid (~6–8)?**
+  Start with the gentler **[Younger Kids Path](YOUNGER-KIDS-PATH.md)** — the same five days in 15-minute chunks,
+  one big idea a day, with the exact sentences to say (a prequel you can graduate from, or a parallel calmer route).
 - **Time:** **5 days, 1–2 hours each** (≈ 7–10 hours total).
 - **Setup:** none — it's all on the device. No internet, no accounts. For two-device days you just
   need two CYDs in the same room.
@@ -31,6 +33,20 @@ the rules and when to let the robot learn them*.
 | **3** | ⚔️ **Compete** | **functions** + the **Arena** | hand-code a **battle** bot and a **soccer** bot | clear rules win — *until they don't* |
 | **4** | 🤖 **Learn** | **NeuroBot** (Teach / Q-Learn / Evolve) | **train** a brain instead of writing rules | when a job is feel, not rules, **let it practise** |
 | **5** | 🏆 **Champion** | the trainer's knobs + the **Room** | train a soccer **striker** and run a **tournament** | iterate, measure, and *match the method* |
+
+### Same week, for ages ~6–8
+
+If you're running this with a younger kid, here's the **one-big-idea-a-day** version — the full
+**[Younger Kids Path](YOUNGER-KIDS-PATH.md)** has the 15-minute quest cards, grown-up scripts, and a Parent Rescue
+Guide. The right column is what to **skip until later** at that age.
+
+| Day | Big idea (say this) | Younger Kid Version | Skip Until Later |
+|---|---|---|---|
+| **1** | "The robot follows my list." | Make a list of moves, fix one wrong turn | CSTA terms, star chasing |
+| **2** | "The robot can check before it moves." | Check wall, then turn | the word "algorithm", *why* it generalises |
+| **3** | "Rules need an order." | First matching rule wins | functions, win-rate tables |
+| **4** | "Training means trying and getting better." | Press **Teach**, watch it improve | Teach/Q-Learn/Evolve taxonomy |
+| **5** | "We test which bot is best." | Try bots, keep the one that wins | statistics, "one match can fool us" |
 
 ---
 

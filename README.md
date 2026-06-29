@@ -24,7 +24,9 @@ all on the same $10 board.
 > (one per day, full-screen, with on-device screenshots). Prefer depth or a one-pager? The full teacher
 > [**Handbook**](docs/HANDBOOK.md), the [**Hand-Coding Guide**](docs/HAND-CODING-GUIDE.md) (write the
 > rules) and its sequel the [**AI Coding Guide**](docs/AI-CODING-GUIDE.md) (train the rules), and the
-> one-page [**5-Day Curriculum**](docs/CURRICULUM.md) are right here too. No coding or AI background needed.
+> one-page [**5-Day Curriculum**](docs/CURRICULUM.md) are right here too. Got a **younger kid (~6–8)?** The
+> [**Younger Kids Path**](docs/YOUNGER-KIDS-PATH.md) runs the same five days as one big idea each, in 15-minute
+> chunks, with the exact sentences to say. No coding or AI background needed.
 
 ---
 

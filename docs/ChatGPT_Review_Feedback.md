@@ -25,9 +25,10 @@ This is a working checklist from a read-only review of the codebase, `docs/COURS
 - [x] Clean up internal "12-input soccer brain" comments. **(Done 2026-06-27.)**
   - Fixed all three stale spots — `src/game/Interpreter.h:20`, `src/game/Interpreter.cpp:239`, and `src/game/Distill.cpp:306` — to say soccer reuses the **same 10 sense slots**, re-meaned (matching `Sensors.h` and the public `10 -> 8 -> 5` shape). Comment-only.
 
-- [ ] Re-run or rebuild `tools/bot_eval.cpp` and capture current output.
+- [x] Re-run or rebuild `tools/bot_eval.cpp` and capture current output. **(Done 2026-06-28.)**
   - The checked-in `bot_eval.exe` exited non-zero with no stdout/stderr in the review environment.
   - The docs lean heavily on these eval numbers, so keeping a reproducible current output log would help prevent future doc drift.
+  - Rebuilt with the MSYS2 UCRT64 g++ (`-std=c++17 -O2 -I src -DNATIVE_BUILD`, all `src/game/*.cpp` minus `ProgramJson.cpp`) and captured the deterministic output to **`docs/bot_eval_output.txt`** (with a reproduce-me header). Numbers match the docs: hand-coded soccer 0% win, Teach 20%, Teach→Evolve 47%, Q-Learn 0%/4%, Evolve-from-scratch 0%; maze wall-follower+JUMP 8/16 vs learned-one-maze 1/16; hunter 9-5-2 vs trained fighters.
 
 ## General Impressions
 
@@ -39,7 +40,11 @@ The main risks are doc drift and one small UI data bug. The most important conce
 
 ## Course Improvements for Ages 6+
 
-- [ ] Add a dedicated "Younger Kids Path, Ages 6-8" section.
+> **All 10 items below DONE 2026-06-28** — delivered as a single new doc, **`docs/YOUNGER-KIDS-PATH.md`**, a
+> prequel/parallel path to the 5-day course, linked from README, COURSE.md, and CURRICULUM.md (with a compact
+> younger-kid table added to CURRICULUM.md). Per-item notes inline below.
+
+- [x] Add a dedicated "Younger Kids Path, Ages 6-8" section. **(Done — `docs/YOUNGER-KIDS-PATH.md`: one big idea/day, one sentence to say, one win condition, one optional grown-up explanation per day, using the exact Day 1–5 framing suggested here.)**
   - Keep the same overall arc, but reduce each day to one big idea, one device path, one sentence to say out loud, one win condition, and one optional grown-up explanation.
   - Example framing:
     - Day 1: "The robot follows my list."
@@ -48,7 +53,7 @@ The main risks are doc drift and one small UI data bug. The most important conce
     - Day 4: "Training means trying and getting better."
     - Day 5: "We test which bot works best."
 
-- [ ] Split each day into 15-minute quests.
+- [x] Split each day into 15-minute quests. **(Done — every day has 4 named ~15-min "quest cards": Make it move / Fix one mistake / Use jump / Use repeat / Make it react, etc. Full course kept intact for teachers/older kids.)**
   - A younger kid may not stay with a 60-90 minute lesson.
   - Example quest cards:
     - Make it move.
@@ -58,7 +63,7 @@ The main risks are doc drift and one small UI data bug. The most important conce
     - Make it react.
   - Keep the current full course for teachers and older kids, but give parents a shorter path they can run without lesson planning.
 
-- [ ] Reduce vocabulary in the youngest path.
+- [x] Reduce vocabulary in the youngest path. **(Done — each day delays the formal term to a "Grown-up word:" callout after the behavior: sequence/algorithm/priority/neural network all introduced plain-language first, e.g. "a rule that works again", "a brain with knobs it can change".)**
   - Keep the concepts, but delay formal terms until after the kid sees the behavior.
   - Suggested substitutions:
     - `sequence` -> "a list in order"
@@ -68,7 +73,7 @@ The main risks are doc drift and one small UI data bug. The most important conce
     - `neural network` -> "a brain with knobs it can change"
   - Add the formal term afterward as "Grown-up word: condition."
 
-- [ ] Add exact adult scripts for younger facilitators.
+- [x] Add exact adult scripts for younger facilitators. **(Done — each day has Say/Do/Ask prompts, plus the printable "Say / Do / Ask" cards section. Includes the "change one block", "point before Run", "did it disobey or follow your rules?" prompts and the "the robot did exactly what the program said" reinforcement up top.)**
   - Short prompts are more useful than explanations for this age group.
   - Examples:
     - "Let's only change one block."
@@ -77,11 +82,11 @@ The main risks are doc drift and one small UI data bug. The most important conce
     - "Did it follow your rule or did it disobey?"
   - Reinforce that the robot usually did exactly what the program said, even when the result was wrong.
 
-- [ ] Make Day 4 less ML-heavy for ages 6-8.
+- [x] Make Day 4 less ML-heavy for ages 6-8. **(Done — Day 4 opens with a callout reframing it to ONE idea: "pressing a button makes the robot practise and get better." Teach/Q-Learn/Evolve distinctions explicitly deferred to older-kid / optional "boss level"; quests are press Teach → watch the curve → before-vs-after → save.)**
   - Younger path should focus on pressing Teach, watching improvement, comparing before/after, and saying "it learned from practice."
   - Treat Teach / Q-Learn / Evolve distinctions as older-kid or optional "boss level" material.
 
-- [ ] Add a "Parent Rescue Guide."
+- [x] Add a "Parent Rescue Guide." **(Done — a dedicated table covering all five suggested situations (frustrated → easy win; changing everything → one block; heading → be the robot; button-mashing → predict before Run; lost ML interest → funny bot + tournament) plus "robot is cheating" and "stuck on a maze".)**
   - Useful quick fixes:
     - Kid is frustrated -> go back one level and get a quick win.
     - Kid keeps changing everything -> change one block only.
@@ -89,7 +94,7 @@ The main risks are doc drift and one small UI data bug. The most important conce
     - Kid wants to mash buttons -> require "Prediction Before Run."
     - Kid loses interest in ML -> train a funny bot and tournament it.
 
-- [ ] Add non-verbal checkpoints for young learners.
+- [x] Add non-verbal checkpoints for young learners. **(Done — every day ends with a "Non-verbal checkpoint": trace next move with a finger / make one program work on two mazes / find the wrong block / point to the bot that learned / choose between hand-coded and trained — matching the suggested show-me list.)**
   - Do not rely only on verbal explanation.
   - Show-me checkpoints:
     - Can they predict the next move with a finger?
@@ -97,14 +102,14 @@ The main risks are doc drift and one small UI data bug. The most important conce
     - Can they make one program work on a second maze?
     - Can they choose between a hand-coded bot and a trained bot after watching both?
 
-- [ ] Tone down exact eval numbers in the youngest path.
+- [x] Tone down exact eval numbers in the youngest path. **(Done — Day 5 uses the suggested phrasing ("This rule worked on lots of mazes", "The trained soccer bot usually wins", "One match can trick us, so we play a few") and explicitly points the win-rate tables to the teacher layer (TRAINING_FINDINGS.md / COURSE.md).)**
   - Keep the tables in the teacher/adult layer.
   - Use younger-kid phrasing:
     - "This rule worked on lots of mazes."
     - "The trained soccer bot usually wins."
     - "One match can trick us, so we try a few."
 
-- [ ] Add printable or slide-friendly "Say / Do / Ask" cards.
+- [x] Add printable or slide-friendly "Say / Do / Ask" cards. **(Done — a one-card-per-day section in the suggested Say/Do/Ask + Celebrate format, each a self-contained ~15-min sitting a grown-up can run with no lesson planning.)**
   - One page per day would help parents and teachers run the course quickly.
   - Suggested format:
     - Say: "A program is a list."
@@ -112,7 +117,7 @@ The main risks are doc drift and one small UI data bug. The most important conce
     - Ask: "What happens if we swap these?"
     - Celebrate: "You debugged it."
 
-- [ ] Add a compact younger-kid table to `COURSE.md` and/or `CURRICULUM.md`.
+- [x] Add a compact younger-kid table to `COURSE.md` and/or `CURRICULUM.md`. **(Done — the "Day / Younger Kid Version / Skip Until Later" table is in `CURRICULUM.md` (new "Same week, for ages ~6–8" subsection) and at the top of `YOUNGER-KIDS-PATH.md`, matching the suggested rows.)**
   - Suggested table:
 
     | Day | Younger Kid Version | Skip Until Later |

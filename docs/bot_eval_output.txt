@@ -1,0 +1,37 @@
+# tools/bot_eval.cpp — captured output (the source of the numbers quoted in the docs).
+# Regenerate after any change to the brain, training recipes, or soccer physics:
+#
+#   PATH="/c/msys64/ucrt64/bin:$PATH"
+#   SRCS=$(ls src/game/*.cpp | grep -v ProgramJson.cpp)
+#   g++ -std=c++17 -O2 -I src -DNATIVE_BUILD -o tools/bot_eval.exe tools/bot_eval.cpp $SRCS
+#   ./tools/bot_eval.exe > docs/bot_eval_output.txt
+#
+# Deterministic (fixed seeds), so re-runs are byte-identical until the engine changes.
+# Captured 2026-06-28 (post auto-swap own-goal fix + pressure tie-breaker: no draws, 0% own-goals).
+# These are the figures cited in TRAINING_FINDINGS.md and the course/handbook docs.
+
+=================  MAZE  =================
+  plain wall-follower (no pit handling): solved  5/16 unseen mazes
+  wall-follower + JUMP pits (hand-coded): solved  8/16 unseen mazes
+  brain that LEARNED one maze           : solved  1/16 unseen mazes
+
+================ BATTLE ================
+hand-coded hunter vs trained fighters (16 rings):
+  vs distilled   W-D-L  9- 5- 2
+  vs evolved     W-D-L  9- 5- 2
+
+======== SOCCER: hand-coded vs trained strikers (4 opponent seeds x 16 matches = 64 games) ========
+  chaser                   W-D-L  0- 0-64  win%   0  goals 133-1059
+  behind                   W-D-L  0- 0-64  win%   0  goals 40-1303
+  commit                   W-D-L  0- 0-64  win%   0  goals 28-1345
+  behind+wall              W-D-L  0- 0-64  win%   0  goals 98-1161
+  -- best hand-coded (chaser) vs STRONGLY-trained strikers --
+  chaser vs distill-20k    W-D-L  4- 0-60  win%   6  goals 126-1020
+  chaser vs Teach->Evolve  W-D-L  0- 0-64  win%   0  goals 158-947
+
+========= SOCCER RECIPE BAKE-OFF (6 train-seeds x 12 matches = 72 games each) =========
+  Teach only               W-D-L 15- 0-57  win%  20  goals 273-464
+  Teach -> Evolve vs opp   W-D-L 34- 0-38  win%  47  goals 317-456
+  Teach -> Q vs cone       W-D-L  0- 0-72  win%   0  goals 164-1153
+  Teach -> Q vs live opp   W-D-L  3- 0-69  win%   4  goals 138-989
+  Evolve from scratch      W-D-L  0- 0-72  win%   0  goals 17-1702
