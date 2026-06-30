@@ -74,6 +74,8 @@ class App {
   void gotoHome();
   void gotoIntro(uint32_t level);
   void gotoGame();
+  int  introLessonFor(uint32_t level) const;  // lesson a level introduces (0=Move,1-4 CodeLab,100-104 Neuro; -1 none)
+  void launchIntroLesson(int lesson);         // open that lesson with _fromIntro set (Back returns to the intro)
 
   // A long-press anywhere opens a small MENU modal (Home / Back / Sound / Close) -- the always-on
   // corner sound icon used to get in the way, so navigation + sound now live behind a hold gesture.

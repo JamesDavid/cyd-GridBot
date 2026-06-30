@@ -108,6 +108,7 @@ static void profileToJson(const gb::Profile& p, JsonObject o) {
   o["shopEmoji"] = p.shopEmoji;
   o["ownedColors"] = p.ownedColors;
   o["ownedEmojis"] = p.ownedEmojis;
+  o["tutMask"] = p.tutorialsSeen;
   if (!p.levelRecs.empty()) {   // per-level best: 3 bytes each (stars, blocks, par), hex-packed
     std::vector<uint8_t> b; b.reserve(p.levelRecs.size() * 3);
     for (const auto& r : p.levelRecs) { b.push_back(r.stars); b.push_back(r.bestBlocks); b.push_back(r.par); }
@@ -178,6 +179,8 @@ static void profileFromJson(JsonObjectConst o, gb::Profile& p) {
   p.shopEmoji = o["shopEmoji"] | 0;
   p.ownedColors = o["ownedColors"] | 0;
   p.ownedEmojis = o["ownedEmojis"] | 0;
+  p.tutorialsSeen = o["tutMask"] | 0u;            // bitmask of auto-played intro lessons (0 if absent)
+  if (o["tutSeen"] | false) p.tutorialsSeen |= 1u;  // migrate the old bool flag: Move (bit 0) already seen
   p.levelRecs.clear();
   if (o["levels"].is<const char*>()) {
     std::vector<uint8_t> b; fromHex(o["levels"], b);

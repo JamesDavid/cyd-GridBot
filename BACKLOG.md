@@ -34,6 +34,18 @@ highlights and links here. Items are grouped; checked = done, unchecked = future
       the Arena / Puzzle Race menus** (stops cleanly before a match's step-tick SFX).
 
 ## Campaign polish (deferred niceties)
+- [x] **Onboarding: auto-play each power's lesson the first time it unlocks.** Powers used to only
+      offer an opt-in "Learn it >" button on the level-intro card, and level 1 (Move) had no button at
+      all (it unlocks no *new* power), so a brand-new kid was dropped straight into the maze with no
+      guided intro. Now the **first time the kid reaches the level that introduces a CodeLab power**
+      (Move @ L1, then **Jump / Repeat / Sense / Functions** as each unlocks) the game **auto-plays that
+      lesson once** at the teachable moment, then lands on the level card to play. Once-only across
+      reboots via a per-lesson `Profile.tutorialsSeen` bitmask; gated on `level == _profile.level` (their
+      frontier) so replaying an old level never re-triggers. The intro card's **"Learn it >"** button is
+      kept (and now shown on level 1 too) so any lesson is re-watchable on demand. NeuroBot lessons
+      (L28+) stay **opt-in** (button only — not force-opened). Implemented via shared `App::introLessonFor`
+      / `launchIntroLesson` helpers (single source of truth for the button and the auto-play); reuses the
+      existing `_fromIntro` lesson-return path.
 - [x] Brick-red walls + void (background-colour) pits so hazards read clearly.
 - [x] Program list scrolls (auto-follows newest + tappable scrollbar) and the pane
       extends full-height — no command-count limit on screen.

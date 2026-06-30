@@ -118,6 +118,12 @@ struct Profile {
   uint32_t achievements = 0;  // bitmask of earned badges (see Achievements.h)
   uint32_t coins = 0;         // spendable currency (collected in levels)
 
+  // Onboarding: bitmask of which intro lessons have been auto-played once at their unlock level
+  // (bit 0 = Move @ L1, bits 1-4 = Jump/Repeat/Sense/Functions as each power unlocks). The lesson
+  // auto-plays the first time the kid reaches the level that introduces it, then never again; the
+  // intro card's "Learn it >" button still replays it on demand. See App::lessonBit / introLessonFor.
+  uint32_t tutorialsSeen = 0;
+
   // Shop: a custom robot tint (0 = use roster colour) + an equipped emoji (0 = none),
   // and bitmasks of what's been purchased.
   uint8_t shopColor = 0;      // index into ShopColors (1-based; 0 = none)

@@ -100,8 +100,56 @@ void App::loadProfileInto(const std::string& id) {
 
 void App::saveProfile() { store::profiles.save(_profile); }
 
+// Onboarding bitmask helper: which Profile.tutorialsSeen bit tracks an auto-played CodeLab lesson.
+// Only the campaign CodeLab lessons (0=Move, 1-4=Jump/Repeat/Sense/Functions) auto-play; the NeuroBot
+// lessons (100+) stay opt-in via the "Learn it >" button, so they get no bit and never force-open.
+static uint32_t lessonBit(int lesson) { return (lesson >= 0 && lesson <= 4) ? (1u << lesson) : 0u; }
+
+// The lesson a given level introduces: 0 = Move (level 1, the curriculum's opener), 1-4 = the CodeLab
+// power that newly unlocks here, 100-104 = the NeuroBot lesson/tool that newly unlocks. -1 = nothing new.
+// Single source of truth for both the intro "Learn it >" button and the once-only auto-play.
+int App::introLessonFor(uint32_t level) const {
+  gb::Unlocks now = gb::computeUnlocks(level);
+  gb::Unlocks prev = gb::computeUnlocks(level ? level - 1 : 0);
+  if (now.jump   && !prev.jump)   return 1;
+  if (now.repeat && !prev.repeat) return 2;
+  if (now.sense  && !prev.sense)  return 3;
+  if (now.func   && !prev.func)   return 4;
+  if (now.neuro  && !prev.neuro)  return 100;
+  if (now.nDraw  && !prev.nDraw)  return 101;
+  if (now.nEvolve&& !prev.nEvolve)return 102;
+  if (now.nPilot && !prev.nPilot) return 103;
+  if (now.nRnn   && !prev.nRnn)   return 104;
+  if (level <= 1)                 return 0;   // Move: level 1 unlocks no new power but is the opener
+  return -1;
+}
+
+// Open `lesson` as a teachable-moment, flagged so its Back returns to this level's intro card.
+void App::launchIntroLesson(int lesson) {
+  _fromIntro = true;
+  if (lesson == 100)      { _lessonHub.enter();                       _state = State::NEURO_HUB; }
+  else if (lesson == 101) { _transferLesson.begin(1); _transferLesson.enter(); _state = State::TRANSFER_LESSON; }  // Data & labels
+  else if (lesson == 102) { _evoLesson.begin();      _evoLesson.enter();       _state = State::EVO_LESSON; }       // Evolution
+  else if (lesson == 103) { _pilotLesson.begin();    _pilotLesson.enter();     _state = State::PILOT_LESSON; }     // Pilot
+  else if (lesson == 104) { _rnnLesson.begin();      _rnnLesson.enter();       _state = State::RNN_LESSON; }       // Memory
+  else                    { _codeLesson.begin(lesson); _codeLesson.enter();    _state = State::CODE_LESSON; }      // CodeLab 0-4
+}
+
 void App::gotoIntro(uint32_t level) {
   _introLevel = level;
+  // Onboarding: the FIRST time the kid reaches the level that introduces a CodeLab power (Move @ L1,
+  // then Jump/Repeat/Sense/Functions as each unlocks), auto-play its lesson once -- the teachable moment.
+  // Gated on `level == _profile.level` (their frontier) so replaying an old level never re-triggers, and
+  // on the per-lesson tutorialsSeen bit so it's once-only across reboots. Back from the lesson returns
+  // here with the bit set, so the level card then draws normally. (NeuroBot lessons stay opt-in.)
+  int lesson = introLessonFor(level);
+  if (lesson >= 0 && lessonBit(lesson) && level == _profile.level &&
+      !(_profile.tutorialsSeen & lessonBit(lesson))) {
+    _profile.tutorialsSeen |= lessonBit(lesson);
+    saveProfile();
+    launchIntroLesson(lesson);
+    return;
+  }
   _state = State::INTRO;
   drawIntro();
   if (hal::audio.enabled() && !hal::audio.playing())
@@ -121,22 +169,22 @@ void App::drawIntro() {
   label(g, SCREEN_W / 2, y + 18, buf, C_ACCENT, textdatum_t::middle_center, 2);
   label(g, SCREEN_W / 2, y + 36, bm.name, C_DIM, textdatum_t::middle_center);
 
-  // newly-unlocked mechanic (compare this level's unlocks to the previous level's)
-  gb::Unlocks now = gb::computeUnlocks(_introLevel);
-  gb::Unlocks prev = gb::computeUnlocks(_introLevel ? _introLevel - 1 : 0);
-  // a newly-unlocked power -> point straight at its lesson, at the teachable moment.
-  const char* newText = nullptr; const char* subText = nullptr; _introLesson = -1;
-  if (now.jump && !prev.jump)        { newText = "New: Jump!";         _introLesson = 1; }   // CodeLab idx
-  else if (now.repeat && !prev.repeat){ newText = "New: Repeat loops!"; _introLesson = 2; }
-  else if (now.sense && !prev.sense)  { newText = "New: Sensing!";      _introLesson = 3;
-                                        subText = "+ Arena Battle - code a fighter!"; }  // foe senses + zap unlock Battle
-  else if (now.func && !prev.func)    { newText = "New: Functions!";    _introLesson = 4; }
-  else if (now.neuro && !prev.neuro)  { newText = "New: NeuroBot!";     _introLesson = 100; } // NeuroLab hub
-  // the training tools arrive one at a time after the brain, each pointing at its lesson:
-  else if (now.nDraw && !prev.nDraw)    { newText = "New: Draw & tag!";   _introLesson = 101; } // Data lesson
-  else if (now.nEvolve && !prev.nEvolve){ newText = "New: Evolve!";       _introLesson = 102; } // Evolution
-  else if (now.nPilot && !prev.nPilot)  { newText = "New: Pilot!";        _introLesson = 103; } // Pilot
-  else if (now.nRnn && !prev.nRnn)      { newText = "New: Memory brain!"; _introLesson = 104; } // RNN
+  // The lesson this level introduces (the teachable moment) -> "Learn it >" button + a banner. Same
+  // source of truth as the once-only auto-play in gotoIntro. Level 1 (Move) shows it as the opener.
+  _introLesson = introLessonFor(_introLevel);
+  const char* newText = nullptr; const char* subText = nullptr;
+  switch (_introLesson) {
+    case 0:   newText = "Start: drive the robot!"; break;   // CodeLab "Move" (level 1 opener)
+    case 1:   newText = "New: Jump!"; break;
+    case 2:   newText = "New: Repeat loops!"; break;
+    case 3:   newText = "New: Sensing!"; subText = "+ Arena Battle - code a fighter!"; break;  // foe senses + zap unlock Battle
+    case 4:   newText = "New: Functions!"; break;
+    case 100: newText = "New: NeuroBot!"; break;            // NeuroLab hub
+    case 101: newText = "New: Draw & tag!"; break;          // Data lesson
+    case 102: newText = "New: Evolve!"; break;              // Evolution
+    case 103: newText = "New: Pilot!"; break;               // Pilot
+    case 104: newText = "New: Memory brain!"; break;        // RNN
+  }
   if (newText) label(g, SCREEN_W / 2, y + 50, newText, C_GO, textdatum_t::middle_center);
   if (subText) label(g, SCREEN_W / 2, y + 64, subText, C_ACCENT, textdatum_t::middle_center);
   if (_newBadge) {
@@ -735,13 +783,7 @@ void App::tick(uint32_t now) {
       int x, y;
       if (_introTap.tapped(tp, now, x, y)) {
         if (_introLesson >= 0 && _learnBtn.contains(x, y)) {  // learn the new power right now
-          _fromIntro = true;
-          if (_introLesson == 100) { _lessonHub.enter(); _state = State::NEURO_HUB; }
-          else if (_introLesson == 101) { _transferLesson.begin(1); _transferLesson.enter(); _state = State::TRANSFER_LESSON; }  // Data & labels
-          else if (_introLesson == 102) { _evoLesson.begin(); _evoLesson.enter(); _state = State::EVO_LESSON; }                 // Evolution
-          else if (_introLesson == 103) { _pilotLesson.begin(); _pilotLesson.enter(); _state = State::PILOT_LESSON; }           // Pilot
-          else if (_introLesson == 104) { _rnnLesson.begin(); _rnnLesson.enter(); _state = State::RNN_LESSON; }                 // Memory
-          else { _codeLesson.begin(_introLesson); _codeLesson.enter(); _state = State::CODE_LESSON; }
+          launchIntroLesson(_introLesson);
         } else if (_backBtn.contains(x, y)) {            // back to the level browser we came from
           _levelSelect.begin(&_profile, _introLevel); _levelSelect.enter(); _state = State::LEVEL_SELECT;
         } else gotoGame();                                // tap the card to start the level
